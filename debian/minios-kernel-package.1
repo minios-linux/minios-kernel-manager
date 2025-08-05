@@ -1,0 +1,36 @@
+.TH MINIOS-KERNEL-PACKAGE 1 "August 2025" "MiniOS Linux" "User Commands"
+.SH NAME
+minios-kernel-package \- Command-line tool for packaging MiniOS kernels
+.SH SYNOPSIS
+.B minios-kernel-package
+ --source-repo <package-name> --output-dir <path> [options]
+.br
+.B minios-kernel-package
+ --source-deb <deb-file> --output-dir <path> [options]
+.SH DESCRIPTION
+.B minios-kernel-package
+ is a command-line utility that handles the core tasks of packaging a Linux kernel for use with the MiniOS distribution. It extracts the kernel and modules, generates an initramfs, and creates a SquashFS image.
+.PP
+This tool is the backend for the graphical Bminios-kernel-managerR but can be used directly for scripting or advanced tasks. It requires one source argument (B--source-repoR or B--source-debR) and the output directory.
+.SH OPTIONS
+.TP
+.BR "--source-repo " <package-name>
+Specify the name of the kernel package to be downloaded from the APT repository (e.g., Ilinux-image-6.5.0-10-genericR).
+.TP
+.BR "--source-deb " <deb-file>
+Specify the path to a local .deb file for the kernel package.
+.TP
+.BR "--output-dir " <path>
+Required. Specify the directory where the packaged kernel files (vmlinuz, initrfs, and SquashFS module) will be saved.
+.TP
+.BR "--squashfs-comp " <compression>
+Set the compression method for the SquashFS image. Defaults to BzstdR. Common options include BgzipR, Blz4R, and BxzR.
+.TP
+.BR "--initrd-comp " <compression>
+Set the compression method for the initramfs. Defaults to BzstdR. Common options include BgzipR, Blz4R, and BxzR.
+.SH AUTHOR
+Written by crims0n <crims0n@minios.dev>.
+.SH "SEE ALSO"
+.BR minios-kernel-manager (1),
+.BR mksquashfs (1),
+.BR update-initramfs (8)

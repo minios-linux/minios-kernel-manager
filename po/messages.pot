@@ -1,0 +1,279 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: minios-kernel-manager 1.0.0\n"
+"Report-Msgid-Bugs-To: crims0n@minios.dev\n"
+"POT-Creation-Date: 2025-08-02 12:00+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "MiniOS Kernel Manager"
+msgstr ""
+
+msgid "Manage kernel modules for MiniOS Live system"
+msgstr ""
+
+msgid "Kernel Selection"
+msgstr ""
+
+msgid "Compression"
+msgstr ""
+
+msgid "Build"
+msgstr ""
+
+msgid "Build KernelPack"
+msgstr ""
+
+msgid "Cancel"
+msgstr ""
+
+msgid "Kernel Source"
+msgstr ""
+
+msgid "Use installed kernel"
+msgstr ""
+
+msgid "Download from repository"
+msgstr ""
+
+msgid "Available Kernels"
+msgstr ""
+
+msgid "Kernel"
+msgstr ""
+
+msgid "Description"
+msgstr ""
+
+msgid "Refresh"
+msgstr ""
+
+msgid "SquashFS Compression"
+msgstr ""
+
+msgid "Initramfs Compression"
+msgstr ""
+
+msgid "Build Progress"
+msgstr ""
+
+msgid "Build Log"
+msgstr ""
+
+msgid "Ready to build"
+msgstr ""
+
+msgid "Installed kernel"
+msgstr ""
+
+msgid "Repository kernel"
+msgstr ""
+
+msgid "Fetching repository kernels..."
+msgstr ""
+
+msgid "Selected kernel: %s"
+msgstr ""
+
+msgid "SquashFS compression: %s"
+msgstr ""
+
+msgid "Initramfs compression: %s"
+msgstr ""
+
+msgid "Please select a kernel first"
+msgstr ""
+
+msgid "Cancelling build..."
+msgstr ""
+
+msgid "Preparing build environment..."
+msgstr ""
+
+msgid "Downloading kernel package..."
+msgstr ""
+
+msgid "Preparing temporary modules..."
+msgstr ""
+
+msgid "Copying kernel image..."
+msgstr ""
+
+msgid "Building SquashFS image..."
+msgstr ""
+
+msgid "Generating initramfs..."
+msgstr ""
+
+msgid "Build completed successfully!"
+msgstr ""
+
+msgid "Error"
+msgstr ""
+
+msgid "Build Complete"
+msgstr ""
+
+msgid "KernelPack build completed successfully!"
+msgstr ""
+
+msgid "Error: This application must be run as root."
+msgstr ""
+
+msgid "Please select a kernel and configure compression settings:"
+msgstr ""
+
+msgid "Kernel Source:"
+msgstr ""
+
+msgid "Installed"
+msgstr ""
+
+msgid "Repository"
+msgstr ""
+
+msgid "Available Kernels:"
+msgstr ""
+
+msgid "Compression Settings:"
+msgstr ""
+
+msgid "Building kernel package..."
+msgstr ""
+
+msgid "Back to Selection"
+msgstr ""
+
+msgid "Fetching kernel list from repository..."
+msgstr ""
+
+msgid "This may take a moment depending on your internet connection"
+msgstr ""
+
+msgid "Scanning for installed kernels..."
+msgstr ""
+
+msgid "Checking system for available kernel modules"
+msgstr ""
+
+msgid "No repository kernels found"
+msgstr ""
+
+msgid "Check your internet connection and repository configuration"
+msgstr ""
+
+msgid "No installed kernels found"
+msgstr ""
+
+msgid "No kernel modules found in /lib/modules directory"
+msgstr ""
+
+msgid "Failed to fetch repository kernels"
+msgstr ""
+
+msgid "Please select a kernel to package and configure compression settings:"
+msgstr ""
+
+msgid "Package Kernel"
+msgstr ""
+
+msgid "Packaging kernel..."
+msgstr ""
+
+msgid "Preparing packaging environment..."
+msgstr ""
+
+msgid "Packaging Log"
+msgstr ""
+
+msgid "Packaging completed successfully!"
+msgstr ""
+
+msgid "Packaging failed: %s"
+msgstr ""
+
+msgid "Packaging Complete"
+msgstr ""
+
+msgid "Kernel packaging completed successfully!"
+msgstr ""
+
+msgid "System Type:"
+msgstr ""
+
+msgid "System Status"
+msgstr ""
+
+msgid "MiniOS Directory:"
+msgstr ""
+
+msgid "Found at {}"
+msgstr ""
+
+msgid "(writable)"
+msgstr ""
+
+msgid "(read-only)"
+msgstr ""
+
+msgid "Not found"
+msgstr ""
+
+msgid "Running from RAM - kernel changes will be lost on reboot"
+msgstr ""
+
+msgid "MiniOS directory is read-only - automatic installation disabled"
+msgstr ""
+
+msgid "Install Kernel"
+msgstr ""
+
+msgid "Package kernel and install to MiniOS directory"
+msgstr ""
+
+msgid "Package Kernel"
+msgstr ""
+
+msgid "Package kernel files (manual installation required)"
+msgstr ""
+
+msgid "Installing kernel files..."
+msgstr ""
+
+msgid "Warning: Automatic installation failed, files created in current directory"
+msgstr ""
+
+msgid "Kernel installation completed successfully!"
+msgstr ""
+
+msgid "Installed files:"
+msgstr ""
+
+msgid "Next Steps:"
+msgstr ""
+
+msgid "1. Update bootloader configuration to use new kernel"
+msgstr ""
+
+msgid "2. Safely eject and reboot to test new kernel"
+msgstr ""
+
+msgid "3. Previous kernel was backed up if it existed"
+msgstr ""
+
+msgid "Manual Installation Required:"
+msgstr ""
+
+msgid "Installation Complete"
+msgstr ""

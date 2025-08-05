@@ -1,0 +1,121 @@
+# Russian translation for minios-kernel-manager
+# Copyright (C) 2025 MiniOS Linux
+# This file is distributed under the same license as the minios-kernel-manager package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: minios-kernel-manager 1.0.0\n"
+"Report-Msgid-Bugs-To: crims0n@minios.dev\n"
+"POT-Creation-Date: 2025-08-02 12:00+0000\n"
+"PO-Revision-Date: 2025-08-02 12:00+0000\n"
+"Last-Translator: crims0n <crims0n@minios.dev>\n"
+"Language-Team: Russian\n"
+"Language: ru\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "MiniOS KernelPack GUI"
+msgstr "MiniOS KernelPack GUI"
+
+msgid "Create SquashFS kernel modules and initramfs images"
+msgstr "Создание SquashFS модулей ядра и образов initramfs"
+
+msgid "Kernel Selection"
+msgstr "Выбор ядра"
+
+msgid "Compression"
+msgstr "Сжатие"
+
+msgid "Build"
+msgstr "Сборка"
+
+msgid "Build KernelPack"
+msgstr "Собрать KernelPack"
+
+msgid "Cancel"
+msgstr "Отмена"
+
+msgid "Kernel Source"
+msgstr "Источник ядра"
+
+msgid "Use installed kernel"
+msgstr "Использовать установленное ядро"
+
+msgid "Download from repository"
+msgstr "Загрузить из репозитория"
+
+msgid "Available Kernels"
+msgstr "Доступные ядра"
+
+msgid "Kernel"
+msgstr "Ядро"
+
+msgid "Description"
+msgstr "Описание"
+
+msgid "Refresh"
+msgstr "Обновить"
+
+msgid "SquashFS Compression"
+msgstr "Сжатие SquashFS"
+
+msgid "Initramfs Compression"
+msgstr "Сжатие Initramfs"
+
+msgid "Build Progress"
+msgstr "Прогресс сборки"
+
+msgid "Build Log"
+msgstr "Журнал сборки"
+
+msgid "Ready to build"
+msgstr "Готов к сборке"
+
+msgid "Installed kernel"
+msgstr "Установленное ядро"
+
+msgid "Repository kernel"
+msgstr "Ядро из репозитория"
+
+msgid "Fetching repository kernels..."
+msgstr "Получение списка ядер из репозитория..."
+
+msgid "Please select a kernel first"
+msgstr "Сначала выберите ядро"
+
+msgid "Cancelling build..."
+msgstr "Отмена сборки..."
+
+msgid "Preparing build environment..."
+msgstr "Подготовка среды сборки..."
+
+msgid "Downloading kernel package..."
+msgstr "Загрузка пакета ядра..."
+
+msgid "Preparing temporary modules..."
+msgstr "Подготовка временных модулей..."
+
+msgid "Copying kernel image..."
+msgstr "Копирование образа ядра..."
+
+msgid "Building SquashFS image..."
+msgstr "Создание образа SquashFS..."
+
+msgid "Generating initramfs..."
+msgstr "Генерация initramfs..."
+
+msgid "Build completed successfully!"
+msgstr "Сборка завершена успешно!"
+
+msgid "Error"
+msgstr "Ошибка"
+
+msgid "Build Complete"
+msgstr "Сборка завершена"
+
+msgid "KernelPack build completed successfully!"
+msgstr "Сборка KernelPack завершена успешно!"
+
+msgid "Error: This application must be run as root."
+msgstr "Ошибка: Это приложение должно запускаться от имени root."

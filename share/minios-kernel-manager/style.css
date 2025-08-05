@@ -1,0 +1,125 @@
+button.suggested-action {
+    background-color: #8FA1B3;
+    color: white;
+}
+
+button.suggested-action:hover {
+    background-color: #7B93A7;
+}
+
+entry.error {
+    border: 2px solid #CC6666;
+}
+
+.error-tab {
+    background-color: #CC6666;
+    color: white;
+}
+
+entry,
+comboboxtext {
+    border: solid #BBB;
+}
+
+button.suggested-action {
+    padding: 10px 16px;
+}
+
+button.destructive-action {
+    padding: 10px 16px;
+}
+
+button.destructive-action:disabled {
+    padding: 10px 16px;
+}
+
+listbox row {
+    border-radius: 8px;
+    margin: 2px;
+    padding: 4px;
+}
+
+/* Warning dialog frame styling */
+frame {
+    border-radius: 8px;
+    padding: 4px;
+}
+
+frame > label {
+    font-weight: bold;
+    margin: 4px;
+}
+
+/* Progress bar styling */
+progressbar {
+    border-radius: 6px;
+    margin: 4px;
+}
+
+progressbar > trough {
+    border-radius: 6px;
+    min-height: 20px;
+}
+
+progressbar > trough > progress {
+    border-radius: 6px;
+    background-color: #8FA1B3;
+}
+
+/* Log text styling */
+textview {
+    font-family: monospace;
+    font-size: 9pt;
+    border-radius: 6px;
+    padding: 6px;
+}
+
+/* Tab styling */
+notebook tab {
+    padding: 8px 16px;
+    margin: 2px;
+    border-radius: 6px 6px 0 0;
+}
+
+notebook tab:checked {
+    background-color: #8FA1B3;
+    color: white;
+}
+
+/* Tree view styling */
+treeview {
+    border-radius: 6px;
+}
+
+treeview header button {
+    font-weight: bold;
+    padding: 6px;
+}
+
+/* Scrolled window styling */
+scrolledwindow {
+    border-radius: 6px;
+    border: 1px solid;
+}
+
+/* Kernel selection styling */
+.kernel-item {
+    padding: 4px 8px;
+    margin: 2px;
+    border-radius: 4px;
+}
+
+.kernel-item:selected {
+    background-color: #8FA1B3;
+    color: white;
+}
+
+/* Status label styling */
+.status-label {
+    font-weight: bold;
+    padding: 4px;
+}
+
+.dim-label {
+    opacity: 0.7;
+}

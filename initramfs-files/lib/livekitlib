@@ -1,0 +1,1915 @@
+#!/bin/ash
+
+# Functions library :: for Linux Live Kit scripts
+# Author: Tomas M. <http://www.linux-live.org>
+# Author: crims0n <https://minios.dev>
+
+# =================================================================
+# debug and output functions
+# =================================================================
+
+debug_start() {
+   if grep -q debug /proc/cmdline; then
+      DEBUG_IS_ENABLED=1
+      set -x
+   else
+      DEBUG_IS_ENABLED=
+   fi
+}
+
+debug_log() {
+   if [ "$DEBUG_IS_ENABLED" ]; then
+      echo "- debug: $*" >&2
+   fi
+   log "- debug: $*"
+}
+
+# header
+# Print header with TITLE, URL and SLOGAN
+# -t TITLE
+# -u URL
+# -s SLOGAN
+#
+header() {
+   local TITLE="" URL="" SLOGAN=""
+
+   OPTIND=1
+   while getopts ":t:u:s:" OPT; do
+      case "$OPT" in
+      t) TITLE="$OPTARG" ;;
+      u) URL="$OPTARG" ;;
+      s) SLOGAN="$OPTARG" ;;
+      *)
+         echo "Usage: header -t title [-u url] [-s slogan]" >&2
+         return 1
+         ;;
+      esac
+   done
+
+   local FORMATTED_TITLE FORMATTED_URL FORMATTED_SLOGAN
+   [ -n "$TITLE" ] && FORMATTED_TITLE="[1;37m${TITLE}[0;0m"
+   [ -n "$URL" ] && FORMATTED_URL="[1;94m${URL}[0;0m"
+   [ -n "$SLOGAN" ] && FORMATTED_SLOGAN="[1;37m${SLOGAN}[0;0m"
+
+   local SEP="" TEXT=""
+   [ -n "$FORMATTED_TITLE" ] && {
+      TEXT="${TEXT}${SEP}${FORMATTED_TITLE}"
+      SEP=" - "
+   }
+   [ -n "$FORMATTED_URL" ] && {
+      TEXT="${TEXT}${SEP}${FORMATTED_URL}"
+      SEP=" - "
+   }
+   [ -n "$FORMATTED_SLOGAN" ] && { TEXT="${TEXT}${SEP}${FORMATTED_SLOGAN}"; }
+
+   [ -n "$TEXT" ] && echo "  $TEXT"
+}
+
+# echo green star
+#
+echo_green_star() {
+   echo -ne "[0;32m""* ""[0;39m"
+}
+
+# echo red star
+#
+echo_red_star() {
+   echo -ne "[0;31m""* ""[0;39m"
+}
+
+# echo white star
+#
+echo_white_star() {
+   echo -ne "[1;37m""* ""[0;39m"
+}
+
+# log - store given text in /var/log/livedbg
+#
+log() {
+   echo "$@" 2>/dev/null >>/var/log/livedbg
+}
+
+echolog() {
+   echo "$@"
+   log "$@"
+}
+
+# show information about the debug shell
+#
+show_debug_banner() {
+   echo
+   echo "====="
+   echo ": Debugging started. Here is the root shell for you."
+   echo ": Type your desired commands or hit Ctrl+D to continue booting."
+   echo
+}
+
+# debug_shell
+# executed when debug boot parameter is present
+#
+debug_shell() {
+   if [ "$DEBUG_IS_ENABLED" ]; then
+      show_debug_banner
+      setsid sh -c 'exec sh < /dev/tty1 >/dev/tty1 2>&1'
+      echo
+   fi
+}
+
+fatal() {
+   echolog
+   header "Fatal error occured - $1"
+   echolog "Something went wrong and we can't continue. This should never happen."
+   echolog "Please reboot your computer with Ctrl+Alt+Delete ..."
+   echolog
+   setsid sh -c 'exec sh < /dev/tty1 >/dev/tty1 2>&1'
+}
+
+# get value of commandline parameter $1
+# $1 = parameter to search for
+#
+cmdline_value() {
+   cat /proc/cmdline | egrep -o "(^|[[:space:]])$1=[^[:space:]]+" | tr -d " " | cut -d "=" -f 2- | tail -n 1
+}
+
+# get value of config parameter $2
+# $1 = config file name
+# $2 = parameter to search for
+#
+config_value() {
+   cat $1 | egrep -o "(^|[[:space:]])$2=[^[:space:]]+" | tr -d " " | cut -d "=" -f 2- | tail -n 1 | sed 's/"//g'
+}
+
+# test if the script is started by root user. If not, exit
+#
+allow_only_root() {
+   if [ "0$UID" -ne 0 ]; then
+      echo "Only root can run $(basename $0)"
+      exit 1
+   fi
+}
+
+# Create bundle
+# call mksquashfs with apropriate arguments
+# $1 = directory which will be compressed to squashfs bundle
+# $2 = output file
+# $3..$9 = optional arguments like -keep-as-directory or -b 123456789
+#
+create_bundle() {
+   debug_log "create_module" "$*"
+   rm -f "$2" # overwrite, never append to existing file
+   mksquashfs "$1" "$2" -comp xz -b 1024K -Xbcj x86 -always-use-fragments $3 $4 $5 $6 $7 $8 $9 >/dev/null
+}
+
+# Move entire initramfs tree to tmpfs mount.
+# It's a bit tricky but is necessray to enable pivot_root
+# even for initramfs boot image
+#
+transfer_initramfs() {
+   if [ ! -r /lib/initramfs_escaped ]; then
+      echo "switch root from initramfs to ramfs"
+      SWITCH=/m # one letter directory
+      mkdir -p $SWITCH
+      mount -t tmpfs -o size="100%" tmpfs $SWITCH
+      cp -a /??* $SWITCH 2>/dev/null # only copy two-and-more-letter directories
+      cd $SWITCH
+      echo "This file indicates that we successfully escaped initramfs" >$SWITCH/lib/initramfs_escaped
+      exec switch_root -c /dev/console . $0
+   fi
+}
+
+# mount virtual filesystems like proc etc
+#
+init_proc_sysfs() {
+   debug_log "init_proc_sysfs" "$*"
+   mkdir -p /proc /sys /etc $MEMORY
+   mount -n -t proc proc /proc
+   echo "0" >/proc/sys/kernel/printk
+   mount -n -t sysfs sysfs /sys
+   mount -n -o remount,rw rootfs /
+   ln -sf /proc/mounts /etc/mtab
+}
+
+# modprobe all modules found in initial ramdisk
+# $1 = -e for match, -v for negative match
+# $2 = regex pattern
+#
+modprobe_everything() {
+   debug_log "modprobe_everything" "$*"
+
+   echo_white_star >&2
+   echo "Probing for hardware" >&2
+
+   find /lib/modules/ | fgrep .ko | egrep $1 $2 | sed -r "s:^.*/|[.]ko\$::g" | xargs -n 1 modprobe 2>/dev/null
+   refresh_devs
+}
+
+refresh_devs() {
+   debug_log "refresh_devs" "$*"
+   if [ -r /proc/sys/kernel/hotplug ]; then
+      echo /sbin/mdev >/proc/sys/kernel/hotplug
+   fi
+   mdev -s
+}
+
+# make sure some devices are there
+#
+init_devs() {
+   debug_log "init_devs" "$*"
+   modprobe zram 2>/dev/null
+   modprobe loop 2>/dev/null
+   modprobe squashfs 2>/dev/null
+   modprobe fuse 2>/dev/null
+   refresh_devs
+}
+
+# Activate zram (auto-compression of RAM)
+# Compressed RAM consumes 1/2 or even 1/4 of original size
+#
+init_zram() {
+   if grep -q nozram /proc/cmdline; then
+      return
+   fi
+   debug_log "init_zram" "$*"
+   echo_white_star
+   echo "Setting dynamic RAM compression using ZRAM if available"
+   ZRAMCOMP=$(cmdline_value zramcomp)
+   ZRAMSIZE=$(cmdline_value zramsize)
+   TOTAL_MEM_KB=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
+
+   if [ -z "$ZRAMSIZE" ]; then
+      if [ "$TOTAL_MEM_KB" -ge 4194304 ]; then
+         ZRAMSIZE=2048
+      elif [ "$TOTAL_MEM_KB" -ge 1048576 ]; then
+         ZRAMSIZE=$((TOTAL_MEM_KB / 1024 / 2))
+      else
+         ZRAMSIZE=512
+      fi
+   fi
+
+   ZRAMSIZE=$((ZRAMSIZE * 1024 * 1024))
+   if [ -r /sys/block/zram0/comp_algorithm ]; then
+      case "$ZRAMCOMP" in
+      lzo | lzo-rle | lz4 | lz4hc | zstd)
+         echo $ZRAMCOMP >/sys/block/zram0/comp_algorithm
+         ;;
+      esac
+   fi
+   if [ -r /sys/block/zram0/disksize ]; then
+      echo $ZRAMSIZE >/sys/block/zram0/disksize
+      mkswap /dev/zram0 >/dev/null
+      swapon /dev/zram0
+      echo 100 >/proc/sys/vm/swappiness
+   fi
+}
+
+aufs_is_supported() {
+   cat /proc/filesystems | grep aufs >/dev/null 2>&1
+}
+
+# load the AUFS kernel driver. If not found,
+# load overlayfs instead.
+#
+init_aufs() {
+   debug_log "init_aufs" "$*"
+   modprobe aufs 2>/dev/null
+   if ! aufs_is_supported >/dev/null; then
+      modprobe overlay 2>/dev/null
+   fi
+   refresh_devs
+}
+
+# Setup empty aufs union, or create overlayfs union
+# $1 = changes directory (ramfs or persistent changes)
+# $2 = union directory where to mount the union
+# $3 = bundles directory
+#
+init_union() {
+   debug_log "init_union" "$*"
+   mkdir -p "$1"
+   mkdir -p "$2"
+
+   if aufs_is_supported >/dev/null; then
+      echo_white_star
+      echo "Setting up empty union using aufs"
+      mount -t aufs -o xino="/.xino",trunc_xino,br="$1" aufs "$2"
+   else
+      echo_white_star
+      echo "Setting up union using overlayfs"
+      mkdir -p "$1/changes"
+      mkdir -p "$1/workdir"
+      mount -t overlay overlay -o lowerdir=$(find "$3" -mindepth 1 -maxdepth 1 | sortmod | tac | tr '\n' ':' | sed -r 's/:$//'),upperdir=$1/changes,workdir=$1/workdir $2
+   fi
+}
+
+# Return device mounted for given directory
+# $1 = directory
+#
+mounted_device() {
+   debug_log "mounted_device" "$*"
+
+   local MNT TARGET
+   MNT="$1"
+   while [ "$MNT" != "/" -a "$MNT" != "." -a "$MNT" != "" ]; do
+      TARGET="$(grep -F " $MNT " /proc/mounts | cut -d " " -f 1)"
+      if [ "$TARGET" != "" ]; then
+         echo "$TARGET"
+         return
+      fi
+      MNT="$(dirname "$MNT")"
+   done
+}
+
+# Return mounted dir for given directory
+# $1 = directory
+#
+mounted_dir() {
+   debug_log "mounted_dir" "$*"
+
+   local MNT
+   MNT="$1"
+   while [ "$MNT" != "/" -a "$MNT" != "." -a "$MNT" != "" ]; do
+      if mountpoint -q "$MNT" 2>/dev/null; then
+         echo "$MNT"
+         return
+      fi
+      MNT="$(dirname "$MNT")"
+   done
+}
+
+# Initialize blkid cache by manually probing all devices
+#
+init_blkid_cache() {
+   local DEV
+   cat /proc/partitions | tr -s " " | cut -d " " -f 5 | while read DEV; do
+      blkid /dev/$DEV >/dev/null 2>/dev/null
+   done
+}
+
+# Get device tag.
+# $1 = device
+# $2 = tag name, such as TYPE, LABEL, UUID, etc
+#
+device_tag() {
+   blkid -s $2 "$1" | sed -r "s/^[^=]+=//" | tr -d '"'
+}
+
+# Make sure to mount FAT12/16/32 using vfat
+# in order to support long filenames
+# $1 = device
+# $2 = prefix to add, like -t
+#
+device_bestfs() {
+   debug_log "device_bestfs" "$*"
+   local FS
+
+   FS="$(device_tag "$1" TYPE | tr [A-Z] [a-z])"
+   if [ "$FS" = "msdos" -o "$FS" = "fat" -o "$FS" = "vfat" ]; then
+      FS="vfat"
+   elif [ "$FS" = "ntfs" ]; then
+      if lsmod | grep -q ntfs; then
+         FS="ntfs3"
+      else
+         FS="ntfs-3g"
+      fi
+   fi
+
+   if [ "$2" != "" ]; then
+      echo -n "$2"
+   fi
+
+   echo "$FS"
+}
+
+# Filesystem options for initial mount
+# $1.. = filesystem
+#
+fs_options() {
+   debug_log "fs_options" "$*"
+
+   if [ "$1" != "ntfs-3g" ]; then
+      echo -n "-t $1 "
+   fi
+
+   echo -n "-o rw"
+
+   if [ "$1" = "vfat" ]; then
+      echo ",umask=000,check=s,shortname=mixed,iocharset=utf8"
+   elif [ "$1" = "ntfs-3g" ] || [ "$1" = "ntfs3" ] || [ "$1" = "exfat" ]; then
+      echo ",umask=000"
+   fi
+}
+
+# Mount command for given filesystem
+# $1.. = filesystem
+#
+mount_command() {
+   debug_log "mount_command" "$*"
+
+   if [ "$1" = "ntfs-3g" ]; then
+      echo "@mount.ntfs-3g"
+   else
+      echo "mount"
+   fi
+}
+
+# echo first network device known at the moment of calling, eg. eth0
+#
+network_device() {
+   debug_log "network_device" "$*"
+   cat /proc/net/dev | grep : | grep -v lo: | grep -v ip6tnl | cut -d : -f 1 | tr -d " " | head -n 1
+}
+
+# Modprobe network kernel modules until a working driver is found.
+# These drivers are (or used to be) probed in Slackware's initrd.
+# The function returns the first device found, yet it doesn't have
+# to be a working one, eg. if the computer has two network interfaces
+# and ethernet cable is plugged only to one of them.
+#
+init_network_dev() {
+   debug_log "init_network_dev" "$*"
+   local MODULE ETH
+
+   for MODULE in 3c59x acenic e1000 e1000e e100 epic100 hp100 ne2k-pci \
+      pcnet32 8139too 8139cp tulip via-rhine r8169 atl1e yellowfin tg3 \
+      dl2k ns83820 atl1 b44 bnx2 skge sky2 tulip forcedeth sb1000 sis900 \
+      vmxnet3 virtio_net; do
+      modprobe $MODULE 2>/dev/null
+      ETH="$(network_device)"
+      if [ "$ETH" != "" ]; then
+         echo $ETH
+         return 0
+      fi
+      rmmod $MODULE 2>/dev/null
+   done
+
+   # If we are here, none of the above specified modules worked.
+   # As a last chance, try to modprobe everything else
+   modprobe_everything -e /drivers/net/
+   echo $(network_device)
+}
+
+# Initialize network IP address
+# either static from ip=bootparameter, or from DHCP
+#
+init_network_ip() {
+   debug_log "init_network_ip" "$*"
+   local IP ETH SCRIPT CLIENT SERVER GW MASK
+
+   SCRIPT=/tmp/dhcpscript
+   ETH=$(init_network_dev)
+   IP=$(cmdline_value ip)
+
+   echo "* Setting up network" >&2
+
+   if [ "$IP" != "" ]; then
+      # set IP address as given by boot parameter
+      echo "$IP" | while IFS=":" read CLIENT SERVER GW MASK; do
+         ifconfig $ETH "$CLIENT" netmask "$MASK"
+         route add default gw "$GW"
+         echo nameserver "$GW" >>/etc/resolv.conf
+         echo nameserver "$SERVER" >>/etc/resolv.conf
+      done
+   else
+      # if client ip is unknown, try to get a DHCP lease
+      ifconfig $ETH up
+      echo -e '#!/bin/sh\nif [ "$1" != "bound" ]; then exit; fi\nifconfig $interface $ip netmask $subnet\nroute add default gw $router\necho nameserver $dns >>/etc/resolv.conf' >$SCRIPT
+      chmod a+x $SCRIPT
+      udhcpc -i $ETH -n -s $SCRIPT -q >/dev/null
+   fi
+}
+
+# Mount data from http using httpfs
+# $1 = from URL
+# $2 = target
+#
+mount_data_http() {
+   debug_log "mount_data_http" "$*"
+   local CACHE
+
+   echo_white_star >&2
+   echo "Load data from $1" >&2
+
+   CACHE=$(cmdline_value cache | sed -r "s/[^0-9]//g" | sed -r "s/^0+//g")
+   if [ "$CACHE" != "" ]; then
+      CACHE="-C /tmp/httpfs.cache -S "$(($CACHE * 1024 * 1024))
+   fi
+
+   init_network_ip
+
+   if [ "$(network_device)" != "" ]; then
+      echo "* Mounting remote file..." >&2
+      mkdir -p "$2"
+      @mount.httpfs2 -r 9999 -t 5 $CACHE -c /dev/null "$1" "$2" -o ro >/dev/null 2>/dev/null
+      mount -o loop "$2"/* "$2" # self mount
+      echo "$2/$LIVEKITNAME"
+   fi
+}
+
+# stdin = files to get
+# $1 = server
+# $2 = destination directory
+#
+tftp_mget() {
+   while read FNAME; do
+      echo "* $FNAME ..." >&2
+      tftp -b 1486 -g -r "$FNAME" -l "$2/$FNAME" "$1"
+   done
+}
+
+# Download data from tftp
+# $1 = target (store downloaded files there)
+#
+download_data_pxe() {
+   debug_log "download_data_pxe" "$*"
+   local IP CMD CLIENT SERVER GW MASK PORT PROTOCOL JOBS
+
+   mkdir -p "$1/$LIVEKITNAME"
+   IP="$(cmdline_value ip)"
+
+   echo "$IP" | while IFS=":" read CLIENT SERVER GW MASK PORT; do
+      echo_white_star >&2
+      echo "Contacting PXE server $SERVER" >&2
+
+      if [ "$PORT" = "" ]; then PORT="7529"; fi
+
+      init_network_ip
+
+      echo "* Downloading PXE file list" >&2
+
+      PROTOCOL=http
+      wget -q -O "$1/PXEFILELIST" "http://$SERVER:$PORT/PXEFILELIST?$(uname -r):$(uname -m)"
+      if [ $? -ne 0 ]; then
+         echo "Error downloading from http://$SERVER:$PORT, trying TFTP" >&2
+         PROTOCOL=tftp
+         echo PXEFILELIST | tftp_mget "$SERVER" "$1"
+      fi
+
+      echo "* Downloading files from the list" >&2
+
+      if [ "$PROTOCOL" = "http" ]; then
+         cat "$1/PXEFILELIST" | while read FILE; do
+            wget -O "$1/$LIVEKITNAME/$(basename $FILE)" "http://$SERVER:$PORT/$FILE"
+         done
+      else
+         JOBS=3
+         for i in $(seq 1 $JOBS); do
+            awk "NR % $JOBS == $i-1" "$1/PXEFILELIST" | tftp_mget "$SERVER" "$1/$LIVEKITNAME" &
+         done
+         wait
+      fi
+   done
+
+   echo "$1/$LIVEKITNAME"
+}
+
+# Interactively ask the user to select a disk partition.
+# $1 = action and folder path, e.g. for from: askdisk:where/is/my/system
+# $2 = mode: from or perchdir
+#
+ask_disk() {
+   debug_log "ask_disk" "$*"
+   local WHERE MODE COMMAND PARTITION SIZE TYPE LABEL ASKPID DIR DRIVE
+
+   WHERE="$1"
+   MODE="$2"
+   COMMAND="askdisk"
+
+   if echo "$WHERE" | grep -q "^$COMMAND"; then
+      (while true; do
+         # Among other things, filter out swap, since the user may have a hard disk with a swap partition on the actual hardware.
+         blkid -o full -s TYPE -s LABEL | grep -E -v "/loop|/ram|/zram|TYPE=\"swap\"" | while read -r LINE; do
+            PARTITION=$(echo "$LINE" | awk '{print $1}' | awk -F':' '{print $1}')
+            SIZE=$(fdisk -l "$PARTITION" 2>/dev/null | head -n 1 | awk '/Disk \// {print $3, $4}' | tr -d ",")
+            TYPE=$(echo $LINE | awk -F'TYPE="' '{print $2}' | awk -F'"' '{print $1}')
+            LABEL=$(echo $LINE | awk -F'LABEL="' '{print $2}' | awk -F'"' '{print $1}')
+            echo "$PARTITION: SIZE=\"$SIZE\" TYPE=\"$TYPE\" LABEL=\"$LABEL\" "
+         done >/tmp/0.txt
+         mv -f /tmp/0.txt /tmp/askdisk.txt
+         sleep 1
+      done) &
+      ASKPID=$!
+      sleep 1 # give blkid some chance to finish
+      if echo "$WHERE" | grep -q "^$COMMAND:"; then
+         DIR="$(echo "$WHERE" | cut -d ':' -f 2- | tr ':' '/')"
+      else
+         if [ "$MODE" = "from" ]; then
+            DIR="$LIVEKITNAME"
+         elif [ "$MODE" = "perchdir" ]; then
+            DIR=""
+         fi
+      fi
+      DRIVE="$(ncurses-menu -t "Look for /$DIR directory on:" -f /tmp/askdisk.txt -s 2>&1 >/dev/tty1 </dev/tty1)"
+      DRIVE="$(echo "$DRIVE" | cut -d : -f 1)"
+      if echo "$WHERE" | grep -q "^$COMMAND:"; then
+         WHERE="$DRIVE/$(echo "$WHERE" | cut -d ':' -f 2- | tr ':' '/')"
+      else
+         WHERE="$DRIVE/$DIR"
+      fi
+      kill $ASKPID
+   fi
+   echo $WHERE
+}
+
+# Find LIVEKIT data by mounting all devices
+# If found, keep mounted, else unmount
+# $1 = data directory target (mount here)
+# $2 = data directory which contains compressed bundles
+#
+find_data_try() {
+   debug_log "find_data_try" "$*"
+   local DRIVE FS FROM OPTIONS MOUNT
+
+   mkdir -p "$1"
+
+   blkid /dev/* | sort | cut -d: -f 1 | grep -E -v "/loop|/ram|/zram" | while read DRIVE; do
+      FROM="$2"
+
+      # supported syntax is even like from=/dev/sr0/livekitname. It is not so much
+      # optiomal to put the following block of code here inside the while loop,
+      # but there is no harm so lets modify DRIVE and FROM to make it work
+      if echo "$FROM" | grep -q '^/dev/'; then
+         if echo "$FROM" | grep -q '^/dev/disk/by-label/'; then
+            LABEL=$(echo "$FROM" | awk -F"/" '{print $5}')
+            DRIVE=$(blkid -t LABEL="$LABEL" -o device -c /dev/null 2>/dev/null)
+            FROM="$(echo "$FROM" | cut -d '/' -f 6-)"
+         else
+            DRIVE="$(echo "$FROM" | cut -d '/' -f 1-3)"
+            FROM="$(echo "$FROM" | cut -d '/' -f 4-)"
+         fi
+      fi
+      if [ "$FROM" = "" ]; then
+         FROM="$LIVEKITNAME"
+      fi
+
+      FS="$(device_bestfs "$DRIVE")"
+      OPTIONS="$(fs_options $FS)"
+      MOUNT="$(mount_command $FS)"
+
+      $MOUNT "$DRIVE" "$1" $OPTIONS 2>/dev/null
+
+      # if the FROM parameter is actual file, mount it again as loop (eg. iso)
+      if [ -f "$1/$FROM" ]; then
+         mkdir -p "$1/../iso"
+         mount -o loop,ro "$1/$FROM" "$1/../iso" 2>/dev/null
+         FROM="../iso/$LIVEKITNAME"
+      fi
+
+      # search for bundles in the mounted directory
+      if [ "$(find "$1/$FROM" -maxdepth 1 -name "*.$BEXT" 2>/dev/null)" != "" ]; then
+         # we found at least one bundle/module here
+         echo "$FROM" >/var/log/from.log
+         echo "$1/$FROM" | tr -s "/" | sed -r "s:/[^/]+/[.][.]/:/:g"
+         return
+      fi
+
+      # search for bundles in modules directory
+      if [ "$(find "$1/$FROM/modules" -maxdepth 1 -name "*.$BEXT" 2>/dev/null)" != "" ]; then
+         # we found at least one bundle/module here
+         echo "$1/$FROM" | tr -s "/" | sed -r "s:/[^/]+/[.][.]/:/:g"
+         echo "$FROM" >/var/log/from.log
+         return
+      fi
+
+      # unmount twice, since there could be mounted ISO as loop too. If not, it doesn't hurt
+      umount "$1" 2>/dev/null
+      umount "$1" 2>/dev/null
+   done
+}
+
+# Retry finding LIVEKIT data several times,
+# until timeouted or until data is found
+# $1 = timeout
+# $2 = data directory target (mount here)
+#
+find_data() {
+   debug_log "find_data" "$*"
+   local DATA FROM TIMEOUT
+
+   FROM="$(cmdline_value from)"
+
+   # boot parameter specified as from=http://server.com/file.iso
+   if [ "$(echo $FROM | grep 'http://')" != "" ]; then
+      mount_data_http "$FROM" "$2"
+      return
+   fi
+
+   # if we got IP address as boot parameter, it means we booted over PXE
+   if [ "$(cmdline_value ip)" != "" ]; then
+      download_data_pxe "$2"
+      return
+   fi
+
+   # If user wants to get asked, ask and periodically update list of devices
+   # boot parameter specified as from=askdisk or from=askdisk/directory/where/system/is/installed
+   FROM=$(ask_disk "$FROM" from)
+
+   # default to livekitname autodetected on all disks
+   if [ "$FROM" = "" ]; then FROM="$LIVEKITNAME"; fi
+
+   echo_white_star >&2
+   echo -n "Looking for MiniOS data in /$FROM .." | tr -s "/" >&2 >/dev/tty1
+   for TIMEOUT in $(seq 1 $1); do
+      echo -n "." >&2 >/dev/tty1
+      refresh_devs
+      DATA="$(find_data_try "$2" "$FROM")"
+      if [ "$DATA" != "" ]; then
+         echo "" >&2 >/dev/tty1
+         echo "* Found on $(mounted_device "$2")" >&2 >/dev/tty1
+         echo "$DATA"
+         return
+      fi
+      sleep 1
+   done
+   echo "" >&2 >/dev/tty1
+}
+
+# Check if data is found and exists
+# $1 = data directory
+#
+check_data_found() {
+   if [ "$1" = "" -o ! -d "$1" ]; then
+      fatal "Could not locate MiniOS data"
+   fi
+}
+
+# Get a human readable format of time elapsed since given datetime
+# $1 = date time
+#
+date_diff_since_now() {
+   local NOW TIMESTAMP SEC MINS HOURS DAYS
+
+   NOW=$(date '+%s')
+   TIMESTAMP=$(date --date "$1" '+%s')
+   SEC=$(($NOW - $TIMESTAMP))
+   MINS=$(($SEC / 60))
+   HOURS=$(($SEC / 3600))
+   DAYS=$(($SEC / 86400))
+
+   if [ "$DAYS" -gt 0 ]; then
+      echo "$DAYS days" | sed -r "s/^1 days/1 day/"
+   elif [ "$HOURS" -gt 0 ]; then
+      echo "$HOURS hours" | sed -r "s/^1 hours/1 hour/"
+   elif [ "$MINS" -gt 0 ]; then
+      echo "$MINS minutes" | sed -r "s/^1 minutes/1 minute/"
+   else
+      echo "$SEC seconds" | sed -r "s/^1 seconds/1 second/"
+   fi
+}
+
+# Check if the directory is writable. If the directory is writable, 0 is returned, otherwise 1 is returned.
+# $1 = The directory to check for write access.
+# $2 = The device on which the directory resides.
+# $3 = An optional parameter that specifies the persistent changes directory.
+#      If not provided, it will be retrieved from the command line.
+#
+check_write_access() {
+   debug_log "check_write_access" "$*"
+   local CHANDIR DRIVE PERCHDIR T1
+
+   CHANDIR="$1"
+   if echo "$2" | grep -q ":"; then
+      PERCHDIR=$(echo "$2" | cut -d':' -f2)
+   else
+      PERCHDIR="$2"
+   fi
+   T1="$CHANDIR/.empty"
+
+   # Supported syntax is even like perchdir=/dev/sda1/changes
+   # In this case, perchdir is mounted over $CHANDIR and is set to ask
+   if echo "$PERCHDIR" | grep -q '^/dev/'; then
+      case "$PERCHDIR" in
+      /dev/disk/by-label/*)
+         LABEL=$(echo "$PERCHDIR" | awk -F"/" '{print $5}')
+         DRIVE=$(blkid -t LABEL="$LABEL" -o device -c /dev/null 2>/dev/null)
+         ;;
+      /dev/mapper/*)
+         DRIVE="$(echo "$PERCHDIR" | cut -d '/' -f 1-4)"
+         ;;
+      /dev/*)
+         DRIVE="$(echo "$PERCHDIR" | cut -d '/' -f 1-3)"
+         ;;
+      esac
+
+      # If the partition is unavailable for writing, there is no point in
+      # checking whether the folder can be written to
+      if [ ! -w "$DRIVE" ]; then
+         return 1
+      fi
+
+      FS="$(device_bestfs "$DRIVE")"
+      OPTIONS="$(fs_options $FS)"
+      MOUNT="$(mount_command $FS)"
+
+      refresh_devs
+      $MOUNT "$DRIVE" "$CHANDIR" $OPTIONS 2>/dev/null || return 1
+      if [ $? -eq 0 ]; then
+         # check if changes directory exists and is writable
+         touch "$T1" 2>/dev/null && rm -f "$T1" 2>/dev/null
+
+         # if not, return 1, otherwise return 0
+         if [ $? -ne 0 ]; then
+            umount "$CHANDIR"
+            return 1
+         else
+            umount "$CHANDIR"
+            return 0
+         fi
+      fi
+   else
+      # check if changes directory exists and is writable
+      touch "$T1" 2>/dev/null && rm -f "$T1" 2>/dev/null
+
+      # if not, return 1, otherwise return 0
+      if [ $? -ne 0 ]; then
+         return 1
+      else
+         return 0
+      fi
+   fi
+}
+
+# Attempt to mount a device to a specific directory.
+# $1 = The device to be mounted.
+# $2 = The directory where the device will be mounted.
+# $3 = Persistent changes directory within the mounted device.
+#
+mount_perch_drive() {
+   debug_log "mount_perch_drive" "$*"
+   local TIMEOUT DRIVE FS OPTIONS MOUNT CHANDIR PERCHDIR LABEL
+
+   DRIVE="$1"
+   CHANDIR="$2"
+   PERCHDIR="$3"
+
+   case "$PERCHDIR" in
+   /dev/disk/by-label/*)
+      LABEL=$(echo "$PERCHDIR" | awk -F"/" '{print $5}')
+      DRIVE=$(blkid -t LABEL="$LABEL" -o device -c /dev/null 2>/dev/null)
+      PERCHDIR="$(echo "$PERCHDIR" | cut -d '/' -f 6-)"
+      ;;
+   /dev/mapper/*)
+      DRIVE="$(echo "$PERCHDIR" | cut -d '/' -f 1-4)"
+      LABEL=$(blkid -o value -s LABEL "$DRIVE" -c /dev/null 2>/dev/null)
+      PERCHDIR="$(echo "$PERCHDIR" | cut -d '/' -f 5-)"
+      ;;
+   /dev/*)
+      DRIVE="$(echo "$PERCHDIR" | cut -d '/' -f 1-3)"
+      LABEL=$(blkid -o value -s LABEL "$DRIVE" -c /dev/null 2>/dev/null)
+      PERCHDIR="$(echo "$PERCHDIR" | cut -d '/' -f 4-)"
+      ;;
+   label:*)
+      LABEL=$(echo "$PERCHDIR" | awk -F":" '{print $2}' | awk -F"/" '{print $1}')
+      DRIVE=$(blkid -t LABEL="$LABEL" -o device -c /dev/null 2>/dev/null)
+      PERCHDIR="$(echo "$PERCHDIR" | cut -d '/' -f 2-)"
+      ;;
+   esac
+
+   FS="$(device_bestfs "$DRIVE")"
+   OPTIONS="$(fs_options $FS)"
+   MOUNT="$(mount_command $FS)"
+
+   echo -n "* Waiting for persistent changes on $DRIVE .." >&2
+   for TIMEOUT in $(seq 1 20); do
+      echo -n "." >&2
+      refresh_devs
+      if $MOUNT "$DRIVE" "$CHANDIR" $OPTIONS 2>/dev/null; then
+         if [ -n "$PERCHDIR" ] && [ "$PERCHDIR" != "/" ]; then
+            mkdir -p "$CHANDIR/$PERCHDIR"
+            if $MOUNT --bind "$CHANDIR/$PERCHDIR" "$CHANDIR"; then
+               echo -e "\n" >&2
+               break
+            fi
+         else
+            echo -e "\n" >&2
+            break
+         fi
+      fi
+      sleep 1
+   done
+   echo "$PERCHDIR"
+}
+
+# Restore persistent changes from previous session.
+# Store persistent changes to a directory and keep the directory in a session file,
+# so we know which session was active last time so we can resume it next time
+# $1 = partition on which changes will be stored
+# $2 = changes directory
+# $3 = persistent changes directory within changes directory
+# $4 = action to perform (e.g., resume, new, ask)
+# $5 = session mode
+#
+restore_perch_session() {
+   debug_log "restore_perch_session" "$*"
+   local DRIVE CHANDIR PERCHDIR ACTION LASTSESSION LASTMODE LASTVERSION LASTEDITION NEW DIR USAGE LASTMOD DAYS PERCHMODE SESSIONS SELECTED VERSION EDITION SYSTEM_VERSION SYSTEM_EDITION
+
+   DRIVE="$1"
+   CHANDIR="$2"
+   PERCHDIR="$3"
+   ACTION="$4"
+   PERCHMODE="$5"
+
+   # Get current system's MiniOS version and edition
+   if [ -f /etc/minios-release ]; then
+      SYSTEM_VERSION=$(config_value "/etc/minios-release" VERSION)
+      SYSTEM_EDITION=$(config_value "/etc/minios-release" EDITION)
+   fi
+   # Set the main VERSION/EDITION variables to the system's version by default
+   VERSION="$SYSTEM_VERSION"
+   EDITION="$SYSTEM_EDITION"
+
+   # Supported syntax allows perchdir=/dev/sda1/changes
+   # In this case, perchdir is mounted on $CHANDIR and action is prompted
+   if echo "$PERCHDIR" | grep -q '^/dev/'; then
+      PERCHDIR=$(mount_perch_drive "$DRIVE" "$CHANDIR" "$PERCHDIR" 2>/dev/null)
+      if [ "$PERCHDIR" = "resume" ] || [ "$PERCHDIR" = "new" ] || [ "$PERCHDIR" = "ask" ]; then
+         ACTION="$PERCHDIR"
+      fi
+   fi
+
+   if command -v jq >/dev/null 2>&1; then
+      SESSIONS="$CHANDIR/session.json"
+      if [ ! -f "$SESSIONS" ]; then
+         echo '{"default": null, "sessions": {}}' >"$SESSIONS"
+      fi
+
+      LASTSESSION=$(jq -r '.default // empty' "$SESSIONS")
+      LASTMODE=$(jq -r ".sessions[\"$LASTSESSION\"].mode // empty" "$SESSIONS")
+      LASTVERSION=$(jq -r ".sessions[\"$LASTSESSION\"].version // empty" "$SESSIONS")
+      LASTEDITION=$(jq -r ".sessions[\"$LASTSESSION\"].edition // empty" "$SESSIONS")
+   else
+      SESSIONS="$CHANDIR/session.conf"
+      [ ! -f "$SESSIONS" ] && echo "default=\nsession_mode=" >"$SESSIONS"
+
+      LASTSESSION=$(sed -n 's/^default=//p' "$SESSIONS")
+      LASTMODE=$(sed -n "s/^session_mode\[$LASTSESSION\]=//p" "$SESSIONS")
+      LASTVERSION=$(sed -n "s/^session_version\[$LASTSESSION\]=//p" "$SESSIONS")
+      LASTEDITION=$(sed -n "s/^session_edition\[$LASTSESSION\]=//p" "$SESSIONS")
+   fi
+
+   if [ -n "$LASTSESSION" ]; then
+      # If action is "ask", prompt the user to select a session
+      if [ "$ACTION" = "ask" ]; then
+         local SESSION_CONFIRMED="false"
+         while [ "$SESSION_CONFIRMED" = "false" ]; do
+            ls -1 $CHANDIR | grep -E "^[0-9]+" | while read DIR; do
+               local S_VERSION S_EDITION INFO_PARTS SESSION_INFO
+               if command -v jq >/dev/null 2>&1; then
+                  S_VERSION=$(jq -r ".sessions[\"$DIR\"].version // empty" "$SESSIONS")
+                  S_EDITION=$(jq -r ".sessions[\"$DIR\"].edition // empty" "$SESSIONS")
+               else
+                  S_VERSION=$(sed -n "s/^session_version\[$DIR\]=//p" "$SESSIONS")
+                  S_EDITION=$(sed -n "s/^session_edition\[$DIR\]=//p" "$SESSIONS")
+               fi
+
+               INFO_PARTS=""
+               [ -n "$S_VERSION" ] && INFO_PARTS="$S_VERSION"
+               if [ -n "$S_EDITION" ]; then
+                  [ -n "$INFO_PARTS" ] && INFO_PARTS="$INFO_PARTS, "
+                  INFO_PARTS="$INFO_PARTS$S_EDITION"
+               fi
+
+               [ -n "$INFO_PARTS" ] && SESSION_INFO=" ($INFO_PARTS)"
+
+               USAGE=$(du -s -h "$CHANDIR/$DIR" 2>/dev/null | sed -r "s/[[:space:]].*//")
+               LASTMOD=$(date -r "$CHANDIR/$DIR" "+%Y-%m-%d %H:%M:%S")
+               DAYS=$(date_diff_since_now "$LASTMOD")
+
+               echo "$LASTMOD Resume session #$DIR$SESSION_INFO - last access $DAYS ago - using $USAGE" | sed -r "s/(.)\$/ \1B/"
+
+            done | sort -r | cut -d " " -f 3- >/tmp/sessions.txt
+
+            SELECTED=$(ncurses-menu -t 'Select action:' -o 'Start a new session' -f /tmp/sessions.txt 2>&1 >/dev/tty1 </dev/tty1)
+
+            if [ -z "$SELECTED" ]; then
+               continue
+            fi
+
+            if echo "$SELECTED" | grep -q "new"; then
+               ACTION="new"
+               SESSION_CONFIRMED="true"
+            else
+               PERCHDIR=$(echo "$SELECTED" | sed -r 's/.*#//' | sed -r 's/[^0-9].*//')
+               local SELECTED_VERSION SELECTED_EDITION
+               if command -v jq >/dev/null 2>&1; then
+                  PERCHMODE=$(jq -r ".sessions[\"$PERCHDIR\"].mode // \"unknown\"" "$SESSIONS")
+                  SELECTED_VERSION=$(jq -r ".sessions[\"$PERCHDIR\"].version // \"unknown\"" "$SESSIONS")
+                  SELECTED_EDITION=$(jq -r ".sessions[\"$PERCHDIR\"].edition // \"unknown\"" "$SESSIONS")
+               else
+                  PERCHMODE=$(sed -n "s/^session_mode\[$PERCHDIR\]=//p" "$SESSIONS")
+                  SELECTED_VERSION=$(sed -n "s/^session_version\[$PERCHDIR\]=//p" "$SESSIONS")
+                  SELECTED_EDITION=$(sed -n "s/^session_edition\[$PERCHDIR\]=//p" "$SESSIONS")
+               fi
+
+               local WARNING_TITLE=""
+               if [ "$SYSTEM_VERSION" != "$SELECTED_VERSION" ] && [ "$SYSTEM_EDITION" != "$SELECTED_EDITION" ]; then
+                  WARNING_TITLE="Warning: Incompatible Session\n"
+                  WARNING_TITLE="${WARNING_TITLE}Reason: OS Version and Edition Mismatch\n"
+                  WARNING_TITLE="${WARNING_TITLE}System: $SYSTEM_VERSION/$SYSTEM_EDITION | Session: $SELECTED_VERSION/$SELECTED_EDITION"
+               elif [ "$SYSTEM_VERSION" != "$SELECTED_VERSION" ]; then
+                  WARNING_TITLE="Warning: Incompatible Session\n"
+                  WARNING_TITLE="${WARNING_TITLE}Reason: OS Version Mismatch\n"
+                  WARNING_TITLE="${WARNING_TITLE}System: $SYSTEM_VERSION | Session: $SELECTED_VERSION"
+               elif [ "$SYSTEM_EDITION" != "$SELECTED_EDITION" ]; then
+                  WARNING_TITLE="Warning: Incompatible Session\n"
+                  WARNING_TITLE="${WARNING_TITLE}Reason: OS Edition Mismatch\n"
+                  WARNING_TITLE="${WARNING_TITLE}System: $SYSTEM_EDITION | Session: $SELECTED_EDITION"
+               fi
+
+               if [ -n "$WARNING_TITLE" ]; then
+                  WARNING_TITLE="${WARNING_TITLE}\nUsing this session may cause system instability.\nProceed anyway?"
+
+                  WARNING_CHOICE=$(ncurses-menu \
+                     -t "${WARNING_TITLE}" \
+                     -o "Yes, proceed at my own risk" \
+                     -o "No, return to session list" \
+                     2>&1 >/dev/tty1 </dev/tty1)
+
+                  if echo "$WARNING_CHOICE" | grep -q "Yes"; then
+                     VERSION="$SELECTED_VERSION"
+                     EDITION="$SELECTED_EDITION"
+                     SESSION_CONFIRMED="true"
+                  fi
+               else
+                  VERSION="$SELECTED_VERSION"
+                  EDITION="$SELECTED_EDITION"
+                  SESSION_CONFIRMED="true"
+               fi
+            fi
+         done
+      # Check for mode change
+      elif [ -n "$PERCHMODE" ] && [ "$PERCHMODE" != "$LASTMODE" ]; then
+         echo_white_star >&2
+         echo "Persistence mode has changed. Creating new session." >&2 >/dev/tty1
+         ACTION="new"
+      # Check for version/edition mismatch (only if a previous version exists)
+      elif [ "$ACTION" = "resume" ] && [ -n "$LASTVERSION" ] && { [ "$SYSTEM_VERSION" != "$LASTVERSION" ] || [ "$SYSTEM_EDITION" != "$LASTEDITION" ]; }; then
+         if [ "$SYSTEM_VERSION" != "$SELECTED_VERSION" ] && [ "$SYSTEM_EDITION" != "$SELECTED_EDITION" ]; then
+            echo_white_star >&2
+            echo "OS version and edition mismatch (System: $SYSTEM_VERSION/$SYSTEM_EDITION, Session: $LASTVERSION/$LASTEDITION). Creating new session." >&2 >/dev/tty1
+         elif [ "$SYSTEM_VERSION" != "$LASTVERSION" ]; then
+            echo_white_star >&2
+            echo "OS version mismatch (System: $SYSTEM_VERSION, Session: $LASTVERSION). Creating new session." >&2 >/dev/tty1
+         elif [ "$SYSTEM_EDITION" != "$LASTEDITION" ]; then
+            echo_white_star >&2
+            echo "OS edition mismatch (System: $SYSTEM_EDITION, Session: $LASTEDITION). Creating new session." >&2 >/dev/tty1
+         fi
+         ACTION="new"
+      elif [ "$ACTION" = "resume" ]; then
+         PERCHDIR="$LASTSESSION"
+         PERCHMODE="$LASTMODE"
+         VERSION="$LASTVERSION"
+         EDITION="$LASTEDITION"
+      else
+         ACTION="new"
+      fi
+   fi
+
+   if [ "$ACTION" = "new" ] || [ ! -d "$CHANDIR/$PERCHDIR" ]; then
+      NEW=$(ls -1 $CHANDIR | egrep '^[0-9]' | sed -r 's/[^0-9].*//' | sort | tail -n 1)
+      NEW=$(($NEW + 1))
+      mkdir -p "$CHANDIR/$NEW"
+      PERCHDIR="$NEW"
+      VERSION="$SYSTEM_VERSION"
+      EDITION="$SYSTEM_EDITION"
+   fi
+
+   : "${PERCHMODE:=native}"
+
+   if command -v jq >/dev/null 2>&1; then
+      jq --arg session "$PERCHDIR" \
+         --arg mode "$PERCHMODE" \
+         --arg version "$VERSION" \
+         --arg edition "$EDITION" \
+         '.default = $session | .sessions[$session] = {"mode": $mode, "version": $version, "edition": $edition}' \
+         "$SESSIONS" >"${SESSIONS}.tmp" && mv "${SESSIONS}.tmp" "$SESSIONS"
+   else
+      sed -i \
+         -e "s/^default=.*/default=$PERCHDIR/" \
+         -e "/^session_mode\[$PERCHDIR\]=.*/d" \
+         -e "/^session_version\[$PERCHDIR\]=.*/d" \
+         -e "/^session_edition\[$PERCHDIR\]=.*/d" \
+         "$SESSIONS"
+      echo "session_mode[$PERCHDIR]=$PERCHMODE" >>"$SESSIONS"
+      echo "session_version[$PERCHDIR]=$VERSION" >>"$SESSIONS"
+      echo "session_edition[$PERCHDIR]=$EDITION" >>"$SESSIONS"
+   fi
+
+   touch "$CHANDIR/$PERCHDIR"
+   echo "$PERCHDIR" "$PERCHMODE"
+}
+
+# Manage persistence partition
+# $1 = partition on which changes will be stored
+# $2 = changes directory
+#
+manage_perch_partition() {
+   debug_log "manage_perch_partition" "$*"
+   local PERCHPART RESIZEMEPART PERCHDEVICE DEVICE DRIVE PERCHDIR LABELS PART ALTPART FREE_SPACE_MB
+
+   DRIVE="$1"
+   PERCHDIR="$2"
+
+   # Determine the primary device
+   VENTOYDRIVE=$(awk '/linear/ {print $4}' /ventoy/ventoy_dm_table 2>/dev/null)
+   if [ ! "$VENTOYDRIVE" ]; then
+      DEVICE="/dev/$(lsblk -no pkname "$DRIVE" 2>/dev/null | head -n 1)"
+   else
+      DEVICE="/dev/$(lsblk -no pkname "$VENTOYDRIVE" 2>/dev/null | head -n 1)"
+   fi
+
+   for LABEL in persistence resizeme; do
+      PART=$(blkid -t LABEL="$LABEL" -o device -c /dev/null 2>/dev/null)
+      if [ "$PART" ]; then
+         PERCHDEVICE="/dev/$(lsblk -no pkname "$PART" 2>/dev/null | head -n 1)"
+         if [ "$PERCHDEVICE" != "$DEVICE" ]; then
+            continue
+         fi
+         # Handle existing partitions
+         if [ "$LABEL" = "resizeme" ]; then
+            echo "* Found resizeme partition, resizing..." >&2
+            if ! parted --fix -a optimal -s "$DEVICE" resizepart $(lsblk -no partn "$PART" 2>/dev/null) 100% >/dev/null 2>&1; then
+               echo "$PERCHDIR"
+               return
+            fi
+            partprobe "$DEVICE" >/dev/null 2>&1 || sleep 1
+            if ! mke2fs -t ext4 -F -L persistence "$PART" >/dev/null 2>&1; then
+               echo "$PERCHDIR"
+               return
+            fi
+         fi
+         PERCHPART="$PART"
+         break
+      fi
+   done
+
+   if [ ! "$PERCHPART" ]; then
+      # Check for Ventoy-specific partition
+      if [ "$VENTOYDRIVE" ]; then
+         PART=$(blkid -t LABEL="persistence" -o device -c /dev/null 2>/dev/null | grep "$VENTOYDRIVE")
+         if [ ! "$PART" ]; then
+            # If no persistence partition, use Ventoy's default
+            # In Ventoy version 1.1.01 and higher, a device link to /dev/mapper is used instead of the VENTOY_LINUX_REMOUNT variable in the configuration file.
+            MAPPER_DEVICE="/dev/mapper/$(lsblk -no name "$VENTOYDRIVE" 2>/dev/null | head -n 1)"
+            if [ -e "$MAPPER_DEVICE" ]; then
+               PERCHPART="$MAPPER_DEVICE/minios/changes"
+            # If there is no device link in /dev/mapper, then an older version of Ventoy is used.
+            else
+               PERCHPART="$VENTOYDRIVE/minios/changes"
+            fi
+         else
+            PERCHPART="$PART"
+         fi
+      fi
+   fi
+
+   if [ ! "$PERCHPART" ]; then
+      echo "$PERCHDIR"
+      return
+   fi
+
+   echo "$PERCHPART"
+}
+
+# Activate persistent changes
+# $1 = data directory
+# $2 = target changes directory
+#
+persistent_changes() {
+   debug_log "persistent_changes" "$*"
+   local DATA CHANGES DRIVE CHANDIR PERCHDIR PERCHSIZE PERCHFILE FS_TYPE PERCHFILE_EXISTS SPECIFIED AVAILABLE_SPACE MAX_SIZE MOUNT_OPTS PERCHMODE ACTION PERCHSESSION CURRENT_SIZE
+
+   DATA="$1"
+   CHANGES="$2"
+   PERCHDIR="$(cmdline_value perchdir)"
+   PERCHMODE="$(cmdline_value perchmode)"
+   PERCHSIZE="$(cmdline_value perchsize)"
+   : "${PERCHSIZE:=0}"
+   CHANDIR="$DATA/$(basename "$CHANGES")"
+   DRIVE="$(df "$DATA" | tail -n 1 | awk '{print $1}')"
+
+   handle_perch_file() {
+      if [ -z "$PERCHFILE_EXISTS" ]; then
+         echo "* Creating new persistent changes for session #$PERCHDIR"
+         debug_log "truncate -s ${PERCHSIZE}M $1"
+         truncate -s "${PERCHSIZE}M" "$1"
+         echo "- creating filesystem"
+         mke2fs -t ext4 -F "$1" >/dev/null 2>&1
+      else
+         echo "* Resuming persistent changes for session #$PERCHDIR"
+         echo "- grow if needed"
+         case "$PERCHMODE" in
+         "raw")
+            CURRENT_SIZE=$(du -m "$1" | awk '{print $1}')
+            if [ "$PERCHSIZE" -gt "$CURRENT_SIZE" ]; then
+               echo "- expanding raw image from ${CURRENT_SIZE}MB to ${PERCHSIZE}MB"
+               truncate -s "${PERCHSIZE}M" "$1"
+            fi
+            resize2fs -f "$1" >/dev/null 2>&1
+            ;;
+         "dynfilefs")
+            resize2fs -f "$1" >/dev/null 2>&1
+            ;;
+         esac
+         if command -v e2fsck >/dev/null; then
+            echo "- checking filesystem for errors"
+            e2fsck -p "$1"
+         fi
+      fi
+      echo "- mounting persistent changes"
+      mount -o loop "$1" "$CHANGES"
+   }
+
+   calculate_perch_size() {
+      AVAILABLE_SPACE=$(df "$CHANDIR" | tail -n 1 | awk '{print $4}')
+      AVAILABLE_SPACE=$((AVAILABLE_SPACE / 1024))
+
+      if [ "$PERCHMODE" = "raw" ] && [ -e "$CHANDIR/$PERCHFILE" ]; then
+         CURRENT_SIZE=$(du -m "$CHANDIR/$PERCHFILE" | awk '{print $1}')
+         AVAILABLE_SPACE=$((AVAILABLE_SPACE + CURRENT_SIZE))
+      fi
+
+      if [ "$PERCHSIZE" = "0" ] && [ ! -e "$CHANDIR/$PERCHFILE" ]; then
+         if [ "$PERCHMODE" = "dynfilefs" ]; then
+            PERCHSIZE=$((AVAILABLE_SPACE / 1000 * 1000))
+            [ "$PERCHSIZE" -lt 4000 ] && PERCHSIZE=4000
+            return
+         else
+            PERCHSIZE=4000
+         fi
+      fi
+
+      MAX_SIZE=$((AVAILABLE_SPACE - 100))
+
+      if [ "$PERCHSIZE" -gt "$MAX_SIZE" ]; then
+         echo "- persistent changes size ${PERCHSIZE}MB exceeds available space"
+         echo "- using maximum available size ${MAX_SIZE}MB"
+         PERCHSIZE=$MAX_SIZE
+      fi
+
+      if [ "$FS_TYPE" = "vfat" ] && [ "$PERCHSIZE" -gt 4000 ]; then
+         echo "- persistent changes size ${PERCHSIZE}MB exceeds FAT32 limit, using 4000MB"
+         PERCHSIZE=4000
+      fi
+   }
+
+   update_session() {
+      local SESSIONS VERSION EDITION
+
+      if [ -f /etc/minios-release ]; then
+         VERSION=$(config_value "/etc/minios-release" VERSION)
+         EDITION=$(config_value "/etc/minios-release" EDITION)
+      fi
+
+      if command -v jq >/dev/null 2>&1; then
+         SESSIONS="$CHANDIR/session.json"
+         [ ! -f "$SESSIONS" ] && echo '{"default": null, "sessions": {}}' >"$SESSIONS"
+         jq --arg session "$PERCHDIR" \
+            --arg mode "$PERCHMODE" \
+            --arg version "$VERSION" \
+            --arg edition "$EDITION" \
+            '.default = $session | .sessions[$session].mode = $mode | .sessions[$session].version = $version | .sessions[$session].edition = $edition' \
+            "$SESSIONS" >"${SESSIONS}.tmp" && mv "${SESSIONS}.tmp" "$SESSIONS"
+      else
+         SESSIONS="$CHANDIR/session.conf"
+         [ ! -f "$SESSIONS" ] && echo "default=\nsession_mode=" >"$SESSIONS"
+         sed -i \
+            -e "s/^default=.*/default=$PERCHDIR/" \
+            -e "/^session_mode\[$PERCHDIR\]=.*/d" \
+            -e "/^session_version\[$PERCHDIR\]=.*/d" \
+            -e "/^session_edition\[$PERCHDIR\]=.*/d" \
+            "$SESSIONS"
+         echo "session_mode[$PERCHDIR]=$PERCHMODE" >>"$SESSIONS"
+         echo "session_version[$PERCHDIR]=$VERSION" >>"$SESSIONS"
+         echo "session_edition[$PERCHDIR]=$EDITION" >>"$SESSIONS"
+      fi
+   }
+
+   native_mode() {
+      local T1="$CHANDIR/.empty"
+      local T2="${T1}2"
+      PERCHMODE="native"
+      if touch "$T1" && ln -sf "$T1" "$T2" 2>/dev/null &&
+         chmod +x "$T1" 2>/dev/null && test -x "$T1" &&
+         chmod -x "$T1" 2>/dev/null && test ! -x "$T1" &&
+         rm "$T1" "$T2" 2>/dev/null; then
+         echo "* Activating native persistent changes for session #$PERCHDIR"
+         mount --bind "$CHANDIR/$PERCHDIR" "$CHANGES"
+         update_session
+      else
+         echo "* Native mode failed, falling back to DynFileFS"
+         dynfilefs_mode
+      fi
+   }
+
+   dynfilefs_mode() {
+      PERCHMODE="dynfilefs"
+      PERCHFILE="$PERCHDIR/changes.dat"
+      [ -e "$CHANDIR/$PERCHFILE" ] && PERCHFILE_EXISTS="true"
+      calculate_perch_size
+      MOUNT_OPTS="-f $CHANDIR/$PERCHFILE -m $CHANGES -p 4000"
+      [ -z "$PERCHFILE_EXISTS" ] || [ -n "$PERCHSIZE" ] && MOUNT_OPTS="$MOUNT_OPTS -s $PERCHSIZE"
+      @mount.dynfilefs $MOUNT_OPTS
+      handle_perch_file "$CHANGES/virtual.dat"
+      update_session
+   }
+
+   raw_mode() {
+      PERCHMODE="raw"
+      PERCHFILE="$PERCHDIR/changes.img"
+      [ -e "$CHANDIR/$PERCHFILE" ] && PERCHFILE_EXISTS="true"
+      calculate_perch_size
+      handle_perch_file "$CHANDIR/$PERCHFILE"
+      update_session
+   }
+
+   # Setup the directory anyway, it will be used in all cases
+   mkdir -p "$CHANGES"
+
+   # If persistent changes are not requested, end here,
+   # so memory will be used to save changes temporarily
+   if grep -vq perch /proc/cmdline; then
+      return
+   fi
+
+   if [ "$PERCHDIR" = "resume" ] || [ "$PERCHDIR" = "new" ] || [ "$PERCHDIR" = "ask" ]; then
+      ACTION="$PERCHDIR"
+   else
+      ACTION="resume"
+   fi
+
+   PERCHDIR=$(ask_disk "$PERCHDIR" perchdir)
+   PERCHDIR=$(manage_perch_partition "$DRIVE" "$PERCHDIR")
+
+   # Check if changes directory exists and is writable
+   if ! check_write_access "$CHANDIR" "$PERCHDIR"; then
+      echo "* Persistent changes not writable or not used"
+      return
+   fi
+
+   PERCHSESSION=$(restore_perch_session "$DRIVE" "$CHANDIR" "$PERCHDIR" "$ACTION" "$PERCHMODE")
+
+   PERCHDIR=$(echo "$PERCHSESSION" | awk '{print $1}')
+   : "${PERCHMODE:=$(echo "$PERCHSESSION" | awk '{print $2}')}"
+
+   if [ -z "$PERCHMODE" ]; then
+      native_mode
+   else
+      case "$PERCHMODE" in
+      "native") native_mode ;;
+      "dynfilefs") dynfilefs_mode ;;
+      "raw") raw_mode ;;
+      *)
+         echo "* Unknown type of persistent changes specified, falling back to native"
+         native_mode
+         ;;
+      esac
+   fi
+
+   rmdir "$CHANGES/lost+found" 2>/dev/null
+}
+
+# Copy content of rootcopy directory to union
+# $1 = data directory
+# $2 = union directory
+#
+copy_rootcopy_content() {
+   debug_log "copy_rootcopy_content" "$*"
+
+   if [ "$(ls -1 "$1/rootcopy/" 2>/dev/null)" != "" ]; then
+      echo_white_star
+      echo "Copying content of rootcopy directory..."
+      cp -a "$1"/rootcopy/* "$2"
+   fi
+}
+
+# Run user custom preinit script if it exists
+# $1 = data directory
+# $2 = union directory
+#
+user_preinit() {
+   debug_log "user_preinit" "$*"
+   local SRC
+
+   SRC="$1/rootcopy/run/preinit.sh"
+
+   if [ "$(ls -1 "$SRC" 2>/dev/null)" != "" ]; then
+      echo_white_star
+      echo "Executing user custom preinit..."
+      debug_log "Executing user custom preinit [$SRC]"
+      . "$SRC" "$2"
+   fi
+}
+
+# Copy data to RAM if requested
+# $1 = live data directory
+# $2 = changes directory
+#
+copy_to_ram() {
+   debug_log "copy_to_ram" "$*"
+   local MDIR MDEV RAM DATA CHANGES LOAD NOLOAD FILE DIR
+   DATA="$1"
+   CHANGES="$2"
+
+   RAM="$(dirname "$CHANGES")"/toram
+   CMDLINE=$(cat /proc/cmdline)
+
+   # Function to copy filtered MiniOS data to RAM
+   copy_filtered_bundles() {
+      local FILE
+      cp -a "$DATA/config.conf" "$RAM/config.conf" || {
+         echo "Failed to copy config.conf to RAM" >&2 >/dev/tty1
+         exit 1
+      }
+      if [ -f "$DATA/authorized_keys" ]; then
+         cp -a "$DATA/authorized_keys" "$RAM/authorized_keys" || {
+            echo "Failed to copy authorized_keys to RAM" >&2 >/dev/tty1
+         }
+      fi
+      (
+         ls -1 "$DATA" | sort -n
+         cd "$DATA"
+         find modules/ 2>/dev/null | sortmod
+      ) | grep '[.]'$BEXT'$' | filter | while read FILE; do
+         mkdir -p "$RAM/$(dirname "$FILE")"
+         cp -a "$DATA/$FILE" "$RAM/$FILE" || {
+            echo "Failed to copy $FILE to RAM" >&2 >/dev/tty1
+            exit 1
+         }
+      done
+   }
+
+   case "$CMDLINE" in
+   *toram=trim*)
+      mkdir -p "$RAM"
+      echo "* Copying filtered MiniOS data to RAM..." >&2 >/dev/tty1
+      copy_filtered_bundles
+      if echo "$CMDLINE" | grep -q "perch"; then
+         echo "* Copying changes to RAM..." >&2 >/dev/tty1
+         cp -a "$DATA/changes" "$RAM/changes" || {
+            echo "Failed to copy data to RAM" >&2 >/dev/tty1
+            exit 1
+         }
+      fi
+      ;;
+   *toram* | *toram=full*)
+      mkdir -p "$RAM"
+      echo "* Copying all MiniOS data to RAM..." >&2 >/dev/tty1
+      if echo "$CMDLINE" | grep -q "perch"; then
+         cp -a "$DATA"/* "$RAM" || {
+            echo_red_star
+            echo "Failed to copy data to RAM" >&2 >/dev/tty1
+            exit 1
+         }
+      else
+         find "$DATA" -mindepth 1 -maxdepth 1 ! -name changes -exec cp -a {} "$RAM" \; || {
+            echo_red_star
+            echo "Failed to copy data to RAM" >&2 >/dev/tty1
+            exit 1
+         }
+      fi
+      ;;
+   *)
+      echo "$DATA"
+      return
+      ;;
+   esac
+
+   # Get mounted directory and device for $DATA
+   MDIR="$(mounted_dir "$DATA")"
+   MDEV="$(mounted_device "$DATA")"
+   MDEV="$(losetup "$MDEV" 2>/dev/null | cut -d " " -f 3)"
+
+   # Attempt to unmount and move RAM directory
+   if ! umount "$MDIR" 2>/dev/null || ! rm -rf "$DATA" || ! mv "$RAM" "$DATA"; then
+      echo "$RAM"
+   else
+      echo "$DATA"
+   fi
+
+   # If an ISO was mounted, try to unmount its filesystem
+   if [ "$MDEV" ]; then
+      MDEV="$(mounted_device "$MDEV")"
+      umount "$MDEV" 2>/dev/null
+   fi
+}
+
+# universal filter
+#
+filter() {
+   local LOAD_FILTER NOLOAD_FILTER NUM START END
+
+   parse_filter() {
+      local FILTER=$1 START END NUM
+      FILTER=${FILTER//,/|}
+      if [ -n "$FILTER" ] && echo "$FILTER" | grep -qE '^[0-9]+-[0-9]+$'; then
+         START=$(echo "$FILTER" | cut -d '-' -f 1)
+         END=$(echo "$FILTER" | cut -d '-' -f 2)
+         FILTER=""
+         while [ $START -le $END ]; do
+            NUM=$(printf "%02d" $START)
+            FILTER="$FILTER|$NUM"
+            START=$(($START + 1))
+         done
+         FILTER=${FILTER#|}
+      fi
+      echo "$FILTER"
+   }
+
+   LOAD_FILTER=$(parse_filter "$(cmdline_value load)")
+   NOLOAD_FILTER=$(parse_filter "$(cmdline_value noload)")
+
+   if [ -z "$LOAD_FILTER" ] && [ -z "$NOLOAD_FILTER" ]; then
+      cat -
+   elif [ -z "$NOLOAD_FILTER" ]; then
+      grep -E "$LOAD_FILTER"
+   elif [ -z "$LOAD_FILTER" ]; then
+      grep -Ev "$NOLOAD_FILTER"
+   else
+      grep -E "$LOAD_FILTER" | grep -Ev "$NOLOAD_FILTER"
+   fi
+}
+
+# sort modules by number even if they are in subdirectory
+#
+sortmod() {
+   cat - | sed -r "s,(.*/(.*)),\\2:\\1," | sort -n | cut -d : -f 2-
+}
+
+# Setup active kernel from config.conf
+# $1 = data directory containing config.conf and kernels/
+#
+setup_active_kernel() {
+   debug_log "setup_active_kernel" "$*"
+   
+   local DATA="$1"
+   local ACTIVE_KERNEL CONFIG_FILE KERNEL_SB_SRC KERNEL_SB_DST KERNEL_FILE
+   
+   CONFIG_FILE="$DATA/config.conf"
+   
+   # Check if config file exists
+   if [ ! -f "$CONFIG_FILE" ]; then
+      debug_log "setup_active_kernel: config.conf not found at $CONFIG_FILE"
+      return 0
+   fi
+   
+   # Get active kernel from config.conf.d first, then fallback to main config.conf
+   KERNEL_MANAGER_CONFIG="$DATA/config.conf.d/kernel-manager.conf"
+   if [ -f "$KERNEL_MANAGER_CONFIG" ]; then
+      ACTIVE_KERNEL=$(config_value "$KERNEL_MANAGER_CONFIG" "ACTIVE_KERNEL")
+      debug_log "setup_active_kernel: Checking kernel-manager.conf for ACTIVE_KERNEL"
+   fi
+   
+   # Fallback to main config.conf if not found in kernel-manager.conf
+   if [ -z "$ACTIVE_KERNEL" ]; then
+      ACTIVE_KERNEL=$(config_value "$CONFIG_FILE" "ACTIVE_KERNEL")
+      debug_log "setup_active_kernel: Checking main config.conf for ACTIVE_KERNEL"
+   fi
+   
+   # If no active kernel specified, use default behavior
+   if [ -z "$ACTIVE_KERNEL" ]; then
+      debug_log "setup_active_kernel: No ACTIVE_KERNEL specified in any config file"
+      return 0
+   fi
+   
+   debug_log "setup_active_kernel: Active kernel set to: $ACTIVE_KERNEL"
+   
+   # Destination path for the active kernel
+   KERNEL_SB_DST="$DATA/01-kernel-$ACTIVE_KERNEL.sb"
+
+   # Ensure the designated active kernel file exists in /minios/
+   if [ ! -f "$KERNEL_SB_DST" ]; then
+      echo_red_star
+      echo "WARNING: Active kernel file $KERNEL_SB_DST not found!"
+      # Attempt to find it in the repository and activate it
+      KERNEL_SB_SRC="$DATA/kernels/$ACTIVE_KERNEL/01-kernel-$ACTIVE_KERNEL.sb"
+      if [ -f "$KERNEL_SB_SRC" ]; then
+          echo "Found in repository, attempting to activate..."
+          cp "$KERNEL_SB_SRC" "$DATA/"
+      else
+          return 1
+      fi
+   fi
+
+   # Clean up other kernel files from the root /minios directory
+   find "$DATA" -maxdepth 1 -name "01-kernel-*.sb" | while read -r KERNEL_FILE; do
+      if [ "$KERNEL_FILE" != "$KERNEL_SB_DST" ]; then
+         debug_log "setup_active_kernel: Moving inactive kernel $KERNEL_FILE to kernels repository"
+         # Extract version and move to the correct subdirectory
+         INACTIVE_VERSION=$(basename "$KERNEL_FILE" | sed -e 's/01-kernel-//' -e 's/\.sb//')
+         mkdir -p "$DATA/kernels/$INACTIVE_VERSION"
+         mv "$KERNEL_FILE" "$DATA/kernels/$INACTIVE_VERSION/"
+      fi
+   done
+
+   echo_green_star
+   echo "Active kernel: $ACTIVE_KERNEL"
+
+   return 0
+}
+
+# Mount squashfs filesystem bundles
+# $1 = directory where to search for bundles
+# $2 = directory where to mount bundles
+#
+mount_bundles() {
+   echo_white_star
+   echo "Mounting bundles"
+   (
+      ls -1 "$1" | sort -n
+      cd "$1"
+      find modules/ 2>/dev/null | sortmod
+   ) | grep '[.]'$BEXT'$' | filter | while read BUNDLE; do
+      echo "* $BUNDLE"
+      BUN="$(basename "$BUNDLE")"
+      mkdir -p "$2/$BUN"
+      mount -o loop,ro -t squashfs "$1/$BUNDLE" "$2/$BUN"
+   done
+}
+
+# Add mounted bundles to aufs union
+# $1 = directory where bundles are mounted
+# $2 = directory where union is mounted
+#
+union_append_bundles() {
+   debug_log "union_append_bundles" "$*"
+
+   if aufs_is_supported >/dev/null; then
+      echo_white_star
+      echo "Adding bundles to union"
+      find "$1" -mindepth 1 -maxdepth 1 | sortmod | while read BUNDLE; do
+         mount -o remount,add:1:"$BUNDLE=rr+wh" aufs "$2"
+      done
+   fi
+}
+
+# Create empty fstab properly
+# $1 = root directory
+# $2 = directory where boot disk is mounted
+#
+fstab_create() {
+   debug_log "fstab_create" "$*"
+   local FSTAB DRIVE FS LABEL BOOTDEVICE OPTS
+
+   FSTAB="$1/etc/fstab"
+   echo aufs / aufs defaults 0 0 >$FSTAB
+   echo proc /proc proc defaults 0 0 >>$FSTAB
+   echo sysfs /sys sysfs defaults 0 0 >>$FSTAB
+   echo devpts /dev/pts devpts gid=5,mode=620 0 0 >>$FSTAB
+   echo tmpfs /dev/shm tmpfs defaults 0 0 >>$FSTAB
+
+   if grep -vq automount /proc/cmdline; then
+      return
+   fi
+
+   BOOTDEVICE=$(df "$2" | tail -n 1 | cut -d " " -f 1)
+
+   echo >>$FSTAB
+
+   blkid /dev/* | grep -v "^/dev/loop" | grep -v "^/dev/zram" | cut -d: -f 1 | while read DRIVE; do
+      FS="$(device_bestfs $DRIVE)"
+      LABEL="$(basename $DRIVE)"
+      OPTS="defaults,noatime,nofail,x-systemd.device-timeout=10"
+
+      if [ "$FS" != "" -a "$FS" != "swap" -a "$FS" != "squashfs" -a "$DRIVE" != "$BOOTDEVICE" ]; then
+         mkdir -p "$1/media/$LABEL"
+         echo "$DRIVE" "/media/$LABEL" $FS $OPTS 0 0 >>$FSTAB
+      fi
+   done
+}
+
+# minios_boot
+# -----------
+# $1 = data directory
+# $2 = target mount directory
+#
+minios_boot() {
+   debug_log "minios_boot $*"
+   local WRITABLE SRC DST
+
+   # Copy the boot binary to the target mount directory.
+   debug_log "minios_boot: Copying /bin/minios-boot to $2/"
+   cp /bin/minios-boot "$2/" || {
+      debug_log "ERROR: Failed to copy /bin/minios-boot to '$2/'"
+      return 1
+   }
+
+   # Save the current kernel command line in the target directory.
+   debug_log "minios_boot: Saving kernel cmdline to $2/cmdline"
+   cat /proc/cmdline >"$2/cmdline" || {
+      debug_log "ERROR: Failed to save cmdline to '$2/cmdline'"
+      return 1
+   }
+
+   # Mount system directories for chroot
+   debug_log "minios_boot: Mounting /dev, /proc, /sys, /run, /tmp"
+
+   mkdir -p "$2/dev" "$2/proc" "$2/sys" "$2/run" "$2/tmp" || {
+      debug_log "ERROR: Failed to create directories in '$2'"
+      return 1
+   }
+
+   mount --bind /dev "$2/dev" || {
+      debug_log "ERROR: Failed to mount /dev"
+      return 1
+   }
+   mount -t proc proc "$2/proc" || {
+      debug_log "ERROR: Failed to mount proc"
+      return 1
+   }
+   mount -t sysfs sysfs "$2/sys" || {
+      debug_log "ERROR: Failed to mount sysfs"
+      return 1
+   }
+   mount -t tmpfs tmpfs "$2/run" || {
+      debug_log "ERROR: Failed to mount run"
+      return 1
+   }
+   mount -t tmpfs tmpfs "$2/tmp" || {
+      debug_log "ERROR: Failed to mount tmpfs"
+      return 1
+   }
+
+   # Check if the data directory is writable.
+   if touch "$1/.empty" 2>/dev/null && rm -f "$1/.empty" 2>/dev/null; then
+      WRITABLE="true"
+      debug_log "minios_boot: '$1' is writable."
+   else
+      WRITABLE="false"
+      debug_log "minios_boot: '$1' is NOT writable."
+   fi
+
+   # Path to the marker file for storing last sync time
+   local STATE_FILE="$2/var/lib/live/config/last-config-sync-time"
+
+   # Get current time in seconds since epoch
+   local NOW=$(date +%s)
+
+   # Flag indicating that system time is incorrect (has been reset)
+   local SKIP_TIME_CHECK=false
+
+   # Check the marker of the previous synchronization
+   if [ -f "$STATE_FILE" ]; then
+      local LAST_SYNC=$(cat "$STATE_FILE")
+      if [ "$NOW" -lt "$LAST_SYNC" ]; then
+         debug_log "ERROR: System time appears wrong. Skipping timestamp-based sync."
+         SKIP_TIME_CHECK=true
+      fi
+   fi
+
+   # Function: determine whether to copy src ($1) to dst ($2)
+   should_copy() {
+      # $1 = source path, $2 = destination path
+      if [ "$SKIP_TIME_CHECK" = true ]; then
+         # if time is reset — only copy when destination does not exist
+         [ ! -f "$2" ]
+      else
+         # otherwise — copy if dst missing or src is newer than dst
+         [ ! -f "$2" ] || [ "$1" -nt "$2" ]
+      fi
+   }
+
+   debug_log "minios_boot: Starting two-way sync of config.conf and config.conf.d"
+
+   # --- Sync main config.conf ---
+   if [ -f "$1/config.conf" ] && should_copy "$1/config.conf" "$2/etc/live/config.conf"; then
+      debug_log "Copying $1/config.conf -> $2/etc/live/config.conf"
+      cp -fp "$1/config.conf" "$2/etc/live/config.conf" || {
+         debug_log "ERROR: copy failed"
+         return 1
+      }
+   elif [ "$WRITABLE" = "true" ] && [ -f "$2/etc/live/config.conf" ] &&
+      should_copy "$2/etc/live/config.conf" "$1/config.conf"; then
+      debug_log "Copying $2/etc/live/config.conf -> $1/config.conf"
+      cp -fp "$2/etc/live/config.conf" "$1/config.conf" || {
+         debug_log "ERROR: copy failed"
+         return 1
+      }
+   fi
+
+   # --- Ensure directories exist ---
+   mkdir -p "$2/etc/live/config.conf.d" "$1/config.conf.d" >/dev/null 2>&1 || true
+
+   # --- Sync files in config.conf.d from source to live ---
+   if [ -d "$1/config.conf.d" ]; then
+      for SRC in "$1/config.conf.d/"*.conf; do
+         [ -e "$SRC" ] || continue
+         DST="$2/etc/live/config.conf.d/$(basename "$SRC")"
+         if should_copy "$SRC" "$DST"; then
+            debug_log "Copying $SRC -> $DST"
+            cp -fp "$SRC" "$DST" || {
+               debug_log "ERROR: copy failed"
+               return 1
+            }
+         fi
+      done
+   fi
+
+   # --- If writable, sync back from live to source ---
+   if [ "$WRITABLE" = "true" ] && [ -d "$2/etc/live/config.conf.d" ]; then
+      for SRC in "$2/etc/live/config.conf.d/"*.conf; do
+         [ -e "$SRC" ] || continue
+         DST="$1/config.conf.d/$(basename "$SRC")"
+         if should_copy "$SRC" "$DST"; then
+            debug_log "Copying $SRC -> $DST"
+            cp -fp "$SRC" "$DST" || {
+               debug_log "ERROR: copy failed"
+               return 1
+            }
+         fi
+      done
+   fi
+
+   # Update the marker if the system time is valid
+   if [ "$SKIP_TIME_CHECK" = "false" ]; then
+      echo "$NOW" >"$STATE_FILE" || debug_log "WARNING: Could not write state file"
+   fi
+
+   debug_log "minios_boot: Sync completed"
+
+   # Execute the minios-boot script in the target directory.
+   debug_log "minios_boot: Running chroot /bin/bash -c '/minios-boot'"
+   chroot "$2" /bin/bash -c "/minios-boot"
+   local CHROOT_EXIT=$?
+
+   # Export logs if enabled and writable.
+   local EXPORT_LOGS LOGDIR
+   EXPORT_LOGS=$(config_value "$1/config.conf" EXPORT_LOGS)
+   local DATE=$(date +%Y%m%d)
+   local TIME=$(date +%H%M%S)
+   if [ "$EXPORT_LOGS" = "true" ] && [ "$WRITABLE" = "true" ]; then
+      LOGDIR="$1/log/${DATE}_${TIME}"
+      debug_log "minios_boot: Creating export directories $LOGDIR/minios and $LOGDIR/live"
+      mkdir -p "$LOGDIR/minios" "$LOGDIR/live" || {
+         debug_log "ERROR: Failed to create export directories"
+      }
+      debug_log "minios_boot: Copying logs"
+      cp -a "$2/var/log/minios/." "$LOGDIR/minios/" || debug_log "ERROR: Failed to copy /var/log/minios"
+      cp -a "$2/var/log/live/." "$LOGDIR/live/" || debug_log "ERROR: Failed to copy /var/log/live"
+   fi
+
+   # Clean up temporary boot files.
+   debug_log "minios_boot: Cleaning up temporary files"
+   rm -f "$2/cmdline" "$2/minios-boot"
+
+   # Unmount system directories
+   debug_log "minios_boot: Unmounting /tmp, /run, /sys, /proc, /dev"
+   umount "$2/tmp" || debug_log "WARNING: Failed to unmount tmp"
+   umount "$2/run" || debug_log "WARNING: Failed to unmount run"
+   umount "$2/sys" || debug_log "WARNING: Failed to unmount sys"
+   umount "$2/proc" || debug_log "WARNING: Failed to unmount proc"
+   umount "$2/dev" || debug_log "WARNING: Failed to unmount dev"
+
+   debug_log "minios_boot: Finished with exit code $CHROOT_EXIT."
+   return $CHROOT_EXIT
+}
+
+# Change root and execute init
+# $1 = where to change root
+#
+change_root() {
+   debug_log "change_root" "$*"
+
+   # if we are booting over httpfs, we need to copyup some files so they are
+   # accessible on union without any further lookup down, else httpfs locks
+   if [ "$(network_device)" != "" ]; then
+      touch "/net.up.flag"
+      touch "$1/etc/resolv.conf" 2>/dev/null
+      touch "$1/etc/hosts"
+      touch "$1/etc/gai.conf"
+   fi
+
+   umount /proc
+   umount /sys
+
+   cd "$1"
+
+   # make sure important device files and directories are in union
+   mkdir -p boot dev proc sys tmp media mnt run
+   chmod 1777 tmp
+   if [ ! -e dev/console ]; then mknod dev/console c 5 1; fi
+   if [ ! -e dev/tty ]; then mknod dev/tty c 5 0; fi
+   if [ ! -e dev/tty0 ]; then mknod dev/tty0 c 4 0; fi
+   if [ ! -e dev/tty1 ]; then mknod dev/tty1 c 4 1; fi
+   if [ ! -e dev/null ]; then mknod dev/null c 1 3; fi
+   if [ ! -e sbin/fsck.aufs ]; then ln -s /bin/true sbin/fsck.aufs; fi
+
+   # find chroot and init
+   if [ -x bin/chroot -o -L bin/chroot ]; then CHROOT=bin/chroot; fi
+   if [ -x sbin/chroot -o -L sbin/chroot ]; then CHROOT=sbin/chroot; fi
+   if [ -x usr/bin/chroot -o -L usr/bin/chroot ]; then CHROOT=usr/bin/chroot; fi
+   if [ -x usr/sbin/chroot -o -L usr/sbin/chroot ]; then CHROOT=usr/sbin/chroot; fi
+   if [ "$CHROOT" = "" ]; then fatal "Can't find executable chroot command"; fi
+
+   if [ -x bin/init -o -L bin/init ]; then INIT=bin/init; fi
+   if [ -x sbin/init -o -L sbin/init ]; then INIT=sbin/init; fi
+   if [ "$INIT" = "" ]; then fatal "Can't find executable init command"; fi
+
+   mkdir -p run
+   mount -t tmpfs tmpfs run
+   mkdir -p tmp
+   mount -t tmpfs tmpfs tmp
+   mkdir -p run/initramfs
+   mount -n -o remount,ro aufs .
+   pivot_root . run/initramfs
+   exec $CHROOT . $INIT <dev/console >dev/console 2>&1
+}

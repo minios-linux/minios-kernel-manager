@@ -1,0 +1,466 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+MiniOS utilities for kernel management
+Handles MiniOS directory detection, permission checks, and file operations
+"""
+
+import os
+import shutil
+import subprocess
+import glob
+from typing import Optional, List, Tuple
+
+def find_minios_directory() -> Optional[str]:
+    """Find MiniOS directory on the system"""
+    # Common locations where MiniOS might be mounted
+    common_paths = [
+        "/run/initramfs/memory/data/minios",
+        "/run/initramfs/memory/toram/minios", 
+        "/media/*/minios",
+        "/mnt/*/minios",
+        "/minios"
+    ]
+    
+    # Check each path
+    for path_pattern in common_paths:
+        if '*' in path_pattern:
+            # Handle wildcard paths
+            for path in glob.glob(path_pattern):
+                if _is_valid_minios_directory(path):
+                    return path
+        else:
+            # Direct path check
+            if _is_valid_minios_directory(path_pattern):
+                return path_pattern
+    
+    # Try to find mounted filesystems with minios folder
+    try:
+        result = subprocess.run(['findmnt', '-t', 'vfat,ext4,ntfs'], 
+                              capture_output=True, text=True)
+        for line in result.stdout.split('\n')[1:]:  # Skip header
+            if line.strip():
+                parts = line.split()
+                if len(parts) >= 2:
+                    mount_point = parts[1]
+                    minios_path = os.path.join(mount_point, 'minios')
+                    if _is_valid_minios_directory(minios_path):
+                        return minios_path
+    except:
+        pass
+    
+    return None
+
+def _is_valid_minios_directory(path: str) -> bool:
+    """Check if directory looks like a valid MiniOS directory"""
+    if not os.path.exists(path):
+        return False
+    
+    # Check for typical MiniOS structure
+    expected_items = ['boot', '01-kernel*', '02-firmware*']
+    found_items = 0
+    
+    try:
+        items = os.listdir(path)
+        for item in items:
+            if item == 'boot':
+                found_items += 1
+            elif item.startswith('01-kernel'):
+                found_items += 1
+            elif item.startswith('02-firmware'):
+                found_items += 1
+    except PermissionError:
+        return False
+    
+    return found_items >= 1  # At least one expected item
+
+def get_kernel_repository_path(minios_path: str) -> str:
+    """Get the path to the kernel repository."""
+    return os.path.join(minios_path, "kernels")
+
+def get_kernel_path(minios_path: str, kernel_version: str) -> str:
+    """Get the path to a specific kernel version in the repository."""
+    return os.path.join(get_kernel_repository_path(minios_path), kernel_version)
+
+def package_kernel_to_repository(minios_path: str, kernel_version: str,
+                                 squashfs_file: str, vmlinuz_file: str, initramfs_file: str) -> bool:
+    """Packages a kernel and places it in the inactive kernel repository."""
+    kernel_repo_path = get_kernel_repository_path(minios_path)
+    kernel_version_path = get_kernel_path(minios_path, kernel_version)
+    
+    try:
+        os.makedirs(kernel_version_path, exist_ok=True)
+        
+        shutil.copy2(squashfs_file, os.path.join(kernel_version_path, os.path.basename(squashfs_file)))
+        shutil.copy2(vmlinuz_file, os.path.join(kernel_version_path, os.path.basename(vmlinuz_file)))
+        shutil.copy2(initramfs_file, os.path.join(kernel_version_path, os.path.basename(initramfs_file)))
+        
+        return True
+    except Exception as e:
+        print(f"Failed to package kernel to repository: {e}")
+        # Cleanup partial installation
+        if os.path.exists(kernel_version_path):
+            shutil.rmtree(kernel_version_path)
+        return False
+
+def get_active_kernel(minios_path: str) -> Optional[str]:
+    """Gets the version of the currently active kernel."""
+    boot_path = os.path.join(minios_path, "boot")
+    if not os.path.exists(boot_path):
+        return None
+
+    vmlinuz_files = glob.glob(os.path.join(boot_path, "vmlinuz-*"))
+    if not vmlinuz_files:
+        return None
+
+    try:
+        first_file = os.path.basename(vmlinuz_files[0])
+        return first_file.replace("vmlinuz-", "")
+    except IndexError:
+        return None
+
+def get_active_kernel_files(minios_path: str, kernel_version: str = None) -> List[str]:
+    """Gets list of active kernel files (vmlinuz, initramfs, squashfs)."""
+    files = []
+    
+    if kernel_version:
+        # Get files for specific kernel version
+        boot_path = os.path.join(minios_path, "boot")
+        if os.path.exists(boot_path):
+            vmlinuz_file = os.path.join(boot_path, f"vmlinuz-{kernel_version}")
+            if os.path.exists(vmlinuz_file):
+                files.append(vmlinuz_file)
+            
+            initramfs_file = os.path.join(boot_path, f"initrfs-{kernel_version}.img")
+            if os.path.exists(initramfs_file):
+                files.append(initramfs_file)
+        
+        squashfs_file = os.path.join(minios_path, f"01-kernel-{kernel_version}.sb")
+        if os.path.exists(squashfs_file):
+            files.append(squashfs_file)
+    else:
+        # Get all active files (original behavior)
+        boot_path = os.path.join(minios_path, "boot")
+        if os.path.exists(boot_path):
+            vmlinuz_files = glob.glob(os.path.join(boot_path, "vmlinuz-*"))
+            files.extend(vmlinuz_files)
+            
+            # Check for initramfs files
+            initramfs_files = glob.glob(os.path.join(boot_path, "initrfs-*.img"))
+            files.extend(initramfs_files)
+        
+        # Check for squashfs files in minios root
+        squashfs_files = glob.glob(os.path.join(minios_path, "01-kernel-*.sb"))
+        files.extend(squashfs_files)
+    
+    return files
+
+def deactivate_current_kernel(minios_path: str) -> bool:
+    """Moves or copies the currently active kernel files to the kernel repository."""
+    active_kernel_version = get_active_kernel(minios_path)
+    if not active_kernel_version:
+        return True # Nothing to do
+
+    # Always ensure the repository directory exists
+    kernel_version_path = get_kernel_path(minios_path, active_kernel_version)
+    os.makedirs(kernel_version_path, exist_ok=True)
+
+    # Determine operation based on kernel status
+    is_running = is_kernel_currently_running(active_kernel_version)
+    operation = "copy" if is_running else "move"
+    
+    try:
+        # Get files belonging to the specific active kernel version
+        active_files = get_active_kernel_files(minios_path, active_kernel_version)
+        
+        if not active_files:
+            print(f"No active files found for kernel {active_kernel_version}")
+            return True
+        
+        print(f"Deactivating kernel {active_kernel_version}: will {operation} {len(active_files)} file(s)")
+        
+        for f in active_files:
+            if os.path.exists(f):
+                dest_path = os.path.join(kernel_version_path, os.path.basename(f))
+                
+                if is_running:
+                    # Copy files if kernel is running (keep originals)
+                    shutil.copy2(f, dest_path)
+                    print(f"Copied {os.path.basename(f)} to repository (running kernel)")
+                else:
+                    # Move files if kernel is not running
+                    shutil.move(f, dest_path)
+                    print(f"Moved {os.path.basename(f)} to repository")
+            else:
+                print(f"Warning: Expected file {f} not found")
+        
+        if is_running:
+            print(f"Active kernel {active_kernel_version} is running - files copied to repository and left in place")
+        else:
+            print(f"Active kernel {active_kernel_version} deactivated - files moved to repository")
+            
+        return True
+    except Exception as e:
+        print(f"Failed to deactivate current kernel {active_kernel_version}: {e}")
+        # Attempt to rollback is complex, for now we fail
+        return False
+
+def activate_kernel(minios_path: str, kernel_version: str) -> bool:
+    """Activates a kernel from the repository."""
+    # Handle running kernel activation
+    if is_kernel_currently_running(kernel_version):
+        current_active = get_active_kernel(minios_path)
+        if current_active == kernel_version:
+            print(f"Kernel {kernel_version} is already active and running.")
+            return True
+        else:
+            # Deactivate current and use running kernel files
+            if not deactivate_current_kernel(minios_path):
+                return False
+            print(f"Activated running kernel {kernel_version} (files already in place).")
+            return True
+    
+    if not deactivate_current_kernel(minios_path):
+        return False
+
+    kernel_version_path = get_kernel_path(minios_path, kernel_version)
+    if not os.path.exists(kernel_version_path):
+        print(f"Kernel version {kernel_version} not found in repository.")
+        return False
+
+    try:
+        # Prepare kernel file paths
+        squashfs_file = os.path.join(kernel_version_path, f"01-kernel-{kernel_version}.sb")
+        vmlinuz_file = os.path.join(kernel_version_path, f"vmlinuz-{kernel_version}")
+        initramfs_file = os.path.join(kernel_version_path, f"initrfs-{kernel_version}.img")
+
+        # Verify all required files exist before copying
+        if not os.path.exists(squashfs_file):
+            raise FileNotFoundError(f"SquashFS file not found: {squashfs_file}")
+        if not os.path.exists(vmlinuz_file):
+            raise FileNotFoundError(f"Kernel file not found: {vmlinuz_file}")
+        if not os.path.exists(initramfs_file):
+            raise FileNotFoundError(f"Initramfs file not found: {initramfs_file}")
+
+        # Copy kernel files to active locations
+        shutil.copy2(squashfs_file, os.path.join(minios_path, os.path.basename(squashfs_file)))
+        shutil.copy2(vmlinuz_file, os.path.join(minios_path, "boot", os.path.basename(vmlinuz_file)))
+        shutil.copy2(initramfs_file, os.path.join(minios_path, "boot", os.path.basename(initramfs_file)))
+        
+        print(f"Successfully copied kernel files for {kernel_version}")
+        return True
+    except (Exception, IndexError) as e:
+        print(f"Failed to activate kernel {kernel_version}: {e}")
+        return False
+
+def list_all_kernels(minios_path: str) -> List[str]:
+    """Lists all unique kernel versions available (packaged, active, or running)."""
+    kernels = set()
+    
+    # Add packaged kernels
+    kernel_repo_path = get_kernel_repository_path(minios_path)
+    if os.path.exists(kernel_repo_path):
+        kernels.update([d for d in os.listdir(kernel_repo_path) if os.path.isdir(os.path.join(kernel_repo_path, d))])
+
+    # Add active kernel
+    active_kernel = get_active_kernel(minios_path)
+    if active_kernel:
+        kernels.add(active_kernel)
+
+    # Add running kernel
+    running_kernel = get_currently_running_kernel()
+    if running_kernel:
+        kernels.add(running_kernel)
+
+    return sorted(list(kernels))
+
+def delete_packaged_kernel(minios_path: str, kernel_version: str) -> bool:
+    """Deletes a packaged kernel from the repository."""
+    kernel_version_path = get_kernel_path(minios_path, kernel_version)
+    if not os.path.exists(kernel_version_path):
+        return True # Already gone
+    
+    try:
+        shutil.rmtree(kernel_version_path)
+        return True
+    except Exception as e:
+        print(f"Failed to delete packaged kernel {kernel_version}: {e}")
+        return False
+
+def get_kernel_info(minios_path: str, kernel_id: str) -> dict:
+    """Get detailed information about a kernel."""
+    active_kernel_id = get_active_kernel(minios_path)
+    is_active = kernel_id == active_kernel_id
+    is_running = is_kernel_currently_running(kernel_id)
+    is_packaged = os.path.exists(get_kernel_path(minios_path, kernel_id))
+
+    # Create better display name with version parsing
+    display_name = kernel_id
+    if '-' in kernel_id:
+        parts = kernel_id.split('-')
+        if len(parts) >= 2:
+            version = parts[0]
+            arch_flavor = '-'.join(parts[1:])
+            display_name = f"{version} ({arch_flavor})"
+
+    # Determine status with priorities
+    status_parts = []
+    status_color = "#666666"  # Default gray
+    icon_name = "package-x-generic"  # Default icon
+    
+    if is_running:
+        status_parts.append("Running")
+        status_color = "#e74c3c"  # Red for running
+        icon_name = "system-run"
+    
+    if is_active:
+        if is_running:
+            status_parts = ["Active & Running"]
+        else:
+            status_parts.append("Active")
+            status_color = "#27ae60"  # Green for active
+            icon_name = "emblem-default"
+    
+    if is_packaged and not is_active:
+        status_parts.append("Available")
+        status_color = "#3498db"  # Blue for packaged
+        icon_name = "package-x-generic"
+    
+    if not status_parts:
+        return None
+
+    # Determine kernel type and description
+    kernel_type = "Standard"
+    kernel_desc = ""
+    
+    kernel_lower = kernel_id.lower()
+    if 'rt' in kernel_lower:
+        kernel_type = "Real-time"
+        kernel_desc = "Low-latency kernel for real-time applications"
+    elif 'cloud' in kernel_lower:
+        kernel_type = "Cloud"
+        kernel_desc = "Optimized for virtualized environments"
+    elif 'mos' in kernel_lower or 'minios' in kernel_lower:
+        kernel_type = "MiniOS"
+        kernel_desc = "Custom kernel for MiniOS distribution"
+    elif 'generic' in kernel_lower:
+        kernel_type = "Generic"
+        kernel_desc = "General purpose kernel"
+    elif 'lowlatency' in kernel_lower:
+        kernel_type = "Low-latency"
+        kernel_desc = "Reduced latency for audio/video applications"
+    else:
+        kernel_desc = "Linux kernel"
+
+    # Get file sizes for additional info
+    size_info = ""
+    if is_active or is_packaged:
+        try:
+            kernel_path = get_kernel_path(minios_path, kernel_id) if is_packaged else minios_path
+            if is_active and not is_packaged:
+                # Active kernel files are in different locations
+                sb_files = glob.glob(os.path.join(minios_path, "01-kernel-*.sb"))
+                if sb_files:
+                    sb_size = os.path.getsize(sb_files[0])
+                    size_info = f" • {_format_size(sb_size)}"
+            elif is_packaged:
+                sb_files = glob.glob(os.path.join(kernel_path, "01-kernel-*.sb"))
+                if sb_files:
+                    sb_size = os.path.getsize(sb_files[0])
+                    size_info = f" • {_format_size(sb_size)}"
+        except:
+            pass
+
+    info = {
+        'id': kernel_id,
+        'display_name': display_name,
+        'version': kernel_id,
+        'status': " ".join(status_parts),
+        'status_color': status_color,
+        'icon_name': icon_name,
+        'kernel_type': kernel_type,
+        'description': f"{kernel_type} kernel{size_info}",
+        'full_description': kernel_desc,
+        'is_active': is_active,
+        'is_running': is_running,
+        'is_packaged': is_packaged
+    }
+
+    return info
+
+def _format_size(size_bytes: int) -> str:
+    """Format file size in human readable format."""
+    for unit in ['B', 'KB', 'MB', 'GB']:
+        if size_bytes < 1024.0:
+            return f"{size_bytes:.1f} {unit}"
+        size_bytes /= 1024.0
+    return f"{size_bytes:.1f} TB"
+
+def get_kernel_file_info(file_path: str) -> dict:
+    """Get file information (size, date) for a kernel file"""
+    file_info = {'size': 0, 'size_text': 'Unknown', 'date': 'Unknown'}
+    
+    try:
+        if os.path.exists(file_path):
+            stat = os.stat(file_path)
+            file_info['size'] = stat.st_size
+            
+            # Format size in human readable format
+            size = stat.st_size
+            for unit in ['B', 'KB', 'MB', 'GB']:
+                if size < 1024.0:
+                    file_info['size_text'] = f"{size:.1f} {unit}"
+                    break
+                size /= 1024.0
+            
+            # Format date
+            import time
+            file_info['date'] = time.strftime('%Y-%m-%d %H:%M', time.localtime(stat.st_mtime))
+    except:
+        pass
+    
+    return file_info
+
+def get_currently_running_kernel() -> str:
+    """Get the kernel version currently running on the system with comprehensive analysis"""
+    import re
+    
+    # Method 1: Check mounted .sb modules to see which kernel module is active
+    try:
+        result = subprocess.run(['mount'], capture_output=True, text=True, check=True)
+        mount_output = result.stdout
+        
+        # Look for mounted kernel .sb files
+        for line in mount_output.split('\n'):
+            if '01-kernel-' in line and '.sb' in line and 'squashfs' in line:
+                match = re.search(r'01-kernel-([^/\s]+\.sb)', line)
+                if match:
+                    kernel_sb = match.group(1)
+                    kernel_version = kernel_sb.replace('.sb', '')
+                    return kernel_version
+    except subprocess.CalledProcessError:
+        pass
+    
+    # Method 2: Fallback to uname -r
+    try:
+        result = subprocess.run(['uname', '-r'], capture_output=True, text=True, check=True)
+        kernel_version = result.stdout.strip()
+        return kernel_version
+    except subprocess.CalledProcessError:
+        pass
+    
+    return ""
+
+def is_kernel_currently_running(kernel_version: str, minios_path: str = None) -> bool:
+    """Check if a specific kernel version is currently running"""
+    return kernel_version == get_currently_running_kernel()
+
+def get_system_type() -> str:
+    """Get type of system (live, installed, etc.)"""
+    if os.path.exists('/run/initramfs/memory'):
+        if os.path.exists('/run/initramfs/memory/toram'):
+            return "Live system (running from RAM)"
+        else:
+            return "Live system (running from media)"
+    else:
+        return "Installed system"

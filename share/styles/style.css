@@ -1,0 +1,54 @@
+button.suggested-action {
+    background-color: #8FA1B3;
+    color: white;
+    padding: 6px 16px;
+}
+
+button.suggested-action:hover {
+    background-color: #7B93A7;
+}
+
+button.destructive-action {
+    padding: 6px 16px;
+}
+
+button.destructive-action:disabled {
+    padding: 6px 16px;
+}
+
+listbox row {
+    border-radius: 8px;
+    margin: 2px;
+    padding: 0px;
+    transition: background-color 0.2s ease;
+}
+
+listbox row:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+listbox row:selected {
+    background-color: rgba(52, 152, 219, 0.2);
+    border: 1px solid rgba(52, 152, 219, 0.4);
+}
+
+.kernel-item {
+    border-radius: 6px;
+    padding: 6px 12px;
+    margin: 2px;
+}
+
+.kernel-status-running {
+    background-color: rgba(231, 76, 60, 0.1);
+    border-left: 4px solid #e74c3c;
+}
+
+.kernel-status-active {
+    background-color: rgba(39, 174, 96, 0.1);
+    border-left: 4px solid #27ae60;
+}
+
+.kernel-status-available {
+    background-color: rgba(52, 152, 219, 0.1);
+    border-left: 4px solid #3498db;
+}
