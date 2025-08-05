@@ -1541,27 +1541,22 @@ sortmod() {
 setup_active_kernel() {
    debug_log "setup_active_kernel" "$*"
    
-   local DATA="$1"
-   local ACTIVE_KERNEL CONFIG_FILE KERNEL_SB_SRC KERNEL_SB_DST KERNEL_FILE
+   local DATA ACTIVE_KERNEL CONFIG_FILE KERNEL_MANAGER_CONFIG KERNEL_SB_SRC KERNEL_SB_DST
+   local KERNEL_FILE INACTIVE_VERSION
    
+   DATA="$1"
    CONFIG_FILE="$DATA/config.conf"
-   
-   # Check if config file exists
-   if [ ! -f "$CONFIG_FILE" ]; then
-      debug_log "setup_active_kernel: config.conf not found at $CONFIG_FILE"
-      return 0
-   fi
    
    # Get active kernel from config.conf.d first, then fallback to main config.conf
    KERNEL_MANAGER_CONFIG="$DATA/config.conf.d/kernel-manager.conf"
    if [ -f "$KERNEL_MANAGER_CONFIG" ]; then
-      ACTIVE_KERNEL=$(config_value "$KERNEL_MANAGER_CONFIG" "ACTIVE_KERNEL")
+      ACTIVE_KERNEL="$(config_value "$KERNEL_MANAGER_CONFIG" "ACTIVE_KERNEL" 2>/dev/null || true)"
       debug_log "setup_active_kernel: Checking kernel-manager.conf for ACTIVE_KERNEL"
    fi
    
    # Fallback to main config.conf if not found in kernel-manager.conf
-   if [ -z "$ACTIVE_KERNEL" ]; then
-      ACTIVE_KERNEL=$(config_value "$CONFIG_FILE" "ACTIVE_KERNEL")
+   if [ -z "$ACTIVE_KERNEL" ] && [ -f "$CONFIG_FILE" ]; then
+      ACTIVE_KERNEL="$(config_value "$CONFIG_FILE" "ACTIVE_KERNEL" 2>/dev/null || true)"
       debug_log "setup_active_kernel: Checking main config.conf for ACTIVE_KERNEL"
    fi
    
@@ -1569,6 +1564,12 @@ setup_active_kernel() {
    if [ -z "$ACTIVE_KERNEL" ]; then
       debug_log "setup_active_kernel: No ACTIVE_KERNEL specified in any config file"
       return 0
+   fi
+   
+   # Validate kernel version format (alphanumeric, dots, hyphens)
+   if ! echo "$ACTIVE_KERNEL" | grep -q "^[a-zA-Z0-9.-]*$"; then
+      debug_log "setup_active_kernel: Invalid kernel version format: $ACTIVE_KERNEL"
+      return 1
    fi
    
    debug_log "setup_active_kernel: Active kernel set to: $ACTIVE_KERNEL"
@@ -1583,21 +1584,29 @@ setup_active_kernel() {
       # Attempt to find it in the repository and activate it
       KERNEL_SB_SRC="$DATA/kernels/$ACTIVE_KERNEL/01-kernel-$ACTIVE_KERNEL.sb"
       if [ -f "$KERNEL_SB_SRC" ]; then
-          echo "Found in repository, attempting to activate..."
-          cp "$KERNEL_SB_SRC" "$DATA/"
+         echo "Found in repository, attempting to activate..."
+         if ! cp "$KERNEL_SB_SRC" "$DATA/"; then
+            debug_log "setup_active_kernel: Failed to copy kernel from repository"
+            return 1
+         fi
       else
-          return 1
+         debug_log "setup_active_kernel: Kernel $ACTIVE_KERNEL not found in repository"
+         return 1
       fi
    fi
 
    # Clean up other kernel files from the root /minios directory
-   find "$DATA" -maxdepth 1 -name "01-kernel-*.sb" | while read -r KERNEL_FILE; do
+   find "$DATA" -maxdepth 1 -name "01-kernel-*.sb" 2>/dev/null | while read KERNEL_FILE; do
       if [ "$KERNEL_FILE" != "$KERNEL_SB_DST" ]; then
          debug_log "setup_active_kernel: Moving inactive kernel $KERNEL_FILE to kernels repository"
          # Extract version and move to the correct subdirectory
-         INACTIVE_VERSION=$(basename "$KERNEL_FILE" | sed -e 's/01-kernel-//' -e 's/\.sb//')
-         mkdir -p "$DATA/kernels/$INACTIVE_VERSION"
-         mv "$KERNEL_FILE" "$DATA/kernels/$INACTIVE_VERSION/"
+         INACTIVE_VERSION="$(basename "$KERNEL_FILE" | sed -e 's/01-kernel-//' -e 's/\.sb//')"
+         if [ -n "$INACTIVE_VERSION" ]; then
+            mkdir -p "$DATA/kernels/$INACTIVE_VERSION" 2>/dev/null
+            if ! mv "$KERNEL_FILE" "$DATA/kernels/$INACTIVE_VERSION/" 2>/dev/null; then
+               debug_log "setup_active_kernel: Failed to move $KERNEL_FILE"
+            fi
+         fi
       fi
    done
 
