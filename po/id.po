@@ -1,4 +1,4 @@
-# Russian translations for minios-kernel-manager package.
+# Indonesian translations for minios-kernel-manager package.
 # Copyright (C) 2025 MiniOS Linux
 # This file is distributed under the same license as the minios-kernel-manager package.
 # Automatically generated, 2025.
@@ -11,148 +11,146 @@ msgstr ""
 "PO-Revision-Date: 2025-08-06 10:48+0000\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
-"Language: ru\n"
+"Language: id\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
-"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
 #: lib/kernel_manager.py:158
 msgid "System Status"
-msgstr "Состояние системы"
+msgstr "Status Sistem"
 
 #: lib/kernel_manager.py:169
 msgid "System Type:"
-msgstr "Тип системы:"
+msgstr "Tipe Sistem:"
 
 #: lib/kernel_manager.py:177
 msgid "MiniOS Directory:"
-msgstr "Каталог MiniOS:"
+msgstr "Direktori MiniOS:"
 
 #: lib/kernel_manager.py:182
 msgid "Found at {}"
-msgstr "Найдено по адресу {}"
+msgstr "Ditemukan di {}"
 
 #: lib/kernel_manager.py:186
 msgid "(writable)"
-msgstr "(доступно для записи)"
+msgstr "(dapat ditulis)"
 
 #: lib/kernel_manager.py:190
 msgid "(read-only)"
-msgstr "(только для чтения)"
+msgstr "(hanya baca)"
 
 #: lib/kernel_manager.py:192
 msgid "Not found"
-msgstr "Не найдено"
+msgstr "Tidak ditemukan"
 
 #: lib/kernel_manager.py:230 lib/kernel_manager.py:475
 msgid "Package Kernel"
-msgstr "Упаковать ядро"
+msgstr "Paket Kernel"
 
 #: lib/kernel_manager.py:235
 msgid "Manage Kernels"
-msgstr "Управление ядрами"
+msgstr "Kelola Kernel"
 
 #: lib/kernel_manager.py:267
 msgid "Select a packaged kernel to activate or delete:"
-msgstr "Выберите упакованное ядро для активации или удаления:"
+msgstr "Pilih kernel yang sudah dipaket untuk diaktifkan atau dihapus:"
 
 #: lib/kernel_manager.py:288 lib/kernel_manager.py:685
 msgid "Delete Kernel"
-msgstr "Удалить ядро"
+msgstr "Hapus Kernel"
 
 #: lib/kernel_manager.py:294 lib/kernel_manager.py:630
 msgid "Activate Kernel"
-msgstr "Активировать ядро"
+msgstr "Aktifkan Kernel"
 
 #: lib/kernel_manager.py:308
 msgid "Please select a kernel to package and configure compression settings:"
-msgstr "Пожалуйста, выберите ядро для упаковки и настройте параметры сжатия:"
+msgstr "Silakan pilih kernel untuk dipaket dan konfigurasikan pengaturan kompresi:"
 
 #: lib/kernel_manager.py:320
 msgid "Kernel Source:"
-msgstr "Источник ядра:"
+msgstr "Sumber Kernel:"
 
 #: lib/kernel_manager.py:324
 msgid "Manual Package"
-msgstr "Пакет вручную"
+msgstr "Paket Manual"
 
 #: lib/kernel_manager.py:329
 msgid "Repository"
-msgstr "Репозиторий"
+msgstr "Repositori"
 
 #: lib/kernel_manager.py:341
 msgid "Select Kernel Package:"
-msgstr "Выберите пакет ядра:"
+msgstr "Pilih Paket Kernel:"
 
 #: lib/kernel_manager.py:346 lib/kernel_manager.py:1082
 msgid "No file selected"
-msgstr "Файл не выбран"
+msgstr "Tidak ada file yang dipilih"
 
 #: lib/kernel_manager.py:351
 msgid "Browse..."
-msgstr "Обзор..."
+msgstr "Jelajahi..."
 
 #: lib/kernel_manager.py:364 lib/kernel_manager.py:365
 msgid "Package Information:"
-msgstr "Информация о пакете:"
+msgstr "Informasi Paket:"
 
 #: lib/kernel_manager.py:394
 msgid "Available Kernels:"
-msgstr "Доступные ядра:"
+msgstr "Kernel Tersedia:"
 
 #: lib/kernel_manager.py:417
 msgid "Compression Settings:"
-msgstr "Параметры сжатия:"
+msgstr "Pengaturan Kompresi:"
 
 #: lib/kernel_manager.py:422
 msgid "SquashFS Compression"
-msgstr "Сжатие SquashFS"
+msgstr "Kompresi SquashFS"
 
 #: lib/kernel_manager.py:449
 msgid "Initramfs Compression"
-msgstr "Сжатие Initramfs"
+msgstr "Kompresi Initramfs"
 
 #: lib/kernel_manager.py:476
 msgid "Package kernel and add to repository"
-msgstr "Упаковать ядро и добавить в репозиторий"
+msgstr "Paket kernel dan tambahkan ke repositori"
 
 #: lib/kernel_manager.py:512
 msgid "No kernels packaged"
-msgstr "Нет упакованных ядер"
+msgstr "Tidak ada kernel yang dipaket"
 
 #: lib/kernel_manager.py:517
 msgid "Package a kernel first using the Package Kernel tab"
-msgstr "Сначала упакуйте ядро, используя вкладку Упаковать ядро"
+msgstr "Paket kernel terlebih dahulu menggunakan tab Paket Kernel"
 
 #: lib/kernel_manager.py:601
 msgid "This kernel is already active"
-msgstr "Это ядро уже активно"
+msgstr "Kernel ini sudah aktif"
 
 #: lib/kernel_manager.py:602
 msgid "Cannot delete an active kernel"
-msgstr "Невозможно удалить активное ядро"
+msgstr "Tidak dapat menghapus kernel yang aktif"
 
 #: lib/kernel_manager.py:604
 msgid "Cannot delete the currently running kernel"
-msgstr "Невозможно удалить текущее запущенное ядро"
+msgstr "Tidak dapat menghapus kernel yang sedang berjalan"
 
 #: lib/kernel_manager.py:606
 msgid "Activate this kernel"
-msgstr "Активировать это ядро"
+msgstr "Aktifkan kernel ini"
 
 #: lib/kernel_manager.py:607
 msgid "Delete this kernel and all associated files"
-msgstr "Удалить это ядро и все связанные файлы"
+msgstr "Hapus kernel ini dan semua file terkait"
 
 #: lib/kernel_manager.py:618
 msgid "Please select a kernel to activate"
-msgstr "Пожалуйста, выберите ядро для активации"
+msgstr "Silakan pilih kernel untuk diaktifkan"
 
 #: lib/kernel_manager.py:622 lib/kernel_manager.py:677
 msgid "MiniOS directory is not writable"
-msgstr "Каталог MiniOS недоступен для записи"
+msgstr "Direktori MiniOS tidak dapat ditulis"
 
 #: lib/kernel_manager.py:633
 msgid ""
@@ -161,21 +159,21 @@ msgid ""
 "This will deactivate the current kernel and update the bootloader "
 "configuration."
 msgstr ""
-"Вы уверены, что хотите активировать ядро {}?\n"
+"Apakah Anda yakin ingin mengaktifkan kernel {}?\n"
 "\n"
-"Это деактивирует текущее ядро и обновит конфигурацию загрузчика."
+"Ini akan menonaktifkan kernel saat ini dan memperbarui konfigurasi bootloader."
 
 #: lib/kernel_manager.py:655
 msgid "Kernel Activated"
-msgstr "Ядро активировано"
+msgstr "Kernel Diaktifkan"
 
 #: lib/kernel_manager.py:658
 msgid "Kernel {} has been activated successfully!"
-msgstr "Ядро {} успешно активировано!"
+msgstr "Kernel {} telah berhasil diaktifkan!"
 
 #: lib/kernel_manager.py:673
 msgid "Please select a kernel to delete"
-msgstr "Пожалуйста, выберите ядро для удаления"
+msgstr "Silakan pilih kernel untuk dihapus"
 
 #: lib/kernel_manager.py:688
 msgid ""
@@ -183,111 +181,111 @@ msgid ""
 "\n"
 "This action cannot be undone."
 msgstr ""
-"Вы уверены, что хотите удалить ядро '{}'?\n"
+"Apakah Anda yakin ingin menghapus kernel '{}'?\n"
 "\n"
-"Это действие невозможно отменить."
+"Tindakan ini tidak dapat dibatalkan."
 
 #: lib/kernel_manager.py:708
 msgid "Kernel Deleted"
-msgstr "Ядро удалено"
+msgstr "Kernel Dihapus"
 
 #: lib/kernel_manager.py:711
 msgid "Kernel '{}' has been deleted successfully!"
-msgstr "Ядро '{}' успешно удалено!"
+msgstr "Kernel '{}' telah berhasil dihapus!"
 
 #: lib/kernel_manager.py:727
 msgid "Select Kernel Package"
-msgstr "Выбрать пакет ядра"
+msgstr "Pilih Paket Kernel"
 
 #: lib/kernel_manager.py:732 lib/kernel_manager.py:1246
 #: lib/kernel_manager.py:1280
 msgid "Cancel"
-msgstr "Отмена"
+msgstr "Batal"
 
 #: lib/kernel_manager.py:733
 msgid "Open"
-msgstr "Открыть"
+msgstr "Buka"
 
 #: lib/kernel_manager.py:748
 msgid "Debian Package Files (*.deb)"
-msgstr "Файлы пакетов Debian (*.deb)"
+msgstr "File Paket Debian (*.deb)"
 
 #: lib/kernel_manager.py:753
 msgid "All Files"
-msgstr "Все файлы"
+msgstr "Semua File"
 
 #: lib/kernel_manager.py:890
 msgid "Fetching kernel list from repository..."
-msgstr "Получение списка ядер из репозитория..."
+msgstr "Mengambil daftar kernel dari repositori..."
 
 #: lib/kernel_manager.py:892
 msgid "Scanning for manual packages..."
-msgstr "Поиск пакетов, установленных вручную..."
+msgstr "Memindai paket manual..."
 
 #: lib/kernel_manager.py:965
 msgid "Manual package"
-msgstr "Пакет вручную"
+msgstr "Paket manual"
 
 #: lib/kernel_manager.py:965
 msgid "Repository kernel"
-msgstr "Ядро из репозитория"
+msgstr "Kernel repositori"
 
 #: lib/kernel_manager.py:1018
 msgid "No repository kernels found"
-msgstr "Ядра в репозитории не найдены"
+msgstr "Tidak ada kernel repositori yang ditemukan"
 
 #: lib/kernel_manager.py:1020
 msgid "No manual packages found"
-msgstr "Пакеты, установленные вручную, не найдены"
+msgstr "Tidak ada paket manual yang ditemukan"
 
 #: lib/kernel_manager.py:1047
 msgid "Failed to fetch repository kernels"
-msgstr "Не удалось получить ядра из репозитория"
+msgstr "Gagal mengambil kernel repositori"
 
 #: lib/kernel_manager.py:1108
 msgid "Please select a kernel first"
-msgstr "Пожалуйста, выберите ядро сначала"
+msgstr "Silakan pilih kernel terlebih dahulu"
 
 #: lib/kernel_manager.py:1178
 msgid "CLI tool finished successfully."
-msgstr "Инструмент CLI успешно завершил работу."
+msgstr "Alat CLI selesai dengan sukses."
 
 #: lib/kernel_manager.py:1199
 msgid "Kernel packaging failed. Check log for details."
-msgstr "Ошибка упаковки ядра. Подробности в журнале."
+msgstr "Pengemasan kernel gagal. Periksa log untuk detailnya."
 
 #: lib/kernel_manager.py:1213
 msgid "Packaging kernel..."
-msgstr "Упаковка ядра..."
+msgstr "Memaketkan kernel..."
 
 #: lib/kernel_manager.py:1222
 msgid "Starting packaging process..."
-msgstr "Запуск процесса упаковки..."
+msgstr "Memulai proses pemaketan..."
 
 #: lib/kernel_manager.py:1228
 msgid "Packaging Log"
-msgstr "Журнал упаковки"
+msgstr "Log Pemaketan"
 
 #: lib/kernel_manager.py:1259
 msgid "Cancelling packaging..."
-msgstr "Отмена упаковки..."
+msgstr "Membatalkan pemaketan..."
 
 #: lib/kernel_manager.py:1273
 msgid "Back to Selection"
-msgstr "Вернуться к выбору"
+msgstr "Kembali ke Pilihan"
 
 #: lib/kernel_manager.py:1311
 msgid "Error"
-msgstr "Ошибка"
+msgstr "Kesalahan"
 
 #: lib/kernel_manager.py:1324
 msgid "Packaging Complete"
-msgstr "Упаковка завершена"
+msgstr "Pemaketan Selesai"
 
 #: lib/kernel_manager.py:1330
 msgid "Kernel packaging completed successfully!"
-msgstr "Упаковка ядра успешно завершена!"
+msgstr "Pengemasan kernel berhasil diselesaikan!"
 
 #: lib/kernel_manager.py:1331
 msgid "The new kernel is now available in the 'Manage Kernels' tab."
-msgstr "Новое ядро теперь доступно на вкладке 'Управление ядрами'."
+msgstr "Kernel baru sekarang tersedia di tab 'Kelola Kernel'."
