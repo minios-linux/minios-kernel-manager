@@ -1,7 +1,7 @@
-EXECUTABLES = bin/minios-kernel-manager bin/minios-kernel-package
+EXECUTABLES = bin/minios-kernel-manager bin/minios-kernel
 LIBRARIES = lib/*.py
 APPLICATIONS = share/applications/minios-kernel-manager.desktop
-POLICIES = share/polkit/org.minios.kernel-manager.policy
+POLICIES = share/polkit/dev.minios.kernel-manager.policy
 STYLES = share/styles/style.css
 
 BINDIR = usr/bin
@@ -40,8 +40,8 @@ install: build
 
 	cp $(EXECUTABLES) $(DESTDIR)/$(BINDIR)/
 	cp $(LIBRARIES) $(DESTDIR)/$(LIBDIR)/
-	chmod +x $(DESTDIR)/$(LIBDIR)/kernel_manager.py
-	chmod +x $(DESTDIR)/$(LIBDIR)/kernel_packager.py
+	chmod +x $(DESTDIR)/$(LIBDIR)/minios_kernel_manager.py
+	chmod +x $(DESTDIR)/$(LIBDIR)/minios_kernel.py
 	cp $(APPLICATIONS) $(DESTDIR)/$(APPLICATIONSDIR)
 	cp $(POLICIES) $(DESTDIR)/$(POLKITACTIONSDIR)
 	cp $(STYLES) $(DESTDIR)/$(SHAREDIR)
@@ -57,7 +57,7 @@ uninstall:
 	
 	# Remove executables
 	rm -f $(DESTDIR)/$(BINDIR)/minios-kernel-manager
-	rm -f $(DESTDIR)/$(BINDIR)/minios-kernel-package
+	rm -f $(DESTDIR)/$(BINDIR)/minios-kernel
 	
 	# Remove library directory
 	rm -rf $(DESTDIR)/$(LIBDIR)

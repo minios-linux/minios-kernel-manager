@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Kernel utilities for MiniOS KernelPack GUI
+Kernel utilities for MiniOS Kernel Manager
 Handles kernel detection, download, and module management
 """
 
@@ -10,7 +10,13 @@ import glob
 import subprocess
 import tempfile
 import shutil
+import gettext
 from typing import List, Optional
+
+# Initialize gettext
+gettext.bindtextdomain('minios-kernel-manager', '/usr/share/locale')
+gettext.textdomain('minios-kernel-manager')
+_ = gettext.gettext
 
 
 def get_available_kernels() -> List[str]:
@@ -168,31 +174,53 @@ def process_manual_package(package_path: str, temp_dir: str) -> str:
 
 def download_kernel_package(package_name: str, temp_dir: str) -> str:
     """Download and extract kernel package, return kernel version"""
+    import time
+    deb_file = None
+    
     try:
-        # Download package
+        # Step 1: Download package
+        print(f"I: {_('Downloading {package_name} from repository...').format(package_name=package_name)}", flush=True)
         result = subprocess.run(['apt-get', 'download', package_name],
-                              cwd=temp_dir, capture_output=True, text=True)
+                              cwd=temp_dir, check=True)
+        print(f"I: {_('Download completed successfully')}", flush=True)
         
-        if result.returncode != 0:
-            raise RuntimeError(f"Failed to download {package_name}: {result.stderr}")
-        
-        # Find downloaded .deb file
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"Failed to download package '{package_name}' from repository: {e}")
+    
+    try:
+        # Step 2: Find downloaded .deb file
         deb_files = glob.glob(os.path.join(temp_dir, f"{package_name}_*.deb"))
         if not deb_files:
-            raise RuntimeError(f"Downloaded package not found")
+            raise RuntimeError(f"Downloaded .deb file for '{package_name}' not found in {temp_dir}")
         
         deb_file = deb_files[0]
+        print(f"I: {_('Found package file: {filename}').format(filename=os.path.basename(deb_file))}", flush=True)
         
-        # Extract package using dpkg-deb
+    except RuntimeError:
+        raise
+    except Exception as e:
+        raise RuntimeError(f"Error locating downloaded package: {e}")
+    
+    try:
+        # Step 3: Extract package contents
+        print(f"I: {_('Extracting package contents...')}", flush=True)
         extract_result = subprocess.run(['dpkg-deb', '-x', deb_file, temp_dir], 
-                                      capture_output=True, text=True, check=True)
+                                      check=True, capture_output=True, text=True)
+        print(f"I: {_('Package extracted successfully')}", flush=True)
         
         # Extract kernel version from package name
         kernel_version = package_name.replace('linux-image-', '')
         return kernel_version
         
-    except (subprocess.CalledProcessError, RuntimeError) as e:
-        raise RuntimeError(f"Failed to download kernel package: {e}")
+    except subprocess.CalledProcessError as e:
+        error_msg = f"Failed to extract package '{os.path.basename(deb_file)}'"
+        if e.stderr:
+            error_msg += f": {e.stderr.strip()}"
+        else:
+            error_msg += f": dpkg-deb returned exit code {e.returncode}"
+        raise RuntimeError(error_msg)
+    except Exception as e:
+        raise RuntimeError(f"Error extracting package: {e}")
 
 
 def get_non_symlink_modules_dir() -> str:
@@ -229,7 +257,7 @@ def prepare_temp_modules(kernel_version: str, temp_dir: str, force_reinstall: bo
             raise RuntimeError(f"KERNEL_EXISTS:{kernel_version}")
         else:
             # Remove existing installation for reinstall
-            print(f"Removing existing kernel modules for {kernel_version}")
+            print(f"I: {_('Removing existing kernel modules for {kernel_version}').format(kernel_version=kernel_version)}")
             shutil.rmtree(target_path)
     
     # Find extracted modules
@@ -238,21 +266,17 @@ def prepare_temp_modules(kernel_version: str, temp_dir: str, force_reinstall: bo
         os.path.join(temp_dir, "usr", "lib", "modules", kernel_version)
     ]
     
-    # Debug: log what we're looking for
-    print(f"Searching for kernel modules for {kernel_version}")
-    print(f"Temporary directory: {temp_dir}")
-    
+    # Find and verify modules directory
     found_paths = []
     for path in extracted_paths:
-        exists = os.path.exists(path)
-        print(f"Checking: {path} - {'Found' if exists else 'Not found'}")
-        if exists:
+        if os.path.exists(path):
             found_paths.append(path)
+            # Verify directory is readable
             try:
-                contents = os.listdir(path)
-                print(f"Module directory contains {len(contents)} items")
+                os.listdir(path)
             except Exception as e:
-                print(f"Error reading modules directory: {e}")
+                print(f"E: {_('Error reading modules directory: {error}').format(error=e)}")
+            break  # Use first found path
     
     source_path = None
     for path in extracted_paths:
@@ -261,32 +285,17 @@ def prepare_temp_modules(kernel_version: str, temp_dir: str, force_reinstall: bo
             break
     
     if not source_path:
-        print(f"No kernel modules found in expected locations")
-        print(f"Available paths searched:")
-        for i, path in enumerate(extracted_paths, 1):
-            print(f"  {i}. {path}")
-        
-        # Show what we actually have in temp_dir
-        print(f"Contents of extraction directory:")
-        try:
-            for root, dirs, files in os.walk(temp_dir):
-                level = root.replace(temp_dir, '').count(os.sep)
-                if level <= 3:  # Limit depth for readability
-                    indent = '  ' * level
-                    rel_path = os.path.relpath(root, temp_dir)
-                    print(f"{indent}{rel_path}/")
-        except Exception as e:
-            print(f"Error examining extraction directory: {e}")
-        
-        raise RuntimeError(f"Extracted kernel modules for {kernel_version} not found")
+        raise RuntimeError(_("Kernel modules for {kernel_version} not found in package").format(kernel_version=kernel_version))
     
     # Copy modules to system location
+    print(f"I: {_('Installing kernel modules to {target_path}').format(target_path=target_path)}", flush=True)
     shutil.copytree(source_path, target_path)
     
     # Run depmod if modules.dep doesn't exist
     modules_dep = os.path.join(target_path, "modules.dep")
     if not os.path.exists(modules_dep):
-        subprocess.run(['depmod', kernel_version], check=True)
+        print(f"I: {_('Building module dependencies')}", flush=True)
+        subprocess.run(['depmod', kernel_version], check=True, capture_output=True)
 
 
 def cleanup_temp_modules(kernel_version: str) -> None:

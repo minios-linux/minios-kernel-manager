@@ -1,10 +1,5 @@
 minios-kernel-manager (1.0.0) stable; urgency=medium
 
-  * Initial release:
-    - GTK3 GUI for kernel management
-    - Package kernels from local files or repositories
-    - Safe kernel operations with running kernel protection
-    - Rich package metadata integration
-    - Dual CLI/GUI architecture
+  * Initial release
 
- -- crims0n <crims0n@minios.dev>  Tue, 05 Aug 2025 11:23:39 +0300
+ -- crims0n <crims0n@minios.dev>  Wed, 06 Aug 2025 14:07:17 +0300

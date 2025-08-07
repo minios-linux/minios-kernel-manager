@@ -8,7 +8,13 @@ Handles updating syslinux and grub configuration files
 import os
 import re
 import shutil
+import gettext
 from typing import Optional
+
+# Initialize gettext
+gettext.bindtextdomain('minios-kernel-manager', '/usr/share/locale')
+gettext.textdomain('minios-kernel-manager')
+_ = gettext.gettext
 
 def update_syslinux_config(minios_path: str, kernel_version: str) -> bool:
     """
@@ -40,7 +46,7 @@ def update_syslinux_config(minios_path: str, kernel_version: str) -> bool:
         return True
         
     except Exception as e:
-        print(f"Error updating syslinux config: {e}")
+        print(f"E: {_('Error updating syslinux config: {error}').format(error=e)}")
         return False
 
 def update_grub_config(minios_path: str, kernel_version: str) -> bool:
@@ -83,7 +89,7 @@ def update_grub_config(minios_path: str, kernel_version: str) -> bool:
         return True
         
     except Exception as e:
-        print(f"Error updating grub config: {e}")
+        print(f"E: {_('Error updating grub config: {error}').format(error=e)}")
         return False
 
 def update_bootloader_configs(minios_path: str, kernel_version: str) -> bool:

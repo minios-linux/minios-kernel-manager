@@ -1,14 +1,14 @@
-.TH MINIOS-KERNEL-PACKAGE 1 "August 2025" "MiniOS Linux" "User Commands"
+.TH minios-kernel 1 "August 2025" "MiniOS Linux" "User Commands"
 .SH NAME
-minios-kernel-package \- Command-line tool for packaging MiniOS kernels
+minios-kernel \- Command-line tool for packaging MiniOS kernels
 .SH SYNOPSIS
-.B minios-kernel-package
+.B minios-kernel
  --source-repo <package-name> --output-dir <path> [options]
 .br
-.B minios-kernel-package
+.B minios-kernel
  --source-deb <deb-file> --output-dir <path> [options]
 .SH DESCRIPTION
-.B minios-kernel-package
+.B minios-kernel
  is a command-line utility that handles the core tasks of packaging a Linux kernel for use with the MiniOS distribution. It extracts the kernel and modules, generates an initramfs, and creates a SquashFS image.
 .PP
 This tool is the backend for the graphical Bminios-kernel-managerR but can be used directly for scripting or advanced tasks. It requires one source argument (B--source-repoR or B--source-debR) and the output directory.

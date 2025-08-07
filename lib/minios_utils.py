@@ -9,7 +9,13 @@ import os
 import shutil
 import subprocess
 import glob
+import gettext
 from typing import Optional, List, Tuple
+
+# Initialize gettext
+gettext.bindtextdomain('minios-kernel-manager', '/usr/share/locale')
+gettext.textdomain('minios-kernel-manager')
+_ = gettext.gettext
 
 def find_minios_directory() -> Optional[str]:
     """Find MiniOS directory on the system"""
@@ -104,7 +110,23 @@ def package_kernel_to_repository(minios_path: str, kernel_version: str,
         return False
 
 def get_active_kernel(minios_path: str) -> Optional[str]:
-    """Gets the version of the currently active kernel."""
+    """Gets the version of the currently active kernel from configuration file."""
+    # First try to get active kernel from configuration file
+    config_file = "/etc/live/config.conf.d/kernel-manager.conf"
+    
+    if os.path.exists(config_file):
+        try:
+            with open(config_file, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and '=' in line and not line.startswith('#'):
+                        key, value = line.split('=', 1)
+                        if key.strip() == 'ACTIVE_KERNEL':
+                            return value.strip()
+        except Exception as e:
+            print(f"Warning: Error reading config file {config_file}: {e}")
+    
+    # Fallback: check for vmlinuz files in boot directory
     boot_path = os.path.join(minios_path, "boot")
     if not os.path.exists(boot_path):
         return None
@@ -154,6 +176,176 @@ def get_active_kernel_files(minios_path: str, kernel_version: str = None) -> Lis
         files.extend(squashfs_files)
     
     return files
+
+def _update_kernel_config(kernel_version: str) -> bool:
+    """Update or create kernel configuration file with the active kernel version."""
+    config_dir = "/etc/live/config.conf.d"
+    config_file = os.path.join(config_dir, "kernel-manager.conf")
+    
+    try:
+        # Ensure configuration directory exists
+        os.makedirs(config_dir, exist_ok=True)
+        
+        # Read existing configuration if it exists
+        existing_config = {}
+        if os.path.exists(config_file):
+            try:
+                with open(config_file, 'r') as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and '=' in line and not line.startswith('#'):
+                            key, value = line.split('=', 1)
+                            existing_config[key.strip()] = value.strip()
+            except Exception as read_error:
+                print(f"Warning: Error reading existing config file: {read_error}")
+        
+        # Update the ACTIVE_KERNEL variable
+        existing_config['ACTIVE_KERNEL'] = kernel_version
+        
+        # Write configuration file
+        with open(config_file, 'w') as f:
+            f.write("# MiniOS Kernel Manager Configuration\n")
+            f.write("# This file is automatically managed by minios-kernel-manager\n")
+            f.write("\n")
+            for key, value in existing_config.items():
+                f.write(f"{key}={value}\n")
+        
+        print(f"Updated configuration file: {config_file} (ACTIVE_KERNEL={kernel_version})")
+        return True
+        
+    except Exception as config_error:
+        print(f"Warning: Failed to update configuration file {config_file}: {config_error}")
+        return False
+
+def _get_filesystem_type(path: str) -> str:
+    """Get filesystem type for a given path."""
+    try:
+        result = subprocess.run(['stat', '-f', '-c', '%T', path], 
+                              capture_output=True, text=True, check=True)
+        return result.stdout.strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        # Fallback method using /proc/mounts
+        try:
+            with open('/proc/mounts', 'r') as f:
+                for line in f:
+                    parts = line.split()
+                    if len(parts) >= 3:
+                        mount_point, fs_type = parts[1], parts[2]
+                        if path.startswith(mount_point):
+                            return fs_type
+        except:
+            pass
+    return "unknown"
+
+def _update_bootloader_configs(minios_path: str, kernel_version: str) -> bool:
+    """Update GRUB and Syslinux configuration files with new kernel version."""
+    success = True
+    
+    # Check filesystem type for informational purposes
+    fs_type = _get_filesystem_type(minios_path)
+    print(f"Updating bootloader configs on filesystem type: {fs_type}")
+    
+    # Update Syslinux configuration
+    syslinux_cfg = os.path.join(minios_path, "boot", "syslinux.cfg")
+    if os.path.exists(syslinux_cfg):
+        success &= _update_syslinux_config(syslinux_cfg, kernel_version)
+    
+    # Update GRUB configuration
+    grub_cfg = os.path.join(minios_path, "boot", "grub", "grub.cfg")
+    if os.path.exists(grub_cfg):
+        success &= _update_grub_config(grub_cfg, kernel_version)
+    
+    return success
+
+def _update_syslinux_config(config_file: str, kernel_version: str) -> bool:
+    """Update Syslinux configuration file with new kernel paths."""
+    try:
+        # Check if file exists
+        if not os.path.exists(config_file):
+            print(f"Syslinux config file not found: {config_file}")
+            return True  # Not an error if file doesn't exist
+        
+        # Try to make file writable (may not work on non-POSIX filesystems)
+        try:
+            os.chmod(config_file, 0o644)
+        except (OSError, NotImplementedError):
+            pass  # Filesystem doesn't support chmod
+        
+        # Read current configuration
+        with open(config_file, 'r') as f:
+            content = f.read()
+        
+        # Replace kernel and initrd paths in all KERNEL and APPEND lines
+        import re
+        
+        # Pattern to match kernel paths
+        kernel_pattern = r'(KERNEL\s+/minios/boot/)vmlinuz-[^\s]+'
+        initrd_pattern = r'(initrd=/minios/boot/)initrfs-[^\s]+'
+        
+        # Replace with new kernel version
+        new_content = re.sub(kernel_pattern, f'\\1vmlinuz-{kernel_version}', content)
+        new_content = re.sub(initrd_pattern, f'\\1initrfs-{kernel_version}.img', new_content)
+        
+        # Write back if changed
+        if new_content != content:
+            with open(config_file, 'w') as f:
+                f.write(new_content)
+            print(f"Updated Syslinux configuration: {config_file}")
+        
+        return True
+        
+    except Exception as e:
+        print(f"Warning: Failed to update Syslinux config {config_file}: {e}")
+        return False
+
+def _update_grub_config(config_file: str, kernel_version: str) -> bool:
+    """Update GRUB configuration file with new kernel paths."""
+    try:
+        # Check if file exists
+        if not os.path.exists(config_file):
+            print(f"GRUB config file not found: {config_file}")
+            return True  # Not an error if file doesn't exist
+        
+        # Try to make file writable (may not work on non-POSIX filesystems)
+        try:
+            os.chmod(config_file, 0o644)
+        except (OSError, NotImplementedError):
+            pass  # Filesystem doesn't support chmod
+        
+        # Read current configuration
+        with open(config_file, 'r') as f:
+            content = f.read()
+        
+        # Replace kernel and initrd paths
+        import re
+        
+        # Pattern to match kernel paths in variable definitions
+        linux_image_pattern = r'(set linux_image=")([^"]+)"'
+        initrd_img_pattern = r'(set initrd_img=")([^"]+)"'
+        
+        # Pattern to match kernel paths in menuentry lines
+        vmlinuz_pattern = r'(/minios/boot/)vmlinuz-[^\s]+'
+        initrfs_pattern = r'(/minios/boot/)initrfs-[^\s]+'
+        search_pattern = r'(search --set -f /minios/boot/)vmlinuz-[^\s]+'
+        
+        # Replace with new kernel version
+        new_content = re.sub(linux_image_pattern, f'\\1/minios/boot/vmlinuz-{kernel_version}"', content)
+        new_content = re.sub(initrd_img_pattern, f'\\1/minios/boot/initrfs-{kernel_version}.img"', new_content)
+        new_content = re.sub(vmlinuz_pattern, f'\\1vmlinuz-{kernel_version}', new_content)
+        new_content = re.sub(initrfs_pattern, f'\\1initrfs-{kernel_version}.img', new_content)
+        new_content = re.sub(search_pattern, f'\\1vmlinuz-{kernel_version}', new_content)
+        
+        # Write back if changed
+        if new_content != content:
+            with open(config_file, 'w') as f:
+                f.write(new_content)
+            print(f"Updated GRUB configuration: {config_file}")
+        
+        return True
+        
+    except Exception as e:
+        print(f"Warning: Failed to update GRUB config {config_file}: {e}")
+        return False
 
 def deactivate_current_kernel(minios_path: str) -> bool:
     """Moves or copies the currently active kernel files to the kernel repository."""
@@ -217,6 +409,11 @@ def activate_kernel(minios_path: str, kernel_version: str) -> bool:
             # Deactivate current and use running kernel files
             if not deactivate_current_kernel(minios_path):
                 return False
+            
+            # Update configuration files for running kernel
+            _update_kernel_config(kernel_version)
+            _update_bootloader_configs(minios_path, kernel_version)
+            
             print(f"Activated running kernel {kernel_version} (files already in place).")
             return True
     
@@ -246,6 +443,10 @@ def activate_kernel(minios_path: str, kernel_version: str) -> bool:
         shutil.copy2(squashfs_file, os.path.join(minios_path, os.path.basename(squashfs_file)))
         shutil.copy2(vmlinuz_file, os.path.join(minios_path, "boot", os.path.basename(vmlinuz_file)))
         shutil.copy2(initramfs_file, os.path.join(minios_path, "boot", os.path.basename(initramfs_file)))
+        
+        # Update configuration files
+        _update_kernel_config(kernel_version)
+        _update_bootloader_configs(minios_path, kernel_version)
         
         print(f"Successfully copied kernel files for {kernel_version}")
         return True
@@ -306,12 +507,12 @@ def get_kernel_info(minios_path: str, kernel_id: str) -> dict:
     # Determine status with priorities
     status_parts = []
     status_color = "#666666"  # Default gray
-    icon_name = "package-x-generic"  # Default icon
+    icon_name = "package-x-generic"  # Unified icon for all kernels
     
     if is_running:
         status_parts.append("Running")
         status_color = "#e74c3c"  # Red for running
-        icon_name = "system-run"
+        icon_name = "package-x-generic"  # Unified icon
     
     if is_active:
         if is_running:
@@ -319,12 +520,12 @@ def get_kernel_info(minios_path: str, kernel_id: str) -> dict:
         else:
             status_parts.append("Active")
             status_color = "#27ae60"  # Green for active
-            icon_name = "emblem-default"
+            icon_name = "package-x-generic"  # Unified icon
     
     if is_packaged and not is_active:
         status_parts.append("Available")
         status_color = "#3498db"  # Blue for packaged
-        icon_name = "package-x-generic"
+        icon_name = "package-x-generic"  # Unified icon
     
     if not status_parts:
         return None

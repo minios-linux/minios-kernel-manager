@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Compression utilities for MiniOS KernelPack GUI
+Compression utilities for MiniOS Kernel Manager
 Handles compression method detection and parameter configuration
 """
 
