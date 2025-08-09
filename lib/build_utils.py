@@ -18,11 +18,13 @@ from typing import Optional, Callable
 if os.path.exists('/usr/lib/minios-kernel-manager'):
     from compression_utils import get_compression_params
     from kernel_utils import get_non_symlink_modules_dir
+    from minios_utils import get_temp_dir_with_space_check
 else:
     script_dir = os.path.dirname(os.path.abspath(__file__))
     sys.path.insert(0, script_dir)
     from compression_utils import get_compression_params
     from kernel_utils import get_non_symlink_modules_dir
+    from minios_utils import get_temp_dir_with_space_check
 
 # Initialize gettext
 gettext.bindtextdomain('minios-kernel-manager', '/usr/share/locale')
@@ -98,7 +100,7 @@ def create_squashfs_image(kernel_version: str, compression: str, output_dir: str
             raise RuntimeError(_("Kernel modules not found in extracted deb package for kernel {kernel_version}").format(kernel_version=kernel_version))
         
         # Create temporary structure with proper paths for SquashFS
-        temp_squashfs_dir = tempfile.mkdtemp(prefix=f"squashfs_{kernel_version}_")
+        temp_squashfs_dir = get_temp_dir_with_space_check(200, f"squashfs_{kernel_version}_")  # SquashFS needs less space than full packaging
         target_modules_dir = os.path.join(temp_squashfs_dir, modules_base)
         os.makedirs(target_modules_dir, exist_ok=True)
         
@@ -182,7 +184,7 @@ def create_squashfs_image(kernel_version: str, compression: str, output_dir: str
     return output_image
 
 
-def generate_initramfs(kernel_version: str, compression: str, output_dir: str, logger: Optional[Callable] = None) -> str:
+def generate_initramfs(kernel_version: str, compression: str, output_dir: str, logger: Optional[Callable] = None, temp_dir: str = None) -> str:
     """Generate initramfs image"""
     output_image = os.path.join(output_dir, f"initrfs-{kernel_version}.img")
     
@@ -194,8 +196,60 @@ def generate_initramfs(kernel_version: str, compression: str, output_dir: str, l
     if not os.path.exists(mkinitrfs_path):
         raise RuntimeError(_("mkinitrfs not found - this tool requires MiniOS live environment"))
     
+    # Handle module path for extracted deb packages
+    system_modules_path = os.path.join(modules_dir, kernel_version)
+    temp_symlink_created = False
+    
+    if temp_dir and os.path.exists(temp_dir):
+        # Find modules directory in extracted deb contents
+        possible_modules_paths = [
+            os.path.join(temp_dir, "usr", "lib", "modules", kernel_version),
+            os.path.join(temp_dir, "lib", "modules", kernel_version)
+        ]
+        
+        extracted_modules_path = None
+        for path in possible_modules_paths:
+            if os.path.exists(path):
+                extracted_modules_path = path
+                break
+        
+        if extracted_modules_path:
+            # Create or recreate temporary symlink for mkinitrfs
+            try:
+                os.makedirs(modules_dir, exist_ok=True)
+                
+                # Handle existing path
+                should_create_symlink = True
+                
+                if os.path.islink(system_modules_path):
+                    # Remove existing symlink
+                    os.remove(system_modules_path)
+                    print(f"I: {_('Removed existing symlink: {}').format(system_modules_path)}")
+                elif os.path.exists(system_modules_path):
+                    # Path exists and it's not a symlink (probably a real directory)
+                    print(f"I: {_('Using existing modules directory: {}').format(system_modules_path)}")
+                    should_create_symlink = False
+                    temp_symlink_created = False
+                
+                # Create symlink only if path is free
+                if should_create_symlink:
+                    os.symlink(extracted_modules_path, system_modules_path)
+                    temp_symlink_created = True
+                    print(f"I: {_('Created temporary symlink: {system_path} -> {extracted_path}').format(system_path=system_modules_path, extracted_path=extracted_modules_path)}")
+            except OSError as e:
+                print(f"Warning: Failed to create symlink {system_modules_path}: {e}")
+    
+    # Store symlink info for cleanup
+    cleanup_symlink = system_modules_path if temp_symlink_created else None
+    
     # Execute mkinitrfs with default parameters: -k KERNEL -n -c -dm
     cmd = [mkinitrfs_path, "-k", kernel_version, "-n", "-c", "-dm"]
+
+    # Add config file path if available
+    if temp_dir:
+        config_path = os.path.join(temp_dir, "boot", f"config-{kernel_version}")
+        if os.path.exists(config_path):
+            cmd.extend(["--config-file", config_path])
     
     # Run mkinitrfs with real-time output
     print(f"I: {_('Starting initramfs generation...')}", flush=True)
@@ -264,6 +318,14 @@ def generate_initramfs(kernel_version: str, compression: str, output_dir: str, l
         os.remove(temp_initramfs_path)
     except OSError:
         pass  # Ignore cleanup errors
+    
+    # Clean up temporary symlink if created
+    if cleanup_symlink and os.path.islink(cleanup_symlink):
+        try:
+            os.remove(cleanup_symlink)
+            print(f"I: {_('Removed temporary symlink: {path}').format(path=cleanup_symlink)}")
+        except OSError as e:
+            print(f"Warning: Failed to remove temporary symlink {cleanup_symlink}: {e}")
     
     # Copy log if available
     log_source = os.path.join(os.path.dirname(temp_initramfs_path), 

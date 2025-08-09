@@ -1,14 +1,19 @@
-/* Kernel Manager Styles - Enhanced with Session Manager styling */
+/* Kernel Manager Styles */
 
 /* ==================== Button Styles ==================== */
+/* General button styling - uniform height for all buttons */
+button {
+    min-height: 32px;
+}
 button.suggested-action {
     background: linear-gradient(to bottom, #6bb5ff, #4a90d9);
     color: white;
     border: 1px solid #3875c4;
     text-shadow: 0 1px rgba(0, 0, 0, 0.2);
-    padding: 6px 12px;
+    padding: 0px 12px;
     font-size: 13px;
     min-width: 120px;
+    min-height: 32px;
 }
 
 button.suggested-action:hover {
@@ -23,9 +28,10 @@ button.destructive-action {
     color: white;
     border: 1px solid #a10705;
     text-shadow: 0 1px rgba(0, 0, 0, 0.2);
-    padding: 6px 12px;
+    padding: 0px 12px;
     font-size: 13px;
     min-width: 120px;
+    min-height: 32px;
 }
 
 button.destructive-action:hover {
@@ -41,7 +47,7 @@ button.destructive-action:disabled {
     border: 1px solid #babdb6;
     text-shadow: none;
     box-shadow: none;
-    padding: 6px 12px;
+    padding: 0px 12px;
 }
 
 /* ==================== List Styles ==================== */

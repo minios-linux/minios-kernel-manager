@@ -1,33 +1,114 @@
 .TH minios-kernel 1 "August 2025" "MiniOS Linux" "User Commands"
 .SH NAME
-minios-kernel \- Command-line tool for packaging MiniOS kernels
+minios-kernel \- Command-line tool for managing MiniOS kernels
 .SH SYNOPSIS
 .B minios-kernel
- --source-repo <package-name> --output-dir <path> [options]
+.BR list " [" --json ]
 .br
 .B minios-kernel
- --source-deb <deb-file> --output-dir <path> [options]
+.BR activate " " <kernel-version> " [" --json ]
+.br
+.B minios-kernel
+.BR info " [" <kernel-version> "] [" --json ]
+.br
+.B minios-kernel
+.BR package " {" --repo " " <package> " | " --deb " " <file> "} " -o " " <output-dir> " [options]
 .SH DESCRIPTION
 .B minios-kernel
- is a command-line utility that handles the core tasks of packaging a Linux kernel for use with the MiniOS distribution. It extracts the kernel and modules, generates an initramfs, and creates a SquashFS image.
+is a command-line utility for managing Linux kernels in the MiniOS distribution. It provides commands for listing, activating, and packaging kernels, with JSON output support for GUI integration.
 .PP
-This tool is the backend for the graphical Bminios-kernel-managerR but can be used directly for scripting or advanced tasks. It requires one source argument (B--source-repoR or B--source-debR) and the output directory.
-.SH OPTIONS
+This tool serves as both a standalone CLI utility and the backend for the graphical
+.BR minios-kernel-manager .
+It handles kernel packaging, activation, and provides detailed kernel information.
+.SH COMMANDS
 .TP
-.BR "--source-repo " <package-name>
-Specify the name of the kernel package to be downloaded from the APT repository (e.g., Ilinux-image-6.5.0-10-genericR).
+.BR list " [" --json ]
+List available kernels with their status. Shows active kernel and available kernels in the repository.
 .TP
-.BR "--source-deb " <deb-file>
-Specify the path to a local .deb file for the kernel package.
+.BR activate " " <kernel-version> " [" --json ]
+Activate the specified kernel version for the next boot. Updates bootloader configuration and kernel symlinks.
 .TP
-.BR "--output-dir " <path>
-Required. Specify the directory where the packaged kernel files (vmlinuz, initrfs, and SquashFS module) will be saved.
+.BR info " [" <kernel-version> "] [" --json ]
+Show detailed information about a kernel. If no version is specified, shows information about the currently active kernel.
 .TP
-.BR "--squashfs-comp " <compression>
-Set the compression method for the SquashFS image. Defaults to BzstdR. Common options include BgzipR, Blz4R, and BxzR.
+.BR package " " <source> " " -o " " <output-dir> " [options]
+Package a kernel from repository or local .deb file. Creates SquashFS image, initramfs, and copies kernel files.
+.SH PACKAGE OPTIONS
 .TP
-.BR "--initrd-comp " <compression>
-Set the compression method for the initramfs. Defaults to BzstdR. Common options include BgzipR, Blz4R, and BxzR.
+.BR --repo " " <package-name>
+Download and package kernel from APT repository (e.g., \fIlinux-image-6.12.38+deb13-rt-amd64\fR).
+.TP
+.BR --deb " " <deb-file>
+Package kernel from local .deb file.
+.TP
+.BR -o ", " --output " " <output-dir>
+Directory to save packaged kernel files (vmlinuz, initrfs, SquashFS module). Required for package command.
+.TP
+.BR --sqfs-comp " " <compression>
+Compression method for SquashFS image. Default: \fBzstd\fR. Options: \fBgzip\fR, \fBlz4\fR, \fBxz\fR, \fBzstd\fR.
+.TP
+.BR --init-comp " " <compression>
+Compression method for initramfs. Default: \fBzstd\fR. Options: \fBgzip\fR, \fBlz4\fR, \fBxz\fR, \fBzstd\fR.
+.SH GLOBAL OPTIONS
+.TP
+.BR --json
+Output results in JSON format. Useful for GUI integration and scripting. Can be used with any command.
+.SH EXAMPLES
+.TP
+List available kernels:
+.B minios-kernel list
+.TP
+List kernels in JSON format:
+.B minios-kernel --json list
+.TP
+Activate a specific kernel:
+.B minios-kernel activate 6.12.38+deb13-amd64
+.TP
+Show current kernel information:
+.B minios-kernel info
+.TP
+Package kernel from repository:
+.B minios-kernel package --repo linux-image-6.12.38+deb13-rt-amd64 -o /tmp/output
+.TP
+Package from local .deb with custom compression:
+.B minios-kernel package --deb /path/to/kernel.deb -o /tmp/output --sqfs-comp lz4
+.SH JSON OUTPUT
+When \fB--json\fR flag is used, commands return structured JSON data:
+.TP
+.B list
+Returns array of kernels with version, status, and metadata.
+.TP
+.B activate
+Returns success status and activation details.
+.TP
+.B info
+Returns kernel information including version, status, and system paths.
+.TP
+.B package
+Returns progress updates during packaging and final success status.
+.SH FILES
+.TP
+.I /run/initramfs/memory/data/minios/
+Default MiniOS directory containing kernel files and configuration.
+.TP
+.I /minios/kernels/{version}/
+Repository for inactive packaged kernels.
+.TP
+.I /minios/boot/vmlinuz-*
+Active kernel image.
+.TP
+.I /minios/boot/initrfs-*.img
+Active initramfs image.
+.TP
+.I /minios/01-kernel-*.sb
+Active SquashFS kernel modules.
+.SH EXIT STATUS
+.TP
+.B 0
+Success
+.TP
+.B 1
+General error (invalid arguments, kernel not found, etc.)
 .SH AUTHOR
 Written by crims0n <crims0n@minios.dev>.
 .SH "SEE ALSO"

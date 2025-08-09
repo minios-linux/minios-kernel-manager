@@ -9,6 +9,7 @@ import os
 import shutil
 import subprocess
 import glob
+import tempfile
 import gettext
 from typing import Optional, List, Tuple
 
@@ -110,21 +111,18 @@ def package_kernel_to_repository(minios_path: str, kernel_version: str,
         return False
 
 def get_active_kernel(minios_path: str) -> Optional[str]:
-    """Gets the version of the currently active kernel from configuration file."""
-    # First try to get active kernel from configuration file
-    config_file = "/etc/live/config.conf.d/kernel-manager.conf"
+    """Gets the version of the currently active kernel from boot marker."""
+    # First try to get active kernel from boot marker
+    marker_file = os.path.join(minios_path, "boot", "active-kernel")
     
-    if os.path.exists(config_file):
+    if os.path.exists(marker_file):
         try:
-            with open(config_file, 'r') as f:
-                for line in f:
-                    line = line.strip()
-                    if line and '=' in line and not line.startswith('#'):
-                        key, value = line.split('=', 1)
-                        if key.strip() == 'ACTIVE_KERNEL':
-                            return value.strip()
+            with open(marker_file, 'r') as f:
+                kernel_version = f.read().strip()
+                if kernel_version:
+                    return kernel_version
         except Exception as e:
-            print(f"Warning: Error reading config file {config_file}: {e}")
+            print(f"Warning: Error reading active kernel marker {marker_file}: {e}")
     
     # Fallback: check for vmlinuz files in boot directory
     boot_path = os.path.join(minios_path, "boot")
@@ -410,9 +408,14 @@ def activate_kernel(minios_path: str, kernel_version: str) -> bool:
             if not deactivate_current_kernel(minios_path):
                 return False
             
-            # Update configuration files for running kernel
-            _update_kernel_config(kernel_version)
+            # Update bootloader configurations
             _update_bootloader_configs(minios_path, kernel_version)
+            
+            # Create active kernel marker
+            marker_file = os.path.join(minios_path, "boot", "active-kernel")
+            os.makedirs(os.path.dirname(marker_file), exist_ok=True)
+            with open(marker_file, 'w') as f:
+                f.write(kernel_version)
             
             print(f"Activated running kernel {kernel_version} (files already in place).")
             return True
@@ -444,9 +447,14 @@ def activate_kernel(minios_path: str, kernel_version: str) -> bool:
         shutil.copy2(vmlinuz_file, os.path.join(minios_path, "boot", os.path.basename(vmlinuz_file)))
         shutil.copy2(initramfs_file, os.path.join(minios_path, "boot", os.path.basename(initramfs_file)))
         
-        # Update configuration files
-        _update_kernel_config(kernel_version)
+        # Update bootloader configurations
         _update_bootloader_configs(minios_path, kernel_version)
+        
+        # Create active kernel marker
+        marker_file = os.path.join(minios_path, "boot", "active-kernel")
+        os.makedirs(os.path.dirname(marker_file), exist_ok=True)
+        with open(marker_file, 'w') as f:
+            f.write(kernel_version)
         
         print(f"Successfully copied kernel files for {kernel_version}")
         return True
@@ -665,3 +673,67 @@ def get_system_type() -> str:
             return "Live system (running from media)"
     else:
         return "Installed system"
+
+def get_temp_dir_with_space_check(required_mb: int = 600, prefix: str = "") -> str:
+    """Get temporary directory with sufficient space.
+    
+    Checks available space in /tmp and falls back to alternative location if needed.
+    
+    Args:
+        required_mb: Required space in megabytes (default: 600MB for kernel packaging)
+        prefix: Optional prefix for temporary directory name
+    
+    Returns:
+        str: Path to temporary directory with sufficient space
+    
+    Raises:
+        RuntimeError: If insufficient space is available in all locations
+    """
+    REQUIRED_SPACE = required_mb * 1024 * 1024  # Convert MB to bytes
+    
+    # Primary choice: /tmp
+    default_tmp = "/tmp"
+    
+    try:
+        # Check available space in /tmp
+        statvfs = os.statvfs(default_tmp)
+        available_space = statvfs.f_bavail * statvfs.f_frsize
+        
+        if available_space >= REQUIRED_SPACE:
+            # Sufficient space in /tmp
+            return tempfile.mkdtemp(dir=default_tmp, prefix=prefix)
+        else:
+            print("I: {}".format(_('Insufficient space in /tmp ({:.1f}MB available, {:.1f}MB needed)')).format(
+                available_space / (1024*1024), required_mb), flush=True)
+            
+            # Alternative: /run/initramfs/memory/changes/tmp
+            alt_tmp = "/run/initramfs/memory/changes/tmp"
+            
+            # Create alternative directory if it doesn't exist
+            if not os.path.exists(alt_tmp):
+                os.makedirs(alt_tmp, exist_ok=True)
+                print("I: {}".format(_('Created alternative temporary directory: {}')).format(alt_tmp), flush=True)
+            
+            # Check space in alternative location
+            statvfs_alt = os.statvfs(alt_tmp)
+            available_space_alt = statvfs_alt.f_bavail * statvfs_alt.f_frsize
+            
+            if available_space_alt >= REQUIRED_SPACE:
+                print("I: {}".format(_('Using alternative temporary directory: {} ({:.1f}MB available)')).format(
+                    alt_tmp, available_space_alt / (1024*1024)), flush=True)
+                return tempfile.mkdtemp(dir=alt_tmp, prefix=prefix)
+            else:
+                # Not enough space anywhere
+                raise RuntimeError(_(
+                    "Insufficient disk space for operation. Need {:.1f}MB, but only {:.1f}MB available in /tmp and {:.1f}MB in {}"
+                ).format(
+                    required_mb,
+                    available_space / (1024*1024),
+                    available_space_alt / (1024*1024),
+                    alt_tmp
+                ))
+        
+    except (OSError, IOError) as e:
+        # Fallback to default behavior if space checking fails
+        print("W: {}".format(_('Could not check disk space: {}. Using default temporary directory.')).format(str(e)), flush=True)
+        return tempfile.mkdtemp(prefix=prefix)

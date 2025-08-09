@@ -5,32 +5,53 @@ minios-kernel-manager \- Graphical tool for managing MiniOS kernels
 .B minios-kernel-manager
 .SH DESCRIPTION
 .B minios-kernel-manager
- is a GTK3 graphical utility that provides a user-friendly interface for managing Linux kernels in the MiniOS distribution. It simplifies the process of packaging, installing, activating, and deleting kernels.
+ is a GTK3 graphical utility that provides a user-friendly interface for managing Linux kernels in the MiniOS distribution. It uses the 
+.BR minios-kernel (1)
+CLI backend via JSON API for all kernel operations.
 .PP
 The application provides an easy-to-use GTK3 interface for:
 .IP \(bu 2
-Visual selection of kernels with a color-coded status: running (red), active for the next boot (green), and available (blue).
+Visual selection of kernels with color-coded status indicators.
 .IP \(bu 2
-Safe activation logic that protects the running kernel from being deleted or moved, ensuring system stability.
+Real-time progress monitoring during kernel packaging operations.
 .IP \(bu 2
-Selection of kernels from official repositories or local .deb packages.
+Safe kernel activation with protection of running kernels.
 .IP \(bu 2
-Packaging kernels into SquashFS images and storing them in the I/minios/kernels/R repository.
+Support for both repository packages and local .deb files.
 .IP \(bu 2
-Deletion of packaged kernels from the repository.
+Configurable compression settings for SquashFS and initramfs.
+.IP \(bu 2
+Context menu for kernel management (activate, delete operations).
+.IP \(bu 2
+Clean logging without technical prefixes for better user experience.
+.SH ARCHITECTURE
+The application follows a modern GUI-CLI architecture:
+.IP \(bu 2
+GUI communicates with CLI via JSON API for structured data exchange.
+.IP \(bu 2
+All kernel operations are performed by the
+.BR minios-kernel (1)
+backend.
+.IP \(bu 2
+Progress information is transmitted via JSON messages for real-time updates.
+.IP \(bu 2
+Fallback to text parsing ensures compatibility with older CLI versions.
 .SH FILES
 .TP
 .I /minios/kernels/{version}/
 Repository for inactive packaged kernels.
 .TP
 .I /minios/config.conf.d/kernel-manager.conf
-Configuration file storing the BACTIVE_KERNELR variable.
+Configuration file storing the ACTIVE_KERNEL variable.
 .TP
 .I /usr/share/applications/minios-kernel-manager.desktop
 Desktop entry file.
 .TP
 .I /usr/share/polkit-1/actions/dev.minios.kernel-manager.policy
 PolicyKit policy file for privilege escalation.
+.TP
+.I /usr/share/minios-kernel-manager/style.css
+Application stylesheet for custom GUI styling.
 .SH AUTHOR
 Written by crims0n <crims0n@minios.dev>.
 .SH "SEE ALSO"

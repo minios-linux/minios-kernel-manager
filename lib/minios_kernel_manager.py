@@ -35,6 +35,9 @@ import tempfile
 import shutil
 import time
 import subprocess
+import fcntl
+import json
+import re
 
 # If running from source, add the parent directory of 'lib' to the Python path
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -42,18 +45,16 @@ if os.path.basename(script_dir) == 'lib':
     # Running from source tree
     sys.path.insert(0, os.path.dirname(script_dir))
     from lib.minios_utils import (
-        find_minios_directory, list_all_kernels, get_kernel_info,
-        get_currently_running_kernel, is_kernel_currently_running, get_system_type,
-        package_kernel_to_repository, activate_kernel, delete_packaged_kernel
+        find_minios_directory, get_kernel_info,
+        get_currently_running_kernel, is_kernel_currently_running, get_system_type
     )
     from lib.kernel_utils import get_repository_kernels, get_manual_packages, _format_size
     from lib.compression_utils import get_available_compressions
 else:
     # Running from installed location
     from minios_utils import (
-        find_minios_directory, list_all_kernels, get_kernel_info,
-        get_currently_running_kernel, is_kernel_currently_running, get_system_type,
-        package_kernel_to_repository, activate_kernel, delete_packaged_kernel
+        find_minios_directory, get_kernel_info,
+        get_currently_running_kernel, is_kernel_currently_running, get_system_type
     )
     from kernel_utils import get_repository_kernels, get_manual_packages, _format_size
     from compression_utils import get_available_compressions
@@ -61,6 +62,139 @@ else:
 gi.require_version('Gtk', '3.0')
 gi.require_version('Gio', '2.0')
 from gi.repository import Gtk, GLib, Gio, Pango
+
+# ──────────────────────────────────────────────────────────────────────────────
+# CLI Interface Functions
+# ──────────────────────────────────────────────────────────────────────────────
+def get_minios_kernel_cli_path():
+    """Get the path to minios-kernel CLI tool"""
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    if os.path.basename(script_dir) == 'lib':
+        # Running from source tree
+        cli_path = os.path.join(os.path.dirname(script_dir), 'bin', 'minios-kernel')
+    else:
+        # Running from installed location - assume it's in PATH
+        cli_path = 'minios-kernel'
+    return cli_path
+
+def activate_kernel_cli(kernel_version):
+    """Activate kernel using minios-kernel CLI with JSON output"""
+    cli_path = get_minios_kernel_cli_path()
+    try:
+        # Use bash to execute the script with JSON output
+        cmd = ['bash', cli_path, '--json', 'activate', kernel_version]
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        
+        # Parse JSON response
+        data = json.loads(result.stdout)
+        
+        if data.get('success'):
+            return True, data.get('message', 'Kernel activated successfully')
+        else:
+            return False, data.get('error', 'Unknown error')
+            
+    except (subprocess.CalledProcessError, json.JSONDecodeError, KeyError) as e:
+        # Fallback to text parsing if JSON fails
+        try:
+            cmd = ['bash', cli_path, 'activate', kernel_version]
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            return True, result.stdout
+        except subprocess.CalledProcessError as fallback_e:
+            return False, fallback_e.stderr or str(fallback_e)
+    except Exception as e:
+        return False, str(e)
+
+def list_kernels_cli():
+    """List available kernels using minios-kernel CLI with JSON output"""
+    cli_path = get_minios_kernel_cli_path()
+    try:
+        # Use bash to execute the script with JSON output
+        cmd = ['bash', cli_path, '--json', 'list']
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        
+        # Parse JSON response
+        data = json.loads(result.stdout)
+        
+        kernels = []
+        active_kernel = data.get('active_kernel')
+        
+        for kernel_info in data.get('kernels', []):
+            kernels.append(kernel_info['version'])
+        
+        return kernels, active_kernel
+    except (subprocess.CalledProcessError, json.JSONDecodeError, KeyError) as e:
+        # Fallback to text parsing if JSON fails
+        try:
+            cmd = ['bash', cli_path, 'list']
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            # Parse the output to extract kernel list
+            kernels = []
+            active_kernel = None
+            
+            lines = result.stdout.strip().split('\n')
+            in_kernel_list = False
+            
+            for line in lines:
+                line = line.strip()
+                if line.startswith('Available kernels:'):
+                    in_kernel_list = True
+                    continue
+                elif line.startswith('Currently active kernel:'):
+                    if ':' in line:
+                        active_kernel = line.split(':', 1)[1].strip()
+                    in_kernel_list = False
+                    continue
+                elif in_kernel_list and line.startswith('- '):
+                    kernel_info = line[2:].strip()  # Remove '- ' prefix
+                    if ' (active)' in kernel_info:
+                        kernel = kernel_info.replace(' (active)', '')
+                        active_kernel = kernel
+                    else:
+                        kernel = kernel_info
+                    kernels.append(kernel)
+            
+            return kernels, active_kernel
+        except Exception:
+            print(f"Error listing kernels: {str(e)}")
+            return [], None
+    except Exception as e:
+        print(f"Error listing kernels: {str(e)}")
+        return [], None
+
+def package_kernel_cli(source_type, source_path, output_dir, squashfs_comp="zstd", initrd_comp="zstd"):
+    """Package kernel using minios-kernel CLI with JSON output"""
+    cli_path = get_minios_kernel_cli_path()
+    try:
+        # Use bash to execute the script with JSON output
+        cmd = ['bash', cli_path, '--json', 'package', '-o', output_dir, 
+               '--sqfs-comp', squashfs_comp, '--init-comp', initrd_comp]
+        
+        if source_type == 'repo':
+            cmd.extend(['--repo', source_path])
+        else:  # deb
+            cmd.extend(['--deb', source_path])
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        return True, result.stdout
+    except subprocess.CalledProcessError as e:
+        return False, e.stderr or str(e)
+    except Exception as e:
+        return False, str(e)
+
+def delete_kernel_cli(kernel_version):
+    """Delete kernel using direct file operations (since CLI doesn't support delete yet)"""
+    # For now, fallback to direct function call until delete command is added to CLI
+    try:
+        from minios_utils import find_minios_directory, delete_packaged_kernel
+        minios_path = find_minios_directory()
+        if not minios_path:
+            return False, "MiniOS directory not found"
+        success = delete_packaged_kernel(minios_path, kernel_version)
+        return success, "Kernel deleted successfully" if success else "Failed to delete kernel"
+    except ImportError:
+        return False, "Required modules not available"
+    except Exception as e:
+        return False, str(e)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Constants
@@ -163,68 +297,47 @@ class KernelPackWindow(Gtk.ApplicationWindow):
 
     def _build_system_status_info(self):
         """Build system status information panel"""
-        status_frame = Gtk.Frame()
-        status_frame.set_label(_("System Status"))
-        status_frame.set_margin_bottom(12)
-        
-        status_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        status_box.set_margin_top(6)
-        status_box.set_margin_bottom(6)
-        status_box.set_margin_start(12)
-        status_box.set_margin_end(12)
-        
-        # System type
-        system_label = Gtk.Label()
-        system_label.set_markup(f'<b>{_("System Type:")}</b> {self.system_type}')
-        system_label.set_halign(Gtk.Align.START)
-        status_box.pack_start(system_label, False, False, 0)
-        
-        # MiniOS directory status
+        # MiniOS directory status - simplified
         minios_hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        minios_hbox.set_margin_bottom(12)
         
-        minios_title = Gtk.Label()
-        minios_title.set_markup(f'<b>{_("MiniOS Directory:")}</b>')
-        minios_title.set_halign(Gtk.Align.START)
-        minios_hbox.pack_start(minios_title, False, False, 0)
-        
-        if self.minios_path:
-            minios_status = _("Found at {}").format(self.minios_path)
-            if self.minios_writable:
-                minios_icon_name = "emblem-default"  # Green checkmark
-                minios_color = "#2E7D32"  # Green
-                access_text = _("(writable)")
-            else:
-                minios_icon_name = "dialog-warning"  # Warning icon
-                minios_color = "#F57C00"  # Orange
-                access_text = _("(read-only)")
+        if self.minios_path and self.minios_writable:
+            minios_icon_name = "emblem-default"  # Green checkmark
+            minios_color = "#2E7D32"  # Green
+            status_text = _("MiniOS directory is writable")
         else:
-            minios_status = _("Not found")
             minios_icon_name = "dialog-error"  # Error icon
             minios_color = "#D32F2F"  # Red
-            access_text = ""
+            if self.minios_path:
+                status_text = _("MiniOS directory is read-only")
+            else:
+                status_text = _("MiniOS directory not found")
         
         # Status icon
         status_icon = Gtk.Image.new_from_icon_name(minios_icon_name, Gtk.IconSize.MENU)
         minios_hbox.pack_start(status_icon, False, False, 0)
         
-        # Status text
+        # Status text - clean and simple
         minios_status_label = Gtk.Label()
-        minios_status_label.set_markup(
-            f'<span color="{minios_color}">{minios_status} {access_text}</span>'
-        )
+        minios_status_label.set_markup(f'<span color="{minios_color}"><b>{status_text}</b></span>')
         minios_status_label.set_halign(Gtk.Align.START)
         minios_hbox.pack_start(minios_status_label, False, False, 0)
         
-        status_box.pack_start(minios_hbox, False, False, 0)
-        
-        status_frame.add(status_box)
-        self.main_vbox.pack_start(status_frame, False, False, 0)
+        self.main_vbox.pack_start(minios_hbox, False, False, 0)
 
     def _build_main_ui(self):
         """Build main interface with tabs"""
         # Clear existing UI
         for child in self.main_vbox.get_children():
             self.main_vbox.remove(child)
+            
+        # Clear references to progress UI overlays
+        if hasattr(self, 'cancel_loading_box'):
+            delattr(self, 'cancel_loading_box')
+        if hasattr(self, 'cancel_loading_spinner'):
+            delattr(self, 'cancel_loading_spinner')
+        if hasattr(self, 'cancel_loading_label'):
+            delattr(self, 'cancel_loading_label')
 
         # System status info
         self._build_system_status_info()
@@ -234,15 +347,15 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         self.notebook.set_tab_pos(Gtk.PositionType.TOP)
         self.main_vbox.pack_start(self.notebook, True, True, 0)
         
-        # Install tab
-        install_tab = self._build_install_tab()
-        install_label = Gtk.Label(label=_("Package Kernel"))
-        self.notebook.append_page(install_tab, install_label)
-        
-        # Activate tab
+        # Activate tab (first)
         activate_tab = self._build_activate_tab()
         activate_label = Gtk.Label(label=_("Manage Kernels"))
         self.notebook.append_page(activate_tab, activate_label)
+        
+        # Install tab (second)
+        install_tab = self._build_install_tab()
+        install_label = Gtk.Label(label=_("Package Kernel"))
+        self.notebook.append_page(install_tab, install_label)
         
         # Show everything first, then apply initial visibility logic
         self.show_all()
@@ -254,6 +367,10 @@ class KernelPackWindow(Gtk.ApplicationWindow):
     def _build_selection_ui(self):
         """Return to main selection interface"""
         self._build_main_ui()
+        # Switch to Package Kernel tab (index 1, since Manage Kernels is now index 0)
+        self.notebook.set_current_page(1)
+        # Restore previous state
+        self._restore_ui_state()
 
     def _build_install_tab(self):
         """Build kernel installation tab"""
@@ -317,23 +434,61 @@ class KernelPackWindow(Gtk.ApplicationWindow):
 
     def _build_selection_ui_content(self, container):
         """Build kernel selection interface content"""
-        # Main instruction label
-        lbl = Gtk.Label(label=_("Please select a kernel to package and configure compression settings:"), xalign=0)
-        lbl.set_margin_bottom(8)
-        container.pack_start(lbl, False, False, 0)
-
-        # Horizontal box for main content
-        hb = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=20)
-        container.pack_start(hb, True, True, 0)
-
-        # Left side - Kernel selection
-        vb_kernel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         
+        # Horizontal box for compression settings
+        compress_hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=20)
+        compress_hbox.set_margin_bottom(12)
+        container.pack_start(compress_hbox, False, False, 0)
+        
+        # SquashFS compression
+        sqfs_frame = Gtk.Frame()
+        sqfs_frame.set_label(_("SquashFS Compression"))
+        
+        sqfs_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        sqfs_box.set_margin_top(6)
+        sqfs_box.set_margin_bottom(6)
+        sqfs_box.set_margin_start(12)
+        sqfs_box.set_margin_end(12)
+        
+        self.sqfs_combo = Gtk.ComboBoxText()
+        compressions = get_available_compressions()
+        for comp in compressions:
+            self.sqfs_combo.append_text(comp)
+        # Set default to zstd
+        try:
+            default_index = compressions.index("zstd")
+        except ValueError:
+            default_index = 0
+        self.sqfs_combo.set_active(default_index)
+        self.sqfs_combo.connect("changed", self._on_sqfs_compression_changed)
+        
+        sqfs_box.pack_start(self.sqfs_combo, False, False, 0)
+        sqfs_frame.add(sqfs_box)
+        compress_hbox.pack_start(sqfs_frame, True, True, 0)
+        
+        # Initramfs compression
+        initrd_frame = Gtk.Frame()
+        initrd_frame.set_label(_("Initramfs Compression"))
+        
+        initrd_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        initrd_box.set_margin_top(6)
+        initrd_box.set_margin_bottom(6)
+        initrd_box.set_margin_start(12)
+        initrd_box.set_margin_end(12)
+        
+        self.initrd_combo = Gtk.ComboBoxText()
+        for comp in compressions:
+            self.initrd_combo.append_text(comp)
+        self.initrd_combo.set_active(default_index)
+        self.initrd_combo.connect("changed", self._on_initrd_compression_changed)
+        
+        initrd_box.pack_start(self.initrd_combo, False, False, 0)
+        initrd_frame.add(initrd_box)
+        compress_hbox.pack_start(initrd_frame, True, True, 0)
+
         # Kernel source selection
-        source_label = Gtk.Label(label=_("Kernel Source:"), xalign=0)
-        vb_kernel.pack_start(source_label, False, False, 0)
-        
         source_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        source_box.set_margin_top(6)
         self.local_radio = Gtk.RadioButton.new_with_label_from_widget(None, _("Manual Package"))
         self.local_radio.set_active(True)
         self.local_radio.connect("toggled", self._on_kernel_source_changed)
@@ -343,16 +498,18 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         self.repo_radio.connect("toggled", self._on_kernel_source_changed)
         source_box.pack_start(self.repo_radio, False, False, 0)
         
-        vb_kernel.pack_start(source_box, False, False, 0)
+        container.pack_start(source_box, False, False, 0)
+        
+        # Main content area
+        vb_kernel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        vb_kernel.set_margin_top(12)
+        container.pack_start(vb_kernel, True, True, 0)
         
         # Kernel selection area
         kernel_selection_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         
         # Manual package selection (only shown when Manual Package is selected)
         self.manual_selection_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        
-        manual_label = Gtk.Label(label=_("Select Kernel Package:"), xalign=0)
-        self.manual_selection_box.pack_start(manual_label, False, False, 0)
         
         file_selection_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         
@@ -411,7 +568,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         self.kernel_list.connect("row-selected", self._on_kernel_selected)
 
         sw = Gtk.ScrolledWindow()
-        sw.set_min_content_width(350)
+        sw.set_min_content_width(650)
         sw.set_min_content_height(200)
         sw.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         sw.add(self.kernel_list)
@@ -422,62 +579,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         
         vb_kernel.pack_start(kernel_selection_box, True, True, 0)
         
-        hb.pack_start(vb_kernel, True, True, 0)
 
-        # Right side - Compression settings
-        vb_compress = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        
-        compress_label = Gtk.Label(label=_("Compression Settings:"), xalign=0)
-        vb_compress.pack_start(compress_label, False, False, 0)
-        
-        # SquashFS compression
-        sqfs_frame = Gtk.Frame()
-        sqfs_frame.set_label(_("SquashFS Compression"))
-        sqfs_frame.set_margin_bottom(12)
-        
-        sqfs_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        sqfs_box.set_margin_top(6)
-        sqfs_box.set_margin_bottom(6)
-        sqfs_box.set_margin_start(12)
-        sqfs_box.set_margin_end(12)
-        
-        self.sqfs_combo = Gtk.ComboBoxText()
-        compressions = get_available_compressions()
-        for comp in compressions:
-            self.sqfs_combo.append_text(comp)
-        # Set default to zstd
-        try:
-            default_index = compressions.index("zstd")
-        except ValueError:
-            default_index = 0
-        self.sqfs_combo.set_active(default_index)
-        self.sqfs_combo.connect("changed", self._on_sqfs_compression_changed)
-        
-        sqfs_box.pack_start(self.sqfs_combo, False, False, 0)
-        sqfs_frame.add(sqfs_box)
-        vb_compress.pack_start(sqfs_frame, False, False, 0)
-        
-        # Initramfs compression
-        initrd_frame = Gtk.Frame()
-        initrd_frame.set_label(_("Initramfs Compression"))
-        
-        initrd_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        initrd_box.set_margin_top(6)
-        initrd_box.set_margin_bottom(6)
-        initrd_box.set_margin_start(12)
-        initrd_box.set_margin_end(12)
-        
-        self.initrd_combo = Gtk.ComboBoxText()
-        for comp in compressions:
-            self.initrd_combo.append_text(comp)
-        self.initrd_combo.set_active(default_index)
-        self.initrd_combo.connect("changed", self._on_initrd_compression_changed)
-        
-        initrd_box.pack_start(self.initrd_combo, False, False, 0)
-        initrd_frame.add(initrd_box)
-        vb_compress.pack_start(initrd_frame, False, False, 0)
-        
-        hb.pack_start(vb_compress, False, False, 0)
 
         # Bottom buttons
         button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
@@ -506,7 +608,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         if not self.minios_path:
             return
         
-        all_kernels = list_all_kernels(self.minios_path)
+        all_kernels, active_kernel = list_kernels_cli()
         
         if not all_kernels:
             # Show no kernels message
@@ -537,9 +639,18 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             
         else:
             for kernel in all_kernels:
-                kernel_info = get_kernel_info(self.minios_path, kernel)
-                if not kernel_info:
-                    continue
+                # For CLI compatibility, create simplified kernel_info
+                is_active = kernel == active_kernel
+                is_running = is_kernel_currently_running(kernel)
+                
+                kernel_info = {
+                    'display_name': kernel,
+                    'description': f"Kernel version {kernel}",
+                    'is_active': is_active,
+                    'is_running': is_running,
+                    'icon_name': 'package-x-generic',
+                    'status': 'active' if is_active else 'available'
+                }
 
                 row = Gtk.ListBoxRow()
                 
@@ -666,10 +777,13 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         # Activate kernel in background thread
         def activate_kernel_bg():
             try:
-                success = activate_kernel(self.minios_path, self.selected_packaged_kernel)
+                success, output = activate_kernel_cli(self.selected_packaged_kernel)
                 
                 # Update UI in main thread
-                GLib.idle_add(self._on_kernel_activation_complete, success, None, self.selected_packaged_kernel)
+                if success:
+                    GLib.idle_add(self._on_kernel_activation_complete, True, None, self.selected_packaged_kernel)
+                else:
+                    GLib.idle_add(self._on_kernel_activation_complete, False, output, self.selected_packaged_kernel)
                 
             except Exception as e:
                 GLib.idle_add(self._on_kernel_activation_complete, False, str(e), self.selected_packaged_kernel)
@@ -723,7 +837,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
     def _delete_kernel(self):
         """Delete the selected kernel"""
         try:
-            success = delete_packaged_kernel(self.minios_path, self.selected_packaged_kernel)
+            success, message = delete_kernel_cli(self.selected_packaged_kernel)
             
             if success:
                 dialog = Gtk.MessageDialog(
@@ -1152,6 +1266,9 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         if self.is_building:
             return
 
+        # Save current UI state before switching to progress
+        self._save_ui_state()
+        
         # Switch to progress UI
         self._build_progress_ui()
         
@@ -1175,28 +1292,30 @@ class KernelPackWindow(Gtk.ApplicationWindow):
                 project_dir = os.path.dirname(script_dir)
                 cli_command = os.path.join(project_dir, 'bin', 'minios-kernel')
                 if os.path.exists(cli_command):
-                    cmd = [cli_command]
+                    cmd = ['bash', cli_command, '--json', 'package']
                 else:
                     # Local script not found, fallback to system
-                    cmd = ['/usr/bin/minios-kernel']
+                    cmd = ['bash', '/usr/bin/minios-kernel', '--json', 'package']
             else:
                 # Running from installed location - use full path to system command
-                cmd = ['/usr/bin/minios-kernel']
+                cmd = ['bash', '/usr/bin/minios-kernel', '--json', 'package']
             
             if self.kernel_source == 'repository':
-                cmd.extend(['--source-repo', self.selected_kernel])
+                cmd.extend(['--repo', self.selected_kernel])
             else:
-                cmd.extend(['--source-deb', self.selected_kernel])
+                cmd.extend(['--deb', self.selected_kernel])
             
             # The kernel version is not known before packaging, so we pass a placeholder
             # The CLI tool will determine the actual version
             cmd.extend([
-                '--output-dir', self.temp_output_dir,
-                '--squashfs-comp', self.sqfs_compression,
-                '--initrd-comp', self.initrd_compression,
-                '--progress'
+                '-o', self.temp_output_dir,
+                '--sqfs-comp', self.sqfs_compression,
+                '--init-comp', self.initrd_compression
             ])
 
+            # Log the command being executed
+            self._log_message(_("Executing command: {}").format(" ".join(cmd)))
+            
             # Set environment for unbuffered output
             env = os.environ.copy()
             env['PYTHONUNBUFFERED'] = '1'
@@ -1226,7 +1345,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             # Log detailed error information
             import traceback
             error_details = f"Failed to start packaging process: {str(e)}\n\nTraceback:\n{traceback.format_exc()}"
-            self._log_message(f"E: {error_details}")
+            self._log_message(error_details)
             
             # Show user-friendly error message
             self._show_error(_("Failed to start packaging process. Please check the log for detailed error information.") + f"\n\nError: {str(e)}")
@@ -1256,12 +1375,18 @@ class KernelPackWindow(Gtk.ApplicationWindow):
                     for line in lines:
                         line_text = line.strip()
                         if line_text:  # Skip empty lines
-                            # Update progress based on CLI output
-                            self._update_progress_from_cli_output(line_text)
+                            # Try to update progress based on JSON output
+                            is_json_processed = self._update_progress_from_cli_output(line_text)
                             
-                            # Only log non-PROGRESS messages
-                            if not line_text.startswith("PROGRESS:"):
-                                self._log_message(line_text)
+                            # Only log non-JSON messages to keep log readable
+                            if not is_json_processed:
+                                # Remove log prefixes (I:, E:, W:) for cleaner output
+                                clean_message = line_text
+                                for prefix in ['I: ', 'E: ', 'W: ']:
+                                    if clean_message.startswith(prefix):
+                                        clean_message = clean_message[len(prefix):]
+                                        break
+                                self._log_message(clean_message)
                     
                     return True
             except Exception as e:
@@ -1288,12 +1413,18 @@ class KernelPackWindow(Gtk.ApplicationWindow):
                 if line:
                     line_text = line.strip()
                     if line_text:
-                        # Update progress based on CLI output
+                        # Update progress based on CLI output (JSON format)
                         self._update_progress_from_cli_output(line_text)
                         
-                        # Only log non-PROGRESS messages
-                        if not line_text.startswith("PROGRESS:"):
-                            self._log_message(line_text)
+                        # Only log non-JSON messages to keep log readable
+                        if not (line_text.strip().startswith('{') and line_text.strip().endswith('}')):
+                            # Remove log prefixes (I:, E:, W:) for cleaner output
+                            clean_message = line_text
+                            for prefix in ['I: ', 'E: ', 'W: ']:
+                                if clean_message.startswith(prefix):
+                                    clean_message = clean_message[len(prefix):]
+                                    break
+                            self._log_message(clean_message)
                         
                         # Force GUI update
                         while Gtk.events_pending():
@@ -1324,78 +1455,35 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         return True  # Continue timer
 
     def _update_progress_from_cli_output(self, line_text):
-        """Update progress bar based on CLI output"""
-        # Look for structured progress output: PROGRESS:percent:message
-        if line_text.startswith("PROGRESS:"):
+        """Update progress bar based on CLI output. Returns True if line was processed as JSON."""
+        # Try to parse JSON progress output first
+        if line_text.strip().startswith('{') and line_text.strip().endswith('}'):
             try:
-                parts = line_text.split(":", 3)
-                if len(parts) >= 3:
-                    percent = int(parts[1])
-                    message = parts[2] if len(parts) > 2 else ""
+                data = json.loads(line_text)
+                if data.get('type') == 'progress':
+                    percent = data.get('percent', 0)
+                    message = data.get('message', '')
                     progress = percent / 100.0
                     
-                    # Translate the message if it's in English and add timing info for long operations
+                    # Translate the message 
                     if message:
                         translated_message = _(message)
-                        
-                        # Add timing warnings for long operations
-                        if "Downloading kernel package" in message:
-                            translated_message += " " + _("(This may take 1-5 minutes depending on internet speed)")
-                            translated_message = "I: " + translated_message
-                        elif "Creating SquashFS image" in message:
-                            translated_message += " " + _("(This may take 1-3 minutes)")
-                            translated_message = "I: " + translated_message
-                        elif "Generating initramfs" in message:
-                            translated_message += " " + _("(This may take 30-60 seconds)")
-                            translated_message = "I: " + translated_message
-                        
                         self._update_progress(progress, translated_message)
                     else:
                         self._update_progress(progress, "")
-                    return
-            except (ValueError, IndexError):
-                # If parsing fails, ignore this line
+                    return True
+                elif data.get('type') == 'success':
+                    self._update_progress(1.0, _("Kernel packaging completed successfully!"))
+                    return True
+                elif data.get('type') == 'error':
+                    error_msg = data.get('error', 'Unknown error')
+                    self._log_message(f"E: {error_msg}")
+                    return True
+            except (json.JSONDecodeError, KeyError):
+                # Not JSON or invalid JSON, continue with legacy parsing
                 pass
         
-        # Fallback: Legacy text-based progress detection
-        # Pre-define translatable progress messages with timing info
-        MSG_DOWNLOADING = "I: " + _("Downloading kernel package...") + " " + _("(This may take 1-5 minutes)")
-        MSG_DOWNLOAD_COMPLETE = "I: " + _("Download completed, extracting...")
-        MSG_EXTRACTING = "I: " + _("Extracting package...")
-        MSG_INSTALLING_MODULES = "I: " + _("Installing kernel modules...")
-        MSG_CREATING_SQUASHFS = "I: " + _("Creating SquashFS image...") + " " + _("(This may take 1-3 minutes)")
-        MSG_GENERATING_INITRAMFS = "I: " + _("Generating initramfs...") + " " + _("(This may take 30-60 seconds)")
-        MSG_COPYING_FILES = "I: " + _("Copying kernel files...")
-        MSG_FINALIZING = _("Finalizing installation...")
-        
-        # Detect different stages of the process
-        if "Starting download" in line_text:
-            self._update_progress(0.1, MSG_DOWNLOADING)
-        elif "Download completed" in line_text:
-            self._update_progress(0.3, MSG_DOWNLOAD_COMPLETE)
-        elif "Extracting" in line_text:
-            self._update_progress(0.4, MSG_EXTRACTING)
-        elif "Preparing temporary modules" in line_text or "Copying modules" in line_text:
-            self._update_progress(0.5, MSG_INSTALLING_MODULES)
-        elif "Creating SquashFS" in line_text or "Building SquashFS" in line_text:
-            self._update_progress(0.7, MSG_CREATING_SQUASHFS)
-        elif "Generating initramfs" in line_text:
-            self._update_progress(0.8, MSG_GENERATING_INITRAMFS)
-        elif "Copying kernel files" in line_text or "vmlinuz" in line_text:
-            self._update_progress(0.9, MSG_COPYING_FILES)
-        elif "CLI tool finished successfully" in line_text:
-            self._update_progress(0.95, MSG_FINALIZING)
-        elif "%" in line_text and ("Get:" in line_text or "Fetched" in line_text):
-            # Try to parse apt download progress
-            try:
-                if "%" in line_text:
-                    # Extract percentage from apt output like "25% [1 package 5.2MB/20MB 26%]"
-                    percent_match = line_text.split("%")[0].split()[-1]
-                    if percent_match.isdigit():
-                        progress = min(int(percent_match) / 100 * 0.3, 0.29)  # Download is 0-30%
-                        self._update_progress(progress, MSG_DOWNLOADING)
-            except:
-                pass
+        return False
 
     def _on_cli_exit(self, pid, status):
         """Callback for when the CLI process finishes."""
@@ -1408,29 +1496,26 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         self.active_pid = None
 
         if os.WIFEXITED(status) and os.WEXITSTATUS(status) == 0:
+            
             # Pre-define translatable messages
             MSG_CLI_SUCCESS = _("CLI tool finished successfully, installing to repository...")
             MSG_INSTALLING_TO_REPO = _("Installing kernel to repository...")
             MSG_COMPLETED = _("Kernel packaging completed successfully!")
             
             self._update_progress(0.95, MSG_CLI_SUCCESS)
-            self._log_message("I: " + _("CLI tool finished successfully."))
+            self._log_message(_("CLI tool finished successfully."))
             # Now, move the packaged files to the repository
             try:
+                self._update_progress(0.98, MSG_INSTALLING_TO_REPO)
+                # When using CLI, files should already be in the right place
+                # Just verify they exist and refresh the kernel list
                 packaged_files = os.listdir(self.temp_output_dir)
                 vmlinuz_file = next((f for f in packaged_files if f.startswith('vmlinuz-')), None)
                 if not vmlinuz_file:
                     raise Exception("Could not find vmlinuz file in package output")
                 
                 kernel_version = vmlinuz_file.replace('vmlinuz-','')
-
-                self._update_progress(0.98, MSG_INSTALLING_TO_REPO)
-                package_kernel_to_repository(
-                    self.minios_path, kernel_version,
-                    os.path.join(self.temp_output_dir, f"01-kernel-{kernel_version}.sb"),
-                    os.path.join(self.temp_output_dir, vmlinuz_file),
-                    os.path.join(self.temp_output_dir, f"initrfs-{kernel_version}.img")
-                )
+                self._log_message(f"Kernel {kernel_version} packaged successfully to {self.temp_output_dir}")
                 
                 self._update_progress(1.0, MSG_COMPLETED)
                 GLib.idle_add(self._populate_packaged_kernels)
@@ -1438,16 +1523,17 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             except Exception as e:
                 GLib.idle_add(self._show_error, f"Failed to process package output: {str(e)}")
         else:
+            
             # Log the error with exit status
             error_msg = _("Kernel packaging failed with exit code: {}").format(status)
-            self._log_message(f"E: {error_msg}")
+            self._log_message(error_msg)
             
             # Show error dialog with more information
             full_error = _("Kernel packaging failed with exit code: {}. Please check the log above for detailed error information.").format(status)
             self._show_error(full_error)
 
-        if os.path.exists(self.temp_output_dir):
-            shutil.rmtree(self.temp_output_dir)
+        # Note: temp_output_dir cleanup is handled by CLI via signal handlers
+        # GUI should not clean up CLI temporary files
         
         self._build_finished()
 
@@ -1483,7 +1569,23 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         self.log_buffer = self.log_textview.get_buffer()
         scrolled_log.add(self.log_textview)
         
-        log_frame.add(scrolled_log)
+        # Create cancellation overlay components
+        self.cancel_loading_spinner = Gtk.Spinner()
+        self.cancel_loading_label = Gtk.Label(label=_("Cancelling and cleaning up..."))
+        self.cancel_loading_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        self.cancel_loading_box.pack_start(self.cancel_loading_spinner, False, False, 0)
+        self.cancel_loading_box.pack_start(self.cancel_loading_label, False, False, 0)
+        self.cancel_loading_box.set_halign(Gtk.Align.CENTER)
+        self.cancel_loading_box.set_valign(Gtk.Align.CENTER)
+        self.cancel_loading_box.get_style_context().add_class('loading-overlay')
+        
+        # Create overlay for log area
+        log_overlay = Gtk.Overlay()
+        log_overlay.add(scrolled_log)
+        log_overlay.add_overlay(self.cancel_loading_box)
+        self.cancel_loading_box.set_visible(False)  # Initially hidden
+        
+        log_frame.add(log_overlay)
         self.main_vbox.pack_start(log_frame, True, True, 0)
 
         # Bottom buttons
@@ -1493,26 +1595,158 @@ class KernelPackWindow(Gtk.ApplicationWindow):
 
         self.cancel_button = Gtk.Button.new_with_label(_("Cancel"))
         self.cancel_button.connect("clicked", self._on_cancel_clicked)
+        self.cancel_button.get_style_context().add_class('destructive-action')
         button_box.pack_start(self.cancel_button, False, False, 0)
 
         self.show_all()
+        
+        # Initialize overlays after show_all()
+        self._initialize_loading_overlays()
+
+    def _save_ui_state(self):
+        """Save current UI state before build"""
+        self.saved_state = {
+            'selected_kernel': self.selected_kernel,
+            'kernel_source': self.kernel_source,
+            'sqfs_compression': self.sqfs_compression,
+            'initrd_compression': self.initrd_compression,
+            'selected_file_path': getattr(self, 'selected_file_path', None)
+        }
+
+    def _restore_ui_state(self):
+        """Restore UI state after build completion/cancellation"""
+        if hasattr(self, 'saved_state') and self.saved_state:
+            # Restore data
+            self.selected_kernel = self.saved_state['selected_kernel']
+            self.kernel_source = self.saved_state['kernel_source']
+            self.sqfs_compression = self.saved_state['sqfs_compression']
+            self.initrd_compression = self.saved_state['initrd_compression']
+            if self.saved_state['selected_file_path']:
+                self.selected_file_path = self.saved_state['selected_file_path']
+            
+            # Restore UI elements
+            if hasattr(self, 'sqfs_combo'):
+                compressions = get_available_compressions()
+                if self.sqfs_compression in compressions:
+                    self.sqfs_combo.set_active(compressions.index(self.sqfs_compression))
+                    
+            if hasattr(self, 'initrd_combo'):
+                compressions = get_available_compressions()
+                if self.initrd_compression in compressions:
+                    self.initrd_combo.set_active(compressions.index(self.initrd_compression))
+                    
+            # Restore radio buttons
+            if hasattr(self, 'local_radio') and hasattr(self, 'repo_radio'):
+                if self.kernel_source == 'manual':
+                    self.local_radio.set_active(True)
+                else:
+                    self.repo_radio.set_active(True)
+                    
+            # Restore selected file label
+            if hasattr(self, 'selected_file_label') and self.saved_state['selected_file_path']:
+                import os
+                filename = os.path.basename(self.saved_state['selected_file_path'])
+                self.selected_file_label.set_text(filename)
+
+    def _show_back_button(self):
+        """Replace cancel button with back button after cancellation"""
+        # Find and remove the current button box
+        for child in self.main_vbox.get_children():
+            if isinstance(child, Gtk.Box) and any(isinstance(grandchild, Gtk.Button) for grandchild in child.get_children()):
+                self.main_vbox.remove(child)
+                break
+        
+        # Create new button box with Back button
+        button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        button_box.set_halign(Gtk.Align.END)
+        
+        back_button = Gtk.Button.new_with_label(_("Back to Selection"))
+        back_button.connect("clicked", lambda _: self._build_selection_ui())
+        back_button.get_style_context().add_class('suggested-action')
+        button_box.pack_start(back_button, False, False, 0)
+        
+        self.main_vbox.pack_start(button_box, False, False, 0)
+        self.show_all()
+        
+        # Ensure overlays remain hidden after show_all()
+        self._initialize_loading_overlays()
 
     def _on_cancel_clicked(self, button):
         """Cancel build process and return to selection"""
         # button parameter is not used
-        if self.active_pid:
-            os.kill(self.active_pid, 9) # Kill the process
+        
+        # Show cancellation overlay immediately
+        self._show_cancel_overlay()
+        
+        # Disable the cancel button to prevent multiple clicks
+        self.cancel_button.set_sensitive(False)
+        
         self.cancel_requested = True
         self.is_building = False
-        self._log_message("I: " + _("Cancelling packaging..."))
-        self._build_finished()
+        self._log_message(_("Cancelling packaging..."))
+        
+        # Use GLib.timeout_add to handle process termination without freezing UI
+        def handle_cancellation():
+            if self.active_pid:
+                # First try graceful termination (SIGTERM)
+                try:
+                    os.kill(self.active_pid, 15)  # SIGTERM
+                    # Wait a bit for graceful shutdown
+                    time.sleep(2)
+                    # If still running, force kill
+                    try:
+                        os.kill(self.active_pid, 0)  # Check if process still exists
+                        os.kill(self.active_pid, 9)  # SIGKILL if still alive
+                    except ProcessLookupError:
+                        # Process already terminated gracefully
+                        pass
+                except ProcessLookupError:
+                    # Process already dead
+                    pass
+            
+            # CLI handles all cleanup when it receives termination signal
+            
+            # Hide cancellation overlay first, then proceed with finishing
+            self._hide_cancel_overlay()
+            
+            # Force GUI update to ensure overlay is hidden before showing result
+            while Gtk.events_pending():
+                Gtk.main_iteration()
+            
+            # Now proceed with build finished
+            self._build_finished()
+            
+            return False  # Don't repeat this timeout
+        
+        # Run cancellation in a brief timeout to allow UI to update
+        GLib.timeout_add(100, handle_cancellation)
+
+    def _show_cancel_overlay(self):
+        """Show cancellation overlay with spinner"""
+        if hasattr(self, 'cancel_loading_box'):
+            self.cancel_loading_box.set_visible(True)
+            self.cancel_loading_spinner.start()
+            
+            # Force GUI update
+            while Gtk.events_pending():
+                Gtk.main_iteration()
+
+    def _hide_cancel_overlay(self):
+        """Hide cancellation overlay"""
+        if hasattr(self, 'cancel_loading_box'):
+            self.cancel_loading_box.set_visible(False)
+            self.cancel_loading_spinner.stop()
 
     def _build_finished(self):
         """Called when build is finished"""
         self.is_building = False
         
+        # Ensure cancel overlay is hidden
+        self._hide_cancel_overlay()
+        
         if self.cancel_requested:
-            self._build_selection_ui()
+            # Don't hide the log on cancel, just change the buttons
+            self._show_back_button()
             return
             
         button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
@@ -1520,6 +1754,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         
         back_button = Gtk.Button.new_with_label(_("Back to Selection"))
         back_button.connect("clicked", lambda _: self._build_selection_ui())
+        back_button.get_style_context().add_class('suggested-action')
         button_box.pack_start(back_button, False, False, 0)
         
         for child in self.main_vbox.get_children():
@@ -1529,6 +1764,8 @@ class KernelPackWindow(Gtk.ApplicationWindow):
                         self.main_vbox.remove(child)
                         self.main_vbox.pack_start(button_box, False, False, 0)
                         self.show_all()
+                        # Ensure overlays remain hidden after show_all()
+                        self._initialize_loading_overlays()
                         return
 
     def _update_progress(self, fraction, text):
@@ -1536,7 +1773,9 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         self.progress_bar.set_fraction(fraction)
         self.progress_bar.set_text(f"{int(fraction * 100)}%")
         self.status_label.set_text(text)
-        self._log_message(text)
+        # Only log progress text if it's meaningful and not empty
+        if text and text.strip():
+            self._log_message(text)
 
     def _log_message(self, message):
         """Add message to log"""
@@ -1553,37 +1792,21 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         self.log_buffer.delete_mark(mark)
 
     def _show_error(self, message):
-        """Show error dialog with option to view log"""
+        """Show error dialog"""
         # Also log the error message
-        self._log_message(f"E: {message}")
+        self._log_message(message)
         
         dialog = Gtk.MessageDialog(
             transient_for=self,
             flags=0,
             message_type=Gtk.MessageType.ERROR,
-            buttons=Gtk.ButtonsType.NONE,
+            buttons=Gtk.ButtonsType.OK,
             text=_("Error")
         )
         dialog.format_secondary_text(message)
         
-        # Add custom buttons
-        dialog.add_button(_("View Log"), 1)
-        dialog.add_button(_("OK"), Gtk.ResponseType.OK)
-        
-        response = dialog.run()
+        dialog.run()
         dialog.destroy()
-        
-        if response == 1:
-            # User clicked "View Log" - make sure log is visible and scroll to end
-            if hasattr(self, 'log_textview'):
-                # Scroll to the end of the log
-                end_iter = self.log_buffer.get_end_iter()
-                mark = self.log_buffer.create_mark(None, end_iter, False)
-                self.log_textview.scroll_mark_onscreen(mark)
-                self.log_buffer.delete_mark(mark)
-                
-                # Focus on the log textview
-                self.log_textview.grab_focus()
 
     def _show_completion_message(self):
         """Show completion message with instructions"""
@@ -1629,6 +1852,11 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         if hasattr(self, 'activate_loading_box'):
             self.activate_loading_box.set_visible(False)
             self.activate_loading_spinner.stop()
+            
+        # Hide cancellation loading overlay (only exists in progress UI)
+        if hasattr(self, 'cancel_loading_box'):
+            self.cancel_loading_box.set_visible(False)
+            self.cancel_loading_spinner.stop()
     
     def _create_context_menu(self):
         """Create context menu for kernel items"""
