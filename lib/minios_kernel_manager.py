@@ -77,7 +77,7 @@ def get_minios_kernel_cli_path():
         cli_path = 'minios-kernel'
     return cli_path
 
-def run_minios_kernel_with_pkexec(args):
+def run_minios_kernel(args):
     """Execute minios-kernel command with pkexec for administrative privileges"""
     cli_path = get_minios_kernel_cli_path()
     
@@ -90,7 +90,7 @@ def activate_kernel_cli(kernel_version):
     """Activate kernel using minios-kernel CLI with JSON output"""
     try:
         # Use pkexec to execute the script with JSON output
-        result = run_minios_kernel_with_pkexec(['--json', 'activate', kernel_version])
+        result = run_minios_kernel(['--json', 'activate', kernel_version])
         
         if result.returncode == 0:
             # Parse JSON response
@@ -111,7 +111,7 @@ def activate_kernel_cli(kernel_version):
     except json.JSONDecodeError as e:
         # Fallback to text parsing if JSON fails
         try:
-            result = run_minios_kernel_with_pkexec(['activate', kernel_version])
+            result = run_minios_kernel(['activate', kernel_version])
             if result.returncode == 0:
                 return True, result.stdout
             else:
@@ -125,7 +125,7 @@ def list_kernels_cli():
     """List available kernels using minios-kernel CLI with JSON output"""
     try:
         # Use pkexec to execute the script with JSON output
-        result = run_minios_kernel_with_pkexec(['--json', 'list'])
+        result = run_minios_kernel(['--json', 'list'])
         
         if result.returncode == 0:
             # Parse JSON response
@@ -191,7 +191,7 @@ def package_kernel_cli(source_type, source_path, output_dir, squashfs_comp="zstd
             cmd_args.extend(['--deb', source_path])
         
         # Use pkexec to execute the script
-        result = run_minios_kernel_with_pkexec(cmd_args)
+        result = run_minios_kernel(cmd_args)
         
         if result.returncode == 0:
             return True, result.stdout
@@ -217,24 +217,35 @@ def update_package_lists_gui():
         return False, str(e)
 
 def delete_kernel_cli(kernel_version):
-    """Delete kernel using direct file operations (since CLI doesn't support delete yet)"""
-    # For now, fallback to direct function call until delete command is added to CLI
+    """Delete kernel using minios-kernel CLI with administrative privileges"""
     try:
-        from minios_utils import find_minios_directory, delete_packaged_kernel
-        minios_path = find_minios_directory()
-        if not minios_path:
-            return False, "MiniOS directory not found"
-        success = delete_packaged_kernel(minios_path, kernel_version)
-        return success, "Kernel deleted successfully" if success else "Failed to delete kernel"
-    except ImportError:
-        return False, "Required modules not available"
+        # Use pkexec to execute the script with JSON output
+        result = run_minios_kernel(['--json', 'delete', kernel_version])
+        
+        if result.returncode == 0:
+            response_data = json.loads(result.stdout)
+            success = response_data.get('success', False)
+            message = response_data.get('message', '')
+            error = response_data.get('error', '')
+            
+            if success:
+                return True, message
+            else:
+                return False, error
+        else:
+            # Try to parse error from stderr or stdout
+            error_msg = result.stderr.strip() or result.stdout.strip()
+            return False, f"Command failed with exit code {result.returncode}: {error_msg}"
+            
+    except json.JSONDecodeError as e:
+        return False, f"Failed to parse command output: {e}"
     except Exception as e:
         return False, str(e)
 
 def check_minios_status_cli():
     """Check MiniOS directory status using minios-kernel CLI with JSON output"""
     try:
-        result = run_minios_kernel_with_pkexec(['status', '--json'])
+        result = run_minios_kernel(['status', '--json'])
         if result.returncode == 0:
             status_data = json.loads(result.stdout)
             return status_data
@@ -1671,19 +1682,15 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         for child in self.main_vbox.get_children():
             self.main_vbox.remove(child)
 
-        # Progress label
-        lbl = Gtk.Label(label=_("Packaging kernel..."), xalign=0)
-        self.main_vbox.pack_start(lbl, False, False, 0)
+        # Status label (moved above progress bar)
+        self.status_label = Gtk.Label(label=_("Starting packaging process..."))
+        self.status_label.set_halign(Gtk.Align.START)
+        self.main_vbox.pack_start(self.status_label, False, False, 0)
 
         # Progress bar
         self.progress_bar = Gtk.ProgressBar()
         self.progress_bar.set_show_text(True)
         self.main_vbox.pack_start(self.progress_bar, False, False, 0)
-
-        # Status label
-        self.status_label = Gtk.Label(label=_("Starting packaging process..."))
-        self.status_label.set_halign(Gtk.Align.START)
-        self.main_vbox.pack_start(self.status_label, False, False, 0)
 
         # Log output
         log_frame = Gtk.Frame()
@@ -1893,7 +1900,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
     def _update_progress(self, fraction, text):
         """Update progress bar and status"""
         self.progress_bar.set_fraction(fraction)
-        self.progress_bar.set_text(f"{int(fraction * 100)}%")
+        self.progress_bar.set_text("")
         self.status_label.set_text(text)
         # Only log progress text if it's meaningful and not empty
         if text and text.strip():
@@ -1907,11 +1914,10 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         end_iter = self.log_buffer.get_end_iter()
         self.log_buffer.insert(end_iter, full_message)
         
-        # Create mark at the end and scroll to it
-        end_iter = self.log_buffer.get_end_iter()
-        mark = self.log_buffer.create_mark(None, end_iter, False)
-        self.log_textview.scroll_mark_onscreen(mark)
-        self.log_buffer.delete_mark(mark)
+        # Scroll to end safely
+        if hasattr(self, 'log_textview') and self.log_textview.get_buffer() == self.log_buffer:
+            end_iter = self.log_buffer.get_end_iter()
+            self.log_textview.scroll_to_iter(end_iter, 0.0, False, 0.0, 0.0)
 
     def _show_error(self, message):
         """Show error dialog"""

@@ -479,6 +479,36 @@ def status_cmd(args):
             if error_msg:
                 print("{}: {}".format(_("Reason"), error_msg))
 
+def delete_kernel_cmd(args):
+    """Delete a packaged kernel"""
+    from minios_utils import find_minios_directory, delete_packaged_kernel
+    
+    minios_path = find_minios_directory()
+    if not minios_path:
+        error_msg = _("MiniOS directory not found")
+        if args.json:
+            print(json.dumps({"success": False, "error": error_msg}))
+        else:
+            print(error_msg, file=sys.stderr)
+        sys.exit(1)
+    
+    kernel_version = args.kernel_version
+    success = delete_packaged_kernel(minios_path, kernel_version)
+    
+    if args.json:
+        result = {"success": success}
+        if success:
+            result["message"] = _("Kernel {} deleted successfully").format(kernel_version)
+        else:
+            result["error"] = _("Failed to delete kernel {}").format(kernel_version)
+        print(json.dumps(result))
+    else:
+        if success:
+            print(_("Kernel {} deleted successfully").format(kernel_version))
+        else:
+            print(_("Failed to delete kernel {}").format(kernel_version), file=sys.stderr)
+            sys.exit(1)
+
 def main():
     """Main entry point for the CLI utility."""
     # Check for root privileges
@@ -524,6 +554,10 @@ def main():
     # Status command
     status_parser = subparsers.add_parser('status', help=_('Check MiniOS directory status'), parents=[parent_parser])
 
+    # Delete command
+    delete_parser = subparsers.add_parser('delete', help=_('Delete a packaged kernel'), parents=[parent_parser])
+    delete_parser.add_argument("kernel_version", help=_("Kernel version to delete"))
+
     # Parse arguments - handle global flags that can appear anywhere
     # Extract global flags from any position
     global_json = '--json' in sys.argv
@@ -548,6 +582,8 @@ def main():
         info_kernel_cmd(args)
     elif args.command == 'status':
         status_cmd(args)
+    elif args.command == 'delete':
+        delete_kernel_cmd(args)
 
 if __name__ == "__main__":
     main()
