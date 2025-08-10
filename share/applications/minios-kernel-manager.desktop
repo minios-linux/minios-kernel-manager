@@ -1,0 +1,22 @@
+[Desktop Entry]
+Name=MiniOS Kernel Manager
+Name[ru]=MiniOS Kernel Manager
+Name[pt]=MiniOS Kernel Manager
+Name[de]=MiniOS Kernel Manager
+Name[es]=MiniOS Kernel Manager
+Name[fr]=MiniOS Kernel Manager
+Name[it]=MiniOS Kernel Manager
+Comment=Manage kernel modules for MiniOS Live system
+Comment[ru]=Управление модулями ядра для системы MiniOS Live
+Comment[pt]=Gerenciar módulos do kernel para o sistema MiniOS Live
+Comment[de]=Kernel-Module für MiniOS Live System verwalten
+Comment[es]=Gestionar módulos del kernel para el sistema MiniOS Live
+Comment[fr]=Gérer les modules du noyau pour le système MiniOS Live
+Comment[it]=Gestire i moduli del kernel per il sistema MiniOS Live
+Exec=minios-kernel-manager
+Icon=package-x-generic
+Terminal=false
+Type=Application
+Categories=System;Settings;
+Keywords=kernel;modules;squashfs;initramfs;minios;
+StartupNotify=true

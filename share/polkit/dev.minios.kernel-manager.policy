@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC
+ "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+
+  <vendor>MiniOS Linux</vendor>
+  <vendor_url>https://minios.dev</vendor_url>
+
+  <action id="dev.minios.kernel-manager">
+    <description>Run MiniOS Kernel Manager</description>
+    <description xml:lang="ru">Запустить MiniOS Kernel Manager</description>
+    <description xml:lang="pt">Executar MiniOS Kernel Manager</description>
+    <description xml:lang="de">MiniOS Kernel Manager ausführen</description>
+    <description xml:lang="es">Ejecutar MiniOS Kernel Manager</description>
+    <description xml:lang="fr">Exécuter MiniOS Kernel Manager</description>
+    <description xml:lang="it">Eseguire MiniOS Kernel Manager</description>
+    <message>Authentication is required to run MiniOS Kernel Manager</message>
+    <message xml:lang="ru">Для запуска MiniOS Kernel Manager требуется аутентификация</message>
+    <message xml:lang="pt">É necessária autenticação para executar o MiniOS Kernel Manager</message>
+    <message xml:lang="de">Authentifizierung ist erforderlich, um MiniOS Kernel Manager auszuführen</message>
+    <message xml:lang="es">Se requiere autenticación para ejecutar MiniOS Kernel Manager</message>
+    <message xml:lang="fr">Une authentification est requise pour exécuter MiniOS Kernel Manager</message>
+    <message xml:lang="it">È richiesta l'autenticazione per eseguire MiniOS Kernel Manager</message>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/bin/minios-kernel-manager</annotate>
+    <annotate key="org.freedesktop.policykit.exec.allow_gui">true</annotate>
+  </action>
+
+  <action id="dev.minios.kernel-manager.cli">
+    <description>Run MiniOS Kernel Manager CLI operations</description>
+    <description xml:lang="ru">Выполнить операции MiniOS Kernel Manager CLI</description>
+    <description xml:lang="pt">Executar operações CLI do MiniOS Kernel Manager</description>
+    <description xml:lang="de">MiniOS Kernel Manager CLI-Operationen ausführen</description>
+    <description xml:lang="es">Ejecutar operaciones CLI del MiniOS Kernel Manager</description>
+    <description xml:lang="fr">Exécuter les opérations CLI de MiniOS Kernel Manager</description>
+    <description xml:lang="it">Eseguire operazioni CLI del MiniOS Kernel Manager</description>
+    <message>Authentication is required to perform kernel operations</message>
+    <message xml:lang="ru">Для выполнения операций с ядром требуется аутентификация</message>
+    <message xml:lang="pt">É necessária autenticação para executar operações do kernel</message>
+    <message xml:lang="de">Authentifizierung ist erforderlich, um Kernel-Operationen durchzuführen</message>
+    <message xml:lang="es">Se requiere autenticación para realizar operaciones del kernel</message>
+    <message xml:lang="fr">Une authentification est requise pour effectuer des opérations sur le noyau</message>
+    <message xml:lang="it">È richiesta l'autenticazione per eseguire operazioni del kernel</message>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/bin/minios-kernel</annotate>
+    <annotate key="org.freedesktop.policykit.exec.allow_gui">true</annotate>
+  </action>
+
+</policyconfig>

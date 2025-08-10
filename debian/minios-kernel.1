@@ -1,0 +1,123 @@
+.TH MINIOS-KERNEL 1 "August 2025" "MiniOS" "User Commands"
+.SH NAME
+minios-kernel \- Command-line tool for managing MiniOS kernels
+.SH SYNOPSIS
+.B minios-kernel
+.RB [ --json ]
+.B list
+.br
+.B minios-kernel
+.RB [ --json ]
+.B activate
+.I kernel-version
+.br
+.B minios-kernel
+.RB [ --json ]
+.B info
+.RI [ kernel-version ]
+.br
+.B minios-kernel
+.RB [ --json ]
+.B package
+.RB { --repo
+.I package
+.RB | --deb
+.IR file }
+.B -o
+.I output-dir
+.RI [ options ]
+.SH DESCRIPTION
+.B minios-kernel
+is a command-line utility for managing Linux kernels in the MiniOS distribution. Requires root privileges.
+.PP
+This tool serves as both a standalone CLI utility and the backend for the graphical
+.BR minios-kernel-manager .
+It handles kernel packaging, activation, and provides detailed kernel information.
+.SH OPTIONS
+.TP
+.B --json
+Output results in JSON format. Can be used with any command.
+.SH COMMANDS
+.TP
+.B list
+List available kernels with their status.
+.TP
+.BI activate " kernel-version"
+Activate the specified kernel version for the next boot.
+.TP
+.BI info " [kernel-version]"
+Show information about a kernel. If no version specified, shows current active kernel.
+.TP
+.B package
+Package a kernel from repository or local .deb file.
+.SH PACKAGE OPTIONS
+.TP
+.BI --repo " package-name"
+Download and package kernel from APT repository.
+.TP
+.BI --deb " deb-file"
+Package kernel from local .deb file.
+.TP
+.BI "-o, --output " output-dir
+Directory to save packaged kernel files. Required.
+.TP
+.BI --sqfs-comp " method"
+Compression method for SquashFS image. Default: \fBzstd\fR.
+.TP
+.BI --temp-dir " directory"
+Custom temporary directory (must have at least 600MB free space).
+.SH EXAMPLES
+List available kernels:
+.RS
+.B sudo minios-kernel list
+.RE
+.PP
+Activate a specific kernel:
+.RS
+.B sudo minios-kernel activate 6.12.38+deb13-amd64
+.RE
+.PP
+Package kernel from repository:
+.RS
+.B sudo minios-kernel package --repo linux-image-6.12.38+deb13-amd64 -o /tmp/output
+.RE
+.PP
+Package kernel from local .deb file:
+.RS
+.B sudo minios-kernel package --deb kernel.deb -o /tmp/output
+.RE
+.SH JSON OUTPUT
+When using the \fB--json\fR option, commands return structured data:
+.TP
+.B list
+Returns array of kernels with version, status, and metadata.
+.TP
+.B activate
+Returns success status and activation details.
+.TP
+.B info
+Returns kernel information including version, status, and system paths.
+.TP
+.B package
+Returns progress updates during packaging and final success status.
+.SH FILES
+.TP
+.I /run/initramfs/memory/data/minios/
+Default MiniOS directory containing kernel files and configuration.
+.TP
+.I /minios/kernels/{version}/
+Repository for inactive packaged kernels.
+.TP
+.I /minios/boot/vmlinuz-*
+Active kernel image.
+.TP
+.I /minios/boot/initrfs-*.img
+Active initramfs image.
+.TP
+.I /minios/01-kernel-*.sb
+Active SquashFS kernel modules.
+.SH AUTHOR
+crims0n <crims0n@minios.dev>
+.SH "SEE ALSO"
+.BR minios-kernel-manager (1),
+.BR mksquashfs (1)

@@ -1,0 +1,33 @@
+.TH MINIOS-KERNEL-MANAGER 1 "August 2025" "MiniOS" "User Commands"
+.SH NAME
+minios-kernel-manager \- Graphical tool for managing MiniOS kernels
+.SH SYNOPSIS
+.B minios-kernel-manager
+.SH DESCRIPTION
+.B minios-kernel-manager
+is a GTK3 graphical utility for managing Linux kernels in MiniOS. It provides an intuitive interface for kernel activation, packaging, and management operations. Uses
+.BR minios-kernel (1)
+as backend and handles authentication automatically via PolicyKit.
+.PP
+The application provides two main tabs: Activate (for switching between installed kernels) and Install (for packaging new kernels from repository or local .deb files). All operations that require root privileges are handled transparently through PolicyKit.
+.SH FILES
+.TP
+.I /minios/kernels/{version}/
+Repository for inactive packaged kernels.
+.TP
+.I /minios/boot/active-kernel
+Marker file containing the currently active kernel version.
+.TP
+.I /usr/share/applications/minios-kernel-manager.desktop
+Desktop entry file.
+.TP
+.I /usr/share/polkit-1/actions/dev.minios.kernel-manager.policy
+PolicyKit policy file for privilege escalation.
+.TP
+.I /usr/share/minios-kernel-manager/style.css
+Application stylesheet for custom GUI styling.
+.SH AUTHOR
+crims0n <crims0n@minios.dev>
+.SH "SEE ALSO"
+.BR minios-kernel (1),
+.BR mksquashfs (1)

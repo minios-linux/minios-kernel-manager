@@ -1,0 +1,2 @@
+# pkexec is provided by policykit-1 package, not included in this package
+minios-kernel-manager: desktop-command-not-in-package pkexec [usr/share/applications/minios-kernel-manager.desktop]
