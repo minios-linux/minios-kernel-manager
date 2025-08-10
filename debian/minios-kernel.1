@@ -26,6 +26,10 @@ minios-kernel \- Command-line tool for managing MiniOS kernels
 .B -o
 .I output-dir
 .RI [ options ]
+.br
+.B minios-kernel
+.RB [ --json ]
+.B status
 .SH DESCRIPTION
 .B minios-kernel
 is a command-line utility for managing Linux kernels in the MiniOS distribution. Requires root privileges.
@@ -50,6 +54,9 @@ Show information about a kernel. If no version specified, shows current active k
 .TP
 .B package
 Package a kernel from repository or local .deb file.
+.TP
+.B status
+Check MiniOS directory status and write permissions.
 .SH PACKAGE OPTIONS
 .TP
 .BI --repo " package-name"
@@ -100,6 +107,9 @@ Returns kernel information including version, status, and system paths.
 .TP
 .B package
 Returns progress updates during packaging and final success status.
+.TP
+.B status
+Returns MiniOS directory status and filesystem information.
 .SH FILES
 .TP
 .I /run/initramfs/memory/data/minios/

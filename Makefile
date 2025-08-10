@@ -85,8 +85,6 @@ uninstall:
 	
 	# Remove lintian overrides (if installed by debhelper)  
 	rm -f $(DESTDIR)/usr/share/lintian/overrides/minios-kernel-manager
-	rmdir $(DESTDIR)/usr/share/lintian/overrides 2>/dev/null || true
-	rmdir $(DESTDIR)/usr/share/lintian 2>/dev/null || true
 	
 	@echo "MiniOS Kernel Manager uninstalled successfully"
 

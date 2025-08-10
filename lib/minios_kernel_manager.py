@@ -231,6 +231,35 @@ def delete_kernel_cli(kernel_version):
     except Exception as e:
         return False, str(e)
 
+def check_minios_status_cli():
+    """Check MiniOS directory status using minios-kernel CLI with JSON output"""
+    try:
+        result = run_minios_kernel_with_pkexec(['status', '--json'])
+        if result.returncode == 0:
+            status_data = json.loads(result.stdout)
+            return status_data
+        else:
+            return {
+                'success': False,
+                'found': False,
+                'writable': False,
+                'error': f'CLI command failed: {result.stderr}'
+            }
+    except json.JSONDecodeError as e:
+        return {
+            'success': False,
+            'found': False, 
+            'writable': False,
+            'error': f'Failed to parse JSON response: {e}'
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'found': False,
+            'writable': False,
+            'error': str(e)
+        }
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Constants
 # ──────────────────────────────────────────────────────────────────────────────
@@ -310,6 +339,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         self._build_header_bar()
         self._detect_minios_directory()
         self._build_main_ui()
+        self._update_buttons_state()  # Update button states after UI is built
 
         self.connect("destroy", self._on_destroy)
 
@@ -318,10 +348,17 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         self.get_application().quit()
 
     def _detect_minios_directory(self):
-        """Detect MiniOS directory"""
-        self.minios_path = find_minios_directory()
-        # Always set as writable since we'll use pkexec for privileged operations
-        self.minios_writable = self.minios_path is not None
+        """Detect MiniOS directory and check write permissions"""
+        # Use CLI command to check status
+        status_data = check_minios_status_cli()
+        
+        if status_data.get('success', False) and status_data.get('found', False):
+            self.minios_path = status_data.get('minios_path')
+            self.minios_writable = status_data.get('writable', False)
+        else:
+            # Fallback to direct detection if CLI fails
+            self.minios_path = find_minios_directory()
+            self.minios_writable = False  # Assume not writable if CLI check fails
 
     def _build_header_bar(self):
         """Build the header bar"""
@@ -600,6 +637,29 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         button_box.pack_start(self.build_button, False, False, 0)
 
         return container
+
+    def _update_buttons_state(self):
+        """Update buttons state based on MiniOS directory writeability and selection"""
+        # Check if build button should be enabled
+        if hasattr(self, 'build_button'):
+            can_build = (self.selected_kernel and 
+                        self.minios_path and 
+                        self.minios_writable and 
+                        not self.is_building)
+            self.build_button.set_sensitive(can_build)
+            
+            # Update tooltip
+            if not self.minios_path:
+                tooltip = _("MiniOS directory not found")
+            elif not self.minios_writable:
+                tooltip = _("MiniOS directory is read-only")
+            elif not self.selected_kernel:
+                tooltip = _("Please select a kernel first")
+            elif self.is_building:
+                tooltip = _("Build in progress...")
+            else:
+                tooltip = _("Package kernel and add to repository")
+            self.build_button.set_tooltip_text(tooltip)
 
     def _populate_packaged_kernels(self):
         """Populate list of packaged kernels"""
@@ -891,7 +951,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
                 self.selected_kernel = selected_file
                 filename = os.path.basename(selected_file)
                 self.selected_file_label.set_text(filename)
-                self.build_button.set_sensitive(True)
+                self._update_buttons_state()  # Use centralized button state update
                 
                 # Show package information
                 self._show_package_info(selected_file)
@@ -1314,17 +1374,17 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             # Reset file selection
             self.selected_file_label.set_text(_("No file selected"))
             self.selected_kernel = None
-            self.build_button.set_sensitive(False)
+            self._update_buttons_state()  # Use centralized button state update
 
     def _on_kernel_selected(self, listbox, row):
         """Handle kernel selection change"""
         # listbox parameter is not used
         if row:
             self.selected_kernel = row.kernel_version
-            self.build_button.set_sensitive(True)
+            self._update_buttons_state()  # Use centralized button state update
         else:
             self.selected_kernel = None
-            self.build_button.set_sensitive(False)
+            self._update_buttons_state()  # Use centralized button state update
 
     def _on_sqfs_compression_changed(self, combo):
         """Handle SquashFS compression change"""
@@ -1336,6 +1396,10 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         # button parameter is not used
         if not self.selected_kernel:
             self._show_error(_("Please select a kernel first"))
+            return
+
+        if not self.minios_path or not self.minios_writable:
+            self._show_error(_("MiniOS directory is not writable"))
             return
 
         if self.is_building:
@@ -1961,21 +2025,28 @@ class KernelPackWindow(Gtk.ApplicationWindow):
                     is_active = kernel_info.get('is_active', False)
                     is_running = kernel_info.get('is_running', False)
                     
-                    # Disable activate if already active
+                    # Check if MiniOS directory is writable
+                    minios_writable = self.minios_writable
+                    
+                    # Disable activate if already active or directory not writable
                     if is_active:
+                        activate_item.set_sensitive(False)
+                    elif not minios_writable:
                         activate_item.set_sensitive(False)
                     else:
                         activate_item.set_sensitive(True)
                     
-                    # Disable delete if active or running
+                    # Disable delete if active or running or directory not writable
                     if is_active or is_running:
+                        delete_item.set_sensitive(False)
+                    elif not minios_writable:
                         delete_item.set_sensitive(False)
                     else:
                         delete_item.set_sensitive(True)
                 else:
-                    # Default to enabled if we can't get kernel info
-                    activate_item.set_sensitive(True)
-                    delete_item.set_sensitive(True)
+                    # If we can't get kernel info, check writeability
+                    activate_item.set_sensitive(self.minios_writable)
+                    delete_item.set_sensitive(self.minios_writable)
                 
                 # Show context menu
                 self.context_menu.popup_at_pointer(event)

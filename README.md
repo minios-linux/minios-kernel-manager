@@ -17,6 +17,7 @@ minios-kernel-manager
 minios-kernel list
 minios-kernel activate <version>
 minios-kernel package --repo <package> -o <output>
+minios-kernel status
 ```
 
 ## Build

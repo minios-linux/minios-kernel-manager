@@ -378,6 +378,84 @@ def info_kernel_cmd(args):
             print("{}: {}".format(_("Current active kernel"), current_kernel))
         print("{}: {}".format(_("Total available kernels"), len(available_kernels)))
 
+def status_cmd(args):
+    """Check MiniOS directory status and write permissions."""
+    # Find MiniOS directory
+    minios_path = find_minios_directory()
+    if not minios_path:
+        error_msg = _("MiniOS directory not found")
+        if args.json:
+            print(json.dumps({"success": False, "error": error_msg, "found": False, "writable": False}))
+        else:
+            print("E: {}".format(error_msg), file=sys.stderr, flush=True)
+        sys.exit(1)
+    
+    # Check if directory is writable
+    writable = False
+    fs_type = "unknown"
+    error_msg = None
+    
+    try:
+        # Get filesystem type
+        import subprocess
+        try:
+            result = subprocess.run(['stat', '-f', '-c', '%T', minios_path], 
+                                  capture_output=True, text=True, check=True)
+            fs_type = result.stdout.strip()
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            # Fallback method using /proc/mounts
+            try:
+                with open('/proc/mounts', 'r') as f:
+                    for line in f:
+                        parts = line.split()
+                        if len(parts) >= 3:
+                            mount_point, fs_type_mount = parts[1], parts[2]
+                            if minios_path.startswith(mount_point):
+                                fs_type = fs_type_mount
+                                break
+            except:
+                pass
+        
+        # SquashFS is always read-only
+        if fs_type == 'squashfs':
+            writable = False
+            error_msg = _("Directory is on a SquashFS filesystem (read-only)")
+        else:
+            # Try to create a temporary file to test write access
+            try:
+                import tempfile
+                with tempfile.NamedTemporaryFile(dir=minios_path, delete=True):
+                    pass
+                writable = True
+            except (OSError, PermissionError) as e:
+                writable = False
+                error_msg = _("Permission denied: {}").format(str(e))
+    
+    except Exception as e:
+        writable = False
+        error_msg = _("Error checking directory: {}").format(str(e))
+    
+    if args.json:
+        result = {
+            "success": True,
+            "minios_path": minios_path,
+            "found": True,
+            "writable": writable,
+            "filesystem_type": fs_type
+        }
+        if error_msg:
+            result["error"] = error_msg
+        print(json.dumps(result))
+    else:
+        print("{}: {}".format(_("MiniOS path"), minios_path))
+        print("{}: {}".format(_("Filesystem type"), fs_type))
+        if writable:
+            print("{}: {}".format(_("Status"), _("Writable")))
+        else:
+            print("{}: {}".format(_("Status"), _("Read-only")))
+            if error_msg:
+                print("{}: {}".format(_("Reason"), error_msg))
+
 def main():
     """Main entry point for the CLI utility."""
     # Check for root privileges
@@ -420,6 +498,9 @@ def main():
     info_parser = subparsers.add_parser('info', help=_('Show kernel information'), parents=[parent_parser])
     info_parser.add_argument("kernel_version", nargs='?', help=_("Kernel version to get info about (current if not specified)"))
 
+    # Status command
+    status_parser = subparsers.add_parser('status', help=_('Check MiniOS directory status'), parents=[parent_parser])
+
     # Parse arguments - handle global flags that can appear anywhere
     # Extract global flags from any position
     global_json = '--json' in sys.argv
@@ -442,6 +523,8 @@ def main():
         activate_kernel_cmd(args)
     elif args.command == 'info':
         info_kernel_cmd(args)
+    elif args.command == 'status':
+        status_cmd(args)
 
 if __name__ == "__main__":
     main()

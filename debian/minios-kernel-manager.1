@@ -9,7 +9,7 @@ is a GTK3 graphical utility for managing Linux kernels in MiniOS. It provides an
 .BR minios-kernel (1)
 as backend and handles authentication automatically via PolicyKit.
 .PP
-The application provides two main tabs: Activate (for switching between installed kernels) and Install (for packaging new kernels from repository or local .deb files). All operations that require root privileges are handled transparently through PolicyKit.
+The application provides two main tabs: Activate (for switching between installed kernels) and Install (for packaging new kernels from repository or local .deb files). The interface automatically detects MiniOS directory status and disables operations when the directory is read-only. All operations that require root privileges are handled transparently through PolicyKit.
 .SH FILES
 .TP
 .I /minios/kernels/{version}/
