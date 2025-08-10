@@ -127,6 +127,63 @@ def _format_size(size_bytes: int) -> str:
     return f"{size_bytes:.1f} TB"
 
 
+def check_package_cache(force_update: bool = False) -> tuple[bool, str]:
+    """
+    Check if package cache is outdated and handle accordingly.
+    
+    Args:
+        force_update: If True, automatically update outdated cache
+        
+    Returns:
+        (success, message): True if can proceed, False if should stop
+    """
+    import time
+    
+    cache_file = '/var/cache/apt/pkgcache.bin'
+    lists_dir = '/var/lib/apt/lists'
+    
+    # Check if lists directory is empty or doesn't exist
+    lists_empty = True
+    if os.path.exists(lists_dir):
+        try:
+            # Check if directory has any files (excluding lock files)
+            files = [f for f in os.listdir(lists_dir) if not f.startswith('lock')]
+            lists_empty = len(files) == 0
+        except (OSError, PermissionError):
+            lists_empty = True
+    
+    # Check cache file age
+    cache_outdated = True
+    if os.path.exists(cache_file) and not lists_empty:
+        try:
+            file_age = time.time() - os.path.getmtime(cache_file)
+            cache_outdated = file_age >= 24 * 60 * 60  # Older than 24 hours
+        except (OSError, PermissionError):
+            cache_outdated = True
+    
+    # If lists are empty or cache is outdated
+    if lists_empty or cache_outdated:
+        if force_update:
+            try:
+                print("I: {}".format(_('Updating package lists...')), flush=True)
+                result = subprocess.run(['apt', 'update'], check=True, capture_output=True, text=True)
+                print("I: {}".format(_('Package lists updated')), flush=True)
+                return True, ""
+            except subprocess.CalledProcessError as e:
+                error_msg = _("Failed to update package lists: {}").format(str(e))
+                return False, error_msg
+            except Exception as e:
+                error_msg = _("Error updating package lists: {}").format(str(e))
+                return False, error_msg
+        else:
+            # Show warning and stop
+            print("W: {}".format(_('Package database is outdated')), flush=True)
+            print("E: {}".format(_('Run \'apt update\' or use --force-update')), flush=True)
+            return False, "Package database is outdated"
+    
+    return True, ""
+
+
 def process_manual_package(package_path: str, temp_dir: str) -> str:
     """Process manually selected .deb package, return kernel version"""
     try:
@@ -172,10 +229,15 @@ def process_manual_package(package_path: str, temp_dir: str) -> str:
         raise RuntimeError(f"Error processing manual package: {e}")
 
 
-def download_kernel_package(package_name: str, temp_dir: str) -> str:
+def download_kernel_package(package_name: str, temp_dir: str, force_update: bool = False) -> str:
     """Download and extract kernel package, return kernel version"""
     import time
     deb_file = None
+    
+    # Check package cache before attempting download
+    cache_ok, cache_message = check_package_cache(force_update)
+    if not cache_ok:
+        raise RuntimeError(cache_message)
     
     try:
         # Step 1: Download package

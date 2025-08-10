@@ -133,7 +133,7 @@ def package_kernel(args):
 
         if args.repo:
             progress_print(10, _("Downloading kernel package {}").format(args.repo))
-            kernel_version = download_kernel_package(args.repo, temp_dir)
+            kernel_version = download_kernel_package(args.repo, temp_dir, args.force_update)
         else: # args.deb
             progress_print(10, _("Processing manual package {}").format(args.deb))
             kernel_version = process_manual_package(args.deb, temp_dir)
@@ -407,6 +407,7 @@ def main():
     package_parser.add_argument("-o", "--output", required=True, help=_("Directory to save the packaged kernel files"))
     package_parser.add_argument("--sqfs-comp", default="zstd", help=_("Compression method for SquashFS"))
     package_parser.add_argument("--temp-dir", help=_("Custom temporary directory (must have at least 1024MB free space)"))
+    package_parser.add_argument("--force-update", action="store_true", help=_("Force package lists update if outdated"))
     
     # List command
     list_parser = subparsers.add_parser('list', help=_('List available kernels'), parents=[parent_parser])

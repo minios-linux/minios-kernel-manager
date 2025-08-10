@@ -22,11 +22,7 @@ def find_minios_directory() -> Optional[str]:
     """Find MiniOS directory on the system"""
     # Common locations where MiniOS might be mounted
     common_paths = [
-        "/run/initramfs/memory/data/minios",
-        "/run/initramfs/memory/toram/minios", 
-        "/media/*/minios",
-        "/mnt/*/minios",
-        "/minios"
+        "/run/initramfs/memory/data/minios"
     ]
     
     # Check each path
@@ -43,7 +39,7 @@ def find_minios_directory() -> Optional[str]:
     
     # Try to find mounted filesystems with minios folder
     try:
-        result = subprocess.run(['findmnt', '-t', 'vfat,ext4,ntfs'], 
+        result = subprocess.run(['findmnt', '-t', 'vfat,ext4,ext2,btrfs,ntfs,ntfs3,exfat'], 
                               capture_output=True, text=True)
         for line in result.stdout.split('\n')[1:]:  # Skip header
             if line.strip():

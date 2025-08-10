@@ -9,19 +9,23 @@
 
   <action id="dev.minios.kernel-manager">
     <description>Run MiniOS Kernel Manager</description>
-    <description xml:lang="ru">Запустить MiniOS Kernel Manager</description>
-    <description xml:lang="pt">Executar MiniOS Kernel Manager</description>
     <description xml:lang="de">MiniOS Kernel Manager ausführen</description>
     <description xml:lang="es">Ejecutar MiniOS Kernel Manager</description>
     <description xml:lang="fr">Exécuter MiniOS Kernel Manager</description>
+    <description xml:lang="id">Menjalankan MiniOS Kernel Manager</description>
     <description xml:lang="it">Eseguire MiniOS Kernel Manager</description>
+    <description xml:lang="pt">Executar MiniOS Kernel Manager</description>
+    <description xml:lang="pt_BR">Executar MiniOS Kernel Manager</description>
+    <description xml:lang="ru">Запустить MiniOS Kernel Manager</description>
     <message>Authentication is required to run MiniOS Kernel Manager</message>
-    <message xml:lang="ru">Для запуска MiniOS Kernel Manager требуется аутентификация</message>
-    <message xml:lang="pt">É necessária autenticação para executar o MiniOS Kernel Manager</message>
     <message xml:lang="de">Authentifizierung ist erforderlich, um MiniOS Kernel Manager auszuführen</message>
     <message xml:lang="es">Se requiere autenticación para ejecutar MiniOS Kernel Manager</message>
     <message xml:lang="fr">Une authentification est requise pour exécuter MiniOS Kernel Manager</message>
+    <message xml:lang="id">Diperlukan otentikasi untuk menjalankan MiniOS Kernel Manager</message>
     <message xml:lang="it">È richiesta l'autenticazione per eseguire MiniOS Kernel Manager</message>
+    <message xml:lang="pt">É necessária autenticação para executar o MiniOS Kernel Manager</message>
+    <message xml:lang="pt_BR">É necessária autenticação para executar o MiniOS Kernel Manager</message>
+    <message xml:lang="ru">Для запуска MiniOS Kernel Manager требуется аутентификация</message>
     <defaults>
       <allow_any>auth_admin</allow_any>
       <allow_inactive>auth_admin</allow_inactive>
@@ -33,19 +37,23 @@
 
   <action id="dev.minios.kernel-manager.cli">
     <description>Run MiniOS Kernel Manager CLI operations</description>
-    <description xml:lang="ru">Выполнить операции MiniOS Kernel Manager CLI</description>
-    <description xml:lang="pt">Executar operações CLI do MiniOS Kernel Manager</description>
     <description xml:lang="de">MiniOS Kernel Manager CLI-Operationen ausführen</description>
     <description xml:lang="es">Ejecutar operaciones CLI del MiniOS Kernel Manager</description>
     <description xml:lang="fr">Exécuter les opérations CLI de MiniOS Kernel Manager</description>
+    <description xml:lang="id">Menjalankan operasi CLI MiniOS Kernel Manager</description>
     <description xml:lang="it">Eseguire operazioni CLI del MiniOS Kernel Manager</description>
+    <description xml:lang="pt">Executar operações CLI do MiniOS Kernel Manager</description>
+    <description xml:lang="pt_BR">Executar operações CLI do MiniOS Kernel Manager</description>
+    <description xml:lang="ru">Выполнить операции MiniOS Kernel Manager CLI</description>
     <message>Authentication is required to perform kernel operations</message>
-    <message xml:lang="ru">Для выполнения операций с ядром требуется аутентификация</message>
-    <message xml:lang="pt">É necessária autenticação para executar operações do kernel</message>
     <message xml:lang="de">Authentifizierung ist erforderlich, um Kernel-Operationen durchzuführen</message>
     <message xml:lang="es">Se requiere autenticación para realizar operaciones del kernel</message>
     <message xml:lang="fr">Une authentification est requise pour effectuer des opérations sur le noyau</message>
+    <message xml:lang="id">Diperlukan otentikasi untuk menjalankan operasi kernel</message>
     <message xml:lang="it">È richiesta l'autenticazione per eseguire operazioni del kernel</message>
+    <message xml:lang="pt">É necessária autenticação para executar operações do kernel</message>
+    <message xml:lang="pt_BR">É necessária autenticação para executar operações do kernel</message>
+    <message xml:lang="ru">Для выполнения операций с ядром требуется аутентификация</message>
     <defaults>
       <allow_any>auth_admin</allow_any>
       <allow_inactive>auth_admin</allow_inactive>
@@ -53,6 +61,34 @@
     </defaults>
     <annotate key="org.freedesktop.policykit.exec.path">/usr/bin/minios-kernel</annotate>
     <annotate key="org.freedesktop.policykit.exec.allow_gui">true</annotate>
+  </action>
+
+  <action id="dev.minios.kernel-manager.update-cache">
+    <description>Update package cache</description>
+    <description xml:lang="de">Paket-Cache aktualisieren</description>
+    <description xml:lang="es">Actualizar caché de paquetes</description>
+    <description xml:lang="fr">Mettre à jour le cache des paquets</description>
+    <description xml:lang="id">Memperbarui cache paket</description>
+    <description xml:lang="it">Aggiorna cache dei pacchetti</description>
+    <description xml:lang="pt">Atualizar cache de pacotes</description>
+    <description xml:lang="pt_BR">Atualizar cache de pacotes</description>
+    <description xml:lang="ru">Обновить кэш пакетов</description>
+    <message>Authentication is required to update package lists</message>
+    <message xml:lang="de">Authentifizierung ist erforderlich, um Paketlisten zu aktualisieren</message>
+    <message xml:lang="es">Se requiere autenticación para actualizar listas de paquetes</message>
+    <message xml:lang="fr">Une authentification est requise pour mettre à jour les listes de paquets</message>
+    <message xml:lang="id">Diperlukan otentikasi untuk memperbarui daftar paket</message>
+    <message xml:lang="it">È richiesta l'autenticazione per aggiornare gli elenchi dei pacchetti</message>
+    <message xml:lang="pt">É necessária autenticação para atualizar listas de pacotes</message>
+    <message xml:lang="pt_BR">É necessária autenticação para atualizar listas de pacotes</message>
+    <message xml:lang="ru">Для обновления списков пакетов требуется аутентификация</message>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/bin/apt</annotate>
+    <annotate key="org.freedesktop.policykit.exec.argv1">update</annotate>
   </action>
 
 </policyconfig>

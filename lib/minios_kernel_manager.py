@@ -205,6 +205,17 @@ def package_kernel_cli(source_type, source_path, output_dir, squashfs_comp="zstd
     except Exception as e:
         return False, str(e)
 
+def update_package_lists_gui():
+    """Update package lists directly via pkexec apt update"""
+    try:
+        result = subprocess.run([
+            'pkexec', 'apt', 'update'
+        ], capture_output=True, text=True)
+        
+        return result.returncode == 0, result.stderr if result.returncode != 0 else "Package lists updated"
+    except Exception as e:
+        return False, str(e)
+
 def delete_kernel_cli(kernel_version):
     """Delete kernel using direct file operations (since CLI doesn't support delete yet)"""
     # For now, fallback to direct function call until delete command is added to CLI
@@ -1024,6 +1035,12 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         """Fetch repository kernels in background thread"""
         try:
             kernels = get_repository_kernels()
+            
+            # Check if kernels list is empty (may indicate outdated package cache)
+            if not kernels:
+                GLib.idle_add(self._show_package_cache_outdated_dialog)
+                return
+                
             GLib.idle_add(self._populate_kernels_with_data, kernels, "repository")
         except Exception as e:
             GLib.idle_add(self._show_kernel_fetch_error, str(e))
@@ -1133,6 +1150,89 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             self.kernel_list.add(row)
             
         self.kernel_list.show_all()
+
+    def _show_package_cache_outdated_dialog(self):
+        """Show dialog when package cache appears to be outdated"""
+        dialog = Gtk.MessageDialog(
+            transient_for=self,
+            modal=True,
+            message_type=Gtk.MessageType.QUESTION,
+            buttons=Gtk.ButtonsType.YES_NO,
+            text=_("Package database outdated")
+        )
+        dialog.format_secondary_text(_("The repository kernel list is empty. This may indicate an outdated package database. Update package lists now?"))
+        
+        def on_response(dialog, response_id):
+            dialog.destroy()
+            if response_id == Gtk.ResponseType.YES:
+                self._update_package_lists_with_progress()
+            else:
+                # Show empty list message
+                self._show_no_kernels_found()
+        
+        dialog.connect('response', on_response)
+        dialog.show()
+
+    def _update_package_lists_with_progress(self):
+        """Update package lists with progress indication"""
+        # Show loading message
+        for child in self.kernel_list.get_children():
+            self.kernel_list.remove(child)
+        
+        loading_row = Gtk.ListBoxRow()
+        loading_row.set_sensitive(False)
+        
+        main_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        main_box.set_halign(Gtk.Align.CENTER)
+        
+        spinner = Gtk.Spinner()
+        spinner.start()
+        main_box.pack_start(spinner, False, False, 0)
+        
+        info_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        
+        title_label = Gtk.Label()
+        title_label.set_markup(f'<b>{_("Updating package lists...")}</b>')
+        title_label.set_halign(Gtk.Align.START)
+        info_box.pack_start(title_label, False, False, 0)
+        
+        main_box.pack_start(info_box, True, True, 0)
+        loading_row.add(main_box)
+        self.kernel_list.add(loading_row)
+        self.kernel_list.show_all()
+        
+        # Run update in background thread
+        def update_thread():
+            success, message = update_package_lists_gui()
+            GLib.idle_add(self._on_package_lists_updated, success, message)
+        
+        threading.Thread(target=update_thread, daemon=True).start()
+
+    def _on_package_lists_updated(self, success, message):
+        """Handle package lists update completion"""
+        if success:
+            # Refresh repository kernels list
+            self._show_kernel_loading()
+            thread = threading.Thread(target=self._fetch_repository_kernels_threaded)
+            thread.daemon = True
+            thread.start()
+        else:
+            # Show error and empty list
+            for child in self.kernel_list.get_children():
+                self.kernel_list.remove(child)
+            
+            error_dialog = Gtk.MessageDialog(
+                transient_for=self,
+                modal=True,
+                message_type=Gtk.MessageType.ERROR,
+                buttons=Gtk.ButtonsType.OK,
+                text=_("Failed to update package lists")
+            )
+            error_dialog.format_secondary_text(message)
+            error_dialog.run()
+            error_dialog.destroy()
+            
+            self._show_no_kernels_found()
 
     def _show_no_kernels_found(self):
         """Show message when no kernels are found"""
