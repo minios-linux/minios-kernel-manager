@@ -46,7 +46,7 @@ install: build
 	cp $(POLICIES) $(DESTDIR)/$(POLKITACTIONSDIR)
 	cp $(STYLES) $(DESTDIR)/$(SHAREDIR)
 
-	for MO_FILE in $(MO_FILES); do \
+	@for MO_FILE in $(MO_FILES); do \
 		LOCALE=$$(basename $$MO_FILE .mo); \
 		echo "Copying mo file $$MO_FILE to $(DESTDIR)/usr/share/locale/$$LOCALE/LC_MESSAGES/minios-kernel-manager.mo"; \
 		install -Dm644 "$$MO_FILE" "$(DESTDIR)/usr/share/locale/$$LOCALE/LC_MESSAGES/minios-kernel-manager.mo"; \
@@ -72,11 +72,10 @@ uninstall:
 	rm -rf $(DESTDIR)/$(SHAREDIR)
 	
 	# Remove translations
-	for MO_FILE in $(MO_FILES); do \
+	@for MO_FILE in $(MO_FILES); do \
 		LOCALE=$$(basename $$MO_FILE .mo); \
 		echo "Removing translation file for locale $$LOCALE"; \
 		rm -f "$(DESTDIR)/usr/share/locale/$$LOCALE/LC_MESSAGES/minios-kernel-manager.mo"; \
-		# Remove empty locale directories if they exist and are empty \
 		rmdir "$(DESTDIR)/usr/share/locale/$$LOCALE/LC_MESSAGES" 2>/dev/null || true; \
 		rmdir "$(DESTDIR)/usr/share/locale/$$LOCALE" 2>/dev/null || true; \
 	done
