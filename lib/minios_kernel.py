@@ -155,15 +155,38 @@ def package_kernel(args):
         # Pass the same custom temp dir that was used for the main packaging
         custom_initramfs_temp = args.temp_dir if args.temp_dir else None
         
-        # For unsigned packages, we need to find the original kernel version inside the extracted package
+        # Get the actual kernel version for system operations (modules, initramfs)
+        # This was determined during the download/extraction process
         original_kernel_version = None
-        if temp_dir:
-            modules_dir = os.path.join(temp_dir, "lib", "modules")
-            if os.path.exists(modules_dir):
-                # Find the first (and usually only) version directory
-                version_dirs = [d for d in os.listdir(modules_dir) if os.path.isdir(os.path.join(modules_dir, d))]
-                if version_dirs:
-                    original_kernel_version = version_dirs[0]
+        if hasattr(download_kernel_package, '_versions'):
+            original_kernel_version = download_kernel_package._versions.get('actual_version')
+        
+        if not original_kernel_version and temp_dir:
+            # Fallback: find the actual kernel version from vmlinuz or modules directory
+            boot_paths = [
+                os.path.join(temp_dir, "boot"),
+                os.path.join(temp_dir, "usr", "boot")
+            ]
+            
+            # First try to get version from vmlinuz filename
+            for boot_path in boot_paths:
+                if os.path.exists(boot_path):
+                    for item in os.listdir(boot_path):
+                        if item.startswith("vmlinuz-"):
+                            original_kernel_version = item.replace("vmlinuz-", "")
+                            break
+                    if original_kernel_version:
+                        break
+            
+            # Fallback to modules directory
+            if not original_kernel_version:
+                modules_dir = os.path.join(temp_dir, "lib", "modules")
+                if not os.path.exists(modules_dir):
+                    modules_dir = os.path.join(temp_dir, "usr", "lib", "modules")
+                if os.path.exists(modules_dir):
+                    version_dirs = [d for d in os.listdir(modules_dir) if os.path.isdir(os.path.join(modules_dir, d))]
+                    if version_dirs:
+                        original_kernel_version = version_dirs[0]
         
         generate_initramfs(kernel_version, args.output, logger=None, temp_dir=temp_dir, 
                          custom_temp_dir=custom_initramfs_temp, original_kernel_version=original_kernel_version)

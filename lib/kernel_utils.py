@@ -270,9 +270,56 @@ def download_kernel_package(package_name: str, temp_dir: str, force_update: bool
                                       check=True, capture_output=True, text=True)
         print(f"I: {_('Package extracted successfully')}", flush=True)
         
-        # Extract kernel version from package name
-        kernel_version = package_name.replace('linux-image-', '')
-        return kernel_version
+        # Determine actual kernel version from extracted package contents
+        # Priority: vmlinuz filename > modules directory name > package name
+        actual_kernel_version = None
+        
+        # Look for vmlinuz file to get the real kernel version
+        boot_paths = [
+            os.path.join(temp_dir, "boot"),
+            os.path.join(temp_dir, "usr", "boot")
+        ]
+        
+        for boot_path in boot_paths:
+            if os.path.exists(boot_path):
+                for item in os.listdir(boot_path):
+                    if item.startswith("vmlinuz-"):
+                        actual_kernel_version = item.replace("vmlinuz-", "")
+                        break
+                if actual_kernel_version:
+                    break
+        
+        # Fallback: check modules directory
+        if not actual_kernel_version:
+            modules_base_paths = [
+                os.path.join(temp_dir, "lib", "modules"),
+                os.path.join(temp_dir, "usr", "lib", "modules")
+            ]
+            
+            for modules_base in modules_base_paths:
+                if os.path.exists(modules_base):
+                    version_dirs = [d for d in os.listdir(modules_base) 
+                                  if os.path.isdir(os.path.join(modules_base, d))]
+                    if version_dirs:
+                        actual_kernel_version = version_dirs[0]
+                        break
+        
+        # Final fallback: use package name
+        if not actual_kernel_version:
+            actual_kernel_version = package_name.replace('linux-image-', '')
+        
+        # For output files, use package name (preserves -unsigned suffix if present)
+        display_kernel_version = package_name.replace('linux-image-', '')
+        
+        # Store both versions for later use
+        if not hasattr(download_kernel_package, '_versions'):
+            download_kernel_package._versions = {}
+        download_kernel_package._versions = {
+            'display_version': display_kernel_version,
+            'actual_version': actual_kernel_version
+        }
+        
+        return display_kernel_version
         
     except subprocess.CalledProcessError as e:
         error_msg = f"Failed to extract package '{os.path.basename(deb_file)}'"
