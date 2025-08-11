@@ -834,5 +834,3 @@ msgstr "Menginstal modul kernel ke {target_path}"
 msgid "Building module dependencies"
 msgstr "Membangun dependensi modul"
 
-#~ msgid "Packaging kernel..."
-#~ msgstr "Mengemas kernel..."

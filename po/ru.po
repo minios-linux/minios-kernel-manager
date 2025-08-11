@@ -833,6 +833,3 @@ msgstr "Установка модулей ядра в {target_path}"
 #: lib/kernel_utils.py:406
 msgid "Building module dependencies"
 msgstr "Сборка зависимостей модулей"
-
-#~ msgid "Packaging kernel..."
-#~ msgstr "Упаковка ядра..."

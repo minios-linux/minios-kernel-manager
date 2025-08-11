@@ -843,5 +843,3 @@ msgstr "Installation des modules du noyau vers {target_path}"
 msgid "Building module dependencies"
 msgstr "Construction des dépendances de modules"
 
-#~ msgid "Packaging kernel..."
-#~ msgstr "Empaquetage du noyau en cours..."

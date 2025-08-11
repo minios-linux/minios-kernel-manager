@@ -841,5 +841,3 @@ msgstr "Installazione dei moduli kernel in {target_path}"
 msgid "Building module dependencies"
 msgstr "Costruzione delle dipendenze dei moduli"
 
-#~ msgid "Packaging kernel..."
-#~ msgstr "Impacchettamento del kernel in corso..."

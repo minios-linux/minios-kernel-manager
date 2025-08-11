@@ -840,5 +840,3 @@ msgstr "Kernel-Module werden nach {target_path} installiert"
 msgid "Building module dependencies"
 msgstr "Modulabhängigkeiten werden erstellt"
 
-#~ msgid "Packaging kernel..."
-#~ msgstr "Kernel wird gepackt..."
