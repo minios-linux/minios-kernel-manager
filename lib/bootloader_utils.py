@@ -76,7 +76,10 @@ def find_grub_config_file(minios_path: str) -> Optional[str]:
 def update_grub_config(minios_path: str, kernel_version: str) -> bool:
     """
     Update GRUB configuration to use the new kernel
-    Only handles direct linux/initrd commands (no variables)
+    Handles:
+    - Direct linux/initrd commands  
+    - search --set -f patterns
+    - All other kernel/initrd file references
     """
     try:
         config_file = find_grub_config_file(minios_path)
@@ -97,6 +100,25 @@ def update_grub_config(minios_path: str, kernel_version: str) -> bool:
         content = re.sub(
             r'initrd /minios/boot/initrfs[^\s]*\.img',
             f'initrd /minios/boot/initrfs-{kernel_version}.img',
+            content
+        )
+        
+        # Update search --set -f patterns (for mainmenu.cfg format)
+        content = re.sub(
+            r'search --set -f /minios/boot/vmlinuz[^\s]*',
+            f'search --set -f /minios/boot/vmlinuz-{kernel_version}',
+            content
+        )
+        
+        # Update all other vmlinuz/initrfs references
+        content = re.sub(
+            r'/minios/boot/vmlinuz[^\s]*(?=\s)',
+            f'/minios/boot/vmlinuz-{kernel_version}',
+            content
+        )
+        content = re.sub(
+            r'/minios/boot/initrfs[^\s]*\.img',
+            f'/minios/boot/initrfs-{kernel_version}.img',
             content
         )
         

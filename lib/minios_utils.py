@@ -204,9 +204,14 @@ def _update_bootloader_configs(minios_path: str, kernel_version: str) -> bool:
     if os.path.exists(syslinux_cfg):
         success &= _update_syslinux_config(syslinux_cfg, kernel_version)
     
-    # Update GRUB configuration
-    grub_cfg = os.path.join(minios_path, "boot", "grub", "grub.cfg")
-    if os.path.exists(grub_cfg):
+    # Update GRUB configuration - check for mainmenu.cfg first
+    grub_dir = os.path.join(minios_path, "boot", "grub")
+    mainmenu_cfg = os.path.join(grub_dir, "mainmenu.cfg")
+    grub_cfg = os.path.join(grub_dir, "grub.cfg")
+    
+    if os.path.exists(mainmenu_cfg):
+        success &= _update_grub_config(mainmenu_cfg, kernel_version)
+    elif os.path.exists(grub_cfg):
         success &= _update_grub_config(grub_cfg, kernel_version)
     
     return success
