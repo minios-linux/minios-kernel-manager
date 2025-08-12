@@ -19,16 +19,19 @@ _ = gettext.gettext
 def update_syslinux_config(minios_path: str, kernel_version: str) -> bool:
     """
     Update syslinux.cfg to use the new kernel
+    Returns True if updated or if file doesn't exist (optional)
     """
     try:
         syslinux_cfg = os.path.join(minios_path, "boot", "syslinux.cfg")
         
+        # SYSLINUX is optional - return True if not present
         if not os.path.exists(syslinux_cfg):
-            return False
+            return True
         
         with open(syslinux_cfg, 'r', encoding='utf-8') as f:
             content = f.read()
         
+        # Update SYSLINUX patterns
         content = re.sub(
             r'KERNEL /minios/boot/vmlinuz[^\s]*',
             f'KERNEL /minios/boot/vmlinuz-{kernel_version}',
@@ -43,35 +46,49 @@ def update_syslinux_config(minios_path: str, kernel_version: str) -> bool:
         with open(syslinux_cfg, 'w', encoding='utf-8') as f:
             f.write(content)
         
+        print(f"I: {_('Updated SYSLINUX config')}")
         return True
         
     except Exception as e:
         print(f"E: {_('Error updating syslinux config: {error}').format(error=e)}")
         return False
 
+def find_grub_config_file(minios_path: str) -> Optional[str]:
+    """
+    Find the primary GRUB configuration file with priority:
+    1. mainmenu.cfg (new structure - contains boot commands)  
+    2. grub.cfg (fallback - may contain boot commands)
+    """
+    grub_dir = os.path.join(minios_path, "boot", "grub")
+    
+    # Priority 1: mainmenu.cfg (new structure)
+    mainmenu_cfg = os.path.join(grub_dir, "mainmenu.cfg")
+    if os.path.exists(mainmenu_cfg):
+        return mainmenu_cfg
+        
+    # Priority 2: grub.cfg (fallback)
+    grub_cfg = os.path.join(grub_dir, "grub.cfg")
+    if os.path.exists(grub_cfg):
+        return grub_cfg
+        
+    return None
+
 def update_grub_config(minios_path: str, kernel_version: str) -> bool:
     """
-    Update grub.cfg to use the new kernel
+    Update GRUB configuration to use the new kernel
+    Only handles direct linux/initrd commands (no variables)
     """
     try:
-        grub_cfg = os.path.join(minios_path, "boot", "grub", "grub.cfg")
+        config_file = find_grub_config_file(minios_path)
         
-        if not os.path.exists(grub_cfg):
+        if not config_file:
+            print(f"W: {_('No GRUB configuration file found')}")
             return False
         
-        with open(grub_cfg, 'r', encoding='utf-8') as f:
+        with open(config_file, 'r', encoding='utf-8') as f:
             content = f.read()
         
-        content = re.sub(
-            r'set linux_image="/minios/boot/vmlinuz[^"]*"',
-            f'set linux_image="/minios/boot/vmlinuz-{kernel_version}"',
-            content
-        )
-        content = re.sub(
-            r'set initrd_img="/minios/boot/initrfs[^"]*\.img"',
-            f'set initrd_img="/minios/boot/initrfs-{kernel_version}.img"',
-            content
-        )
+        # Update direct linux/initrd commands
         content = re.sub(
             r'linux /minios/boot/vmlinuz[^\s]*',
             f'linux /minios/boot/vmlinuz-{kernel_version}',
@@ -83,9 +100,10 @@ def update_grub_config(minios_path: str, kernel_version: str) -> bool:
             content
         )
         
-        with open(grub_cfg, 'w', encoding='utf-8') as f:
+        with open(config_file, 'w', encoding='utf-8') as f:
             f.write(content)
         
+        print(f"I: {_('Updated GRUB config: {}').format(os.path.basename(config_file))}")
         return True
         
     except Exception as e:
@@ -95,13 +113,16 @@ def update_grub_config(minios_path: str, kernel_version: str) -> bool:
 def update_bootloader_configs(minios_path: str, kernel_version: str) -> bool:
     """
     Update all bootloader configurations for the new kernel
+    SYSLINUX is optional, GRUB is required
     """
     success = True
     
-    if not update_syslinux_config(minios_path, kernel_version):
+    # Update GRUB (required)
+    if not update_grub_config(minios_path, kernel_version):
         success = False
     
-    if not update_grub_config(minios_path, kernel_version):
+    # Update SYSLINUX (optional - always returns True if missing)
+    if not update_syslinux_config(minios_path, kernel_version):
         success = False
     
     return success
