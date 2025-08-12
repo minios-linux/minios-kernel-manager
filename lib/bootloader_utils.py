@@ -56,15 +56,15 @@ def update_syslinux_config(minios_path: str, kernel_version: str) -> bool:
 def find_grub_config_file(minios_path: str) -> Optional[str]:
     """
     Find the primary GRUB configuration file with priority:
-    1. mainmenu.cfg (new structure - contains boot commands)  
+    1. main.cfg (new structure - contains boot commands)  
     2. grub.cfg (fallback - may contain boot commands)
     """
     grub_dir = os.path.join(minios_path, "boot", "grub")
     
-    # Priority 1: mainmenu.cfg (new structure)
-    mainmenu_cfg = os.path.join(grub_dir, "mainmenu.cfg")
-    if os.path.exists(mainmenu_cfg):
-        return mainmenu_cfg
+    # Priority 1: main.cfg (new structure)
+    main_cfg = os.path.join(grub_dir, "main.cfg")
+    if os.path.exists(main_cfg):
+        return main_cfg
         
     # Priority 2: grub.cfg (fallback)
     grub_cfg = os.path.join(grub_dir, "grub.cfg")
@@ -103,7 +103,7 @@ def update_grub_config(minios_path: str, kernel_version: str) -> bool:
             content
         )
         
-        # Update search --set -f patterns (for mainmenu.cfg format)
+        # Update search --set -f patterns (for main.cfg format)
         content = re.sub(
             r'search --set -f /minios/boot/vmlinuz[^\s]*',
             f'search --set -f /minios/boot/vmlinuz-{kernel_version}',
