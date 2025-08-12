@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: minios-kernel-manager 1.0.0\n"
 "Report-Msgid-Bugs-To: support@minios.dev\n"
-"POT-Creation-Date: 2025-08-10 22:00+0000\n"
+"POT-Creation-Date: 2025-08-12 23:50+0300\n"
 "PO-Revision-Date: 2025-08-09 21:38+0000\n"
 "Last-Translator: crims0n <crims0n@minios.dev>\n"
 "Language-Team: none\n"
@@ -16,15 +16,15 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: lib/minios_utils.py:682
+#: lib/minios_utils.py:687
 msgid "Custom temporary directory does not exist: {}"
 msgstr "Direktori sementara khusus tidak ada: {}"
 
-#: lib/minios_utils.py:685
+#: lib/minios_utils.py:690
 msgid "Custom temporary directory is not writable: {}"
 msgstr "Direktori sementara khusus tidak dapat ditulis: {}"
 
-#: lib/minios_utils.py:692
+#: lib/minios_utils.py:697
 #, python-brace-format
 msgid ""
 "Using custom temporary directory for {operation} ({available:.1f}MB "
@@ -33,7 +33,7 @@ msgstr ""
 "Menggunakan direktori sementara khusus untuk {operation} ({available:.1f}MB "
 "tersedia, {needed:.1f}MB dibutuhkan)"
 
-#: lib/minios_utils.py:696
+#: lib/minios_utils.py:701
 msgid ""
 "Insufficient space in custom temporary directory '{}' for {}: {:.1f}MB "
 "available, {:.1f}MB needed"
@@ -41,11 +41,11 @@ msgstr ""
 "Ruang tidak cukup di direktori sementara khusus '{}' untuk {}: {:.1f}MB "
 "tersedia, {:.1f}MB dibutuhkan"
 
-#: lib/minios_utils.py:699
+#: lib/minios_utils.py:704
 msgid "Cannot check space in custom temporary directory '{}': {}"
 msgstr "Tidak dapat memeriksa ruang di direktori sementara khusus '{}': {}"
 
-#: lib/minios_utils.py:711
+#: lib/minios_utils.py:716
 #, python-brace-format
 msgid ""
 "Using /tmp for {operation} ({available:.1f}MB available, {needed:.1f}MB "
@@ -54,7 +54,7 @@ msgstr ""
 "Menggunakan /tmp untuk {operation} ({available:.1f}MB tersedia, {needed:.1f}"
 "MB dibutuhkan)"
 
-#: lib/minios_utils.py:715
+#: lib/minios_utils.py:720
 #, python-brace-format
 msgid ""
 "Insufficient space in /tmp for {operation} ({available:.1f}MB available, "
@@ -63,19 +63,19 @@ msgstr ""
 "Ruang tidak cukup di /tmp untuk {operation} ({available:.1f}MB tersedia, "
 "{needed:.1f}MB dibutuhkan)"
 
-#: lib/minios_utils.py:725
+#: lib/minios_utils.py:730
 msgid "Detected {} filesystem, using alternative: {}"
 msgstr "Terdeteksi sistem berkas {}, menggunakan alternatif: {}"
 
-#: lib/minios_utils.py:731
+#: lib/minios_utils.py:736
 msgid "Created alternative temporary directory: {}"
 msgstr "Direktori sementara alternatif dibuat: {}"
 
-#: lib/minios_utils.py:738
+#: lib/minios_utils.py:743
 msgid "Using alternative temporary directory: {} ({:.1f}MB available)"
 msgstr "Menggunakan direktori sementara alternatif: {} ({:.1f}MB tersedia)"
 
-#: lib/minios_utils.py:744
+#: lib/minios_utils.py:749
 msgid ""
 "Insufficient disk space for operation. Need {:.1f}MB, but only {:.1f}MB "
 "available in /tmp and {:.1f}MB in {}"
@@ -83,425 +83,40 @@ msgstr ""
 "Ruang disk tidak cukup untuk operasi. Dibutuhkan {:.1f}MB, tetapi hanya "
 "{:.1f}MB tersedia di /tmp dan {:.1f}MB di {}"
 
-#: lib/minios_utils.py:754
+#: lib/minios_utils.py:759
 msgid "Could not check disk space: {}. Using default temporary directory."
 msgstr ""
 "Tidak dapat memeriksa ruang disk: {}. Menggunakan direktori sementara "
 "default."
 
-#: lib/bootloader_utils.py:49
-#, python-brace-format
-msgid "Error updating syslinux config: {error}"
-msgstr "Kesalahan memperbarui konfigurasi syslinux: {error}"
-
-#: lib/bootloader_utils.py:92
-#, python-brace-format
-msgid "Error updating grub config: {error}"
-msgstr "Kesalahan memperbarui konfigurasi grub: {error}"
-
-#: lib/minios_kernel_manager.py:389
-msgid "MiniOS directory is writable"
-msgstr "Direktori MiniOS dapat ditulis"
-
-#: lib/minios_kernel_manager.py:394 lib/minios_kernel_manager.py:666
-msgid "MiniOS directory is read-only"
-msgstr "Direktori MiniOS hanya-baca"
-
-#: lib/minios_kernel_manager.py:396 lib/minios_kernel_manager.py:664
-#: lib/minios_kernel.py:249 lib/minios_kernel.py:291 lib/minios_kernel.py:360
-#: lib/minios_kernel.py:409 lib/minios_kernel.py:488
-msgid "MiniOS directory not found"
-msgstr "Direktori MiniOS tidak ditemukan"
-
-#: lib/minios_kernel_manager.py:434
-msgid "Manage Kernels"
-msgstr "Kelola Kernel"
-
-#: lib/minios_kernel_manager.py:439 lib/minios_kernel_manager.py:640
-msgid "Package Kernel"
-msgstr "Kemaskan Kernel"
-
-#: lib/minios_kernel_manager.py:476
-msgid "Select a packaged kernel to activate or delete:"
-msgstr "Pilih kernel yang sudah dikemas untuk diaktifkan atau dihapus:"
-
-#: lib/minios_kernel_manager.py:493 lib/minios_kernel_manager.py:1974
-msgid "Activating kernel..."
-msgstr "Mengaktifkan kernel..."
-
-#: lib/minios_kernel_manager.py:523
-msgid "Manual Package"
-msgstr "Paket Manual"
-
-#: lib/minios_kernel_manager.py:528
-msgid "Repository"
-msgstr "Repositori"
-
-#: lib/minios_kernel_manager.py:547
-msgid "SquashFS Compression:"
-msgstr "Kompresi SquashFS:"
-
-#: lib/minios_kernel_manager.py:566 lib/minios_kernel_manager.py:1386
-msgid "No file selected"
-msgstr "Tidak ada berkas yang dipilih"
-
-#: lib/minios_kernel_manager.py:571
-msgid "Browse..."
-msgstr "Jelajahi..."
-
-#: lib/minios_kernel_manager.py:584 lib/minios_kernel_manager.py:585
-msgid "Package Information:"
-msgstr "Informasi Paket:"
-
-#: lib/minios_kernel_manager.py:614
-msgid "Available Kernels:"
-msgstr "Kernel Tersedia:"
-
-#: lib/minios_kernel_manager.py:641 lib/minios_kernel_manager.py:672
-msgid "Package kernel and add to repository"
-msgstr "Kemaskan kernel dan tambahkan ke repositori"
-
-#: lib/minios_kernel_manager.py:668 lib/minios_kernel_manager.py:1409
-msgid "Please select a kernel first"
-msgstr "Silakan pilih kernel terlebih dahulu"
-
-#: lib/minios_kernel_manager.py:670
-msgid "Build in progress..."
-msgstr "Pembangunan sedang berlangsung..."
-
-#: lib/minios_kernel_manager.py:700
-msgid "No kernels packaged"
-msgstr "Tidak ada kernel yang dikemas"
-
-#: lib/minios_kernel_manager.py:705
-msgid "Package a kernel first using the Package Kernel tab"
-msgstr "Kemaskan kernel terlebih dahulu menggunakan tab 'Kemaskan Kernel'"
-
-#: lib/minios_kernel_manager.py:772
-msgid "ACTIVE"
-msgstr "AKTIF"
-
-#: lib/minios_kernel_manager.py:775 lib/minios_kernel_manager.py:1210
-msgid "AVAILABLE"
-msgstr "TERSEDIA"
-
-#: lib/minios_kernel_manager.py:785
-msgid "RUNNING"
-msgstr "BERJALAN"
-
-#: lib/minios_kernel_manager.py:819
-msgid "Please select a kernel to activate"
-msgstr "Silakan pilih kernel untuk diaktifkan"
-
-#: lib/minios_kernel_manager.py:823 lib/minios_kernel_manager.py:890
-#: lib/minios_kernel_manager.py:1413
-msgid "MiniOS directory is not writable"
-msgstr "Direktori MiniOS tidak dapat ditulis"
-
-#: lib/minios_kernel_manager.py:831 lib/minios_kernel_manager.py:1995
-msgid "Activate Kernel"
-msgstr "Aktifkan Kernel"
-
-#: lib/minios_kernel_manager.py:834
-msgid ""
-"Are you sure you want to activate kernel {}?\n"
-"\n"
-"This will deactivate the current kernel and update the bootloader "
-"configuration."
-msgstr ""
-"Apakah Anda yakin ingin mengaktifkan kernel {}?\n"
-"\n"
-"Ini akan menonaktifkan kernel saat ini dan memperbarui konfigurasi "
-"bootloader."
-
-#: lib/minios_kernel_manager.py:848
-msgid "Activating kernel, please wait..."
-msgstr "Mengaktifkan kernel, mohon tunggu..."
-
-#: lib/minios_kernel_manager.py:886
-msgid "Please select a kernel to delete"
-msgstr "Silakan pilih kernel untuk dihapus"
-
-#: lib/minios_kernel_manager.py:898 lib/minios_kernel_manager.py:2005
-msgid "Delete Kernel"
-msgstr "Hapus Kernel"
-
-#: lib/minios_kernel_manager.py:901
-msgid ""
-"Are you sure you want to delete kernel '{}'?\n"
-"\n"
-"This action cannot be undone."
-msgstr ""
-"Apakah Anda yakin ingin menghapus kernel '{}'?\n"
-"\n"
-"Tindakan ini tidak dapat dibatalkan."
-
-#: lib/minios_kernel_manager.py:927
-msgid "Select Kernel Package"
-msgstr "Pilih Paket Kernel"
-
-#: lib/minios_kernel_manager.py:932 lib/minios_kernel_manager.py:1731
-#: lib/minios_kernel_manager.py:1892
-msgid "Cancel"
-msgstr "Batal"
-
-#: lib/minios_kernel_manager.py:933
-msgid "Open"
-msgstr "Buka"
-
-#: lib/minios_kernel_manager.py:948
-msgid "Debian Package Files (*.deb)"
-msgstr "Berkas Paket Debian (*.deb)"
-
-#: lib/minios_kernel_manager.py:953
-msgid "All Files"
-msgstr "Semua Berkas"
-
-#: lib/minios_kernel_manager.py:1090
-msgid "Fetching kernel list from repository..."
-msgstr "Mengambil daftar kernel dari repositori..."
-
-#: lib/minios_kernel_manager.py:1092
-msgid "Scanning for manual packages..."
-msgstr "Memindai paket manual..."
-
-#: lib/minios_kernel_manager.py:1172
-msgid "Manual package"
-msgstr "Paket manual"
-
-#: lib/minios_kernel_manager.py:1172
-msgid "Repository kernel"
-msgstr "Kernel repositori"
-
-#: lib/minios_kernel_manager.py:1232
-msgid "Package database outdated"
-msgstr "Basis data paket usang"
-
-#: lib/minios_kernel_manager.py:1234
-msgid ""
-"The repository kernel list is empty. This may indicate an outdated package "
-"database. Update package lists now?"
-msgstr ""
-"Daftar kernel repositori kosong. Ini dapat menunjukkan bahwa basis data "
-"paket usang. Perbarui daftar paket sekarang?"
-
-#: lib/minios_kernel_manager.py:1266 lib/kernel_utils.py:168
+#: lib/kernel_utils.py:168
 msgid "Updating package lists..."
 msgstr "Memperbarui daftar paket..."
 
-#: lib/minios_kernel_manager.py:1300
-msgid "Failed to update package lists"
-msgstr "Gagal memperbarui daftar paket"
+#: lib/kernel_utils.py:170
+msgid "Package lists updated"
+msgstr "Daftar paket diperbarui"
 
-#: lib/minios_kernel_manager.py:1322
-msgid "No repository kernels found"
-msgstr "Tidak ada kernel repositori ditemukan"
+#: lib/kernel_utils.py:173
+msgid "Failed to update package lists: {}"
+msgstr "Gagal memperbarui daftar paket: {}"
 
-#: lib/minios_kernel_manager.py:1324
-msgid "No manual packages found"
-msgstr "Tidak ada paket manual ditemukan"
+#: lib/kernel_utils.py:176
+msgid "Error updating package lists: {}"
+msgstr "Kesalahan memperbarui daftar paket: {error}"
 
-#: lib/minios_kernel_manager.py:1351
-msgid "Failed to fetch repository kernels"
-msgstr "Gagal mengambil kernel repositori"
+#: lib/kernel_utils.py:180
+msgid "Package database is outdated"
+msgstr "Basis data paket usang"
 
-#: lib/minios_kernel_manager.py:1456
-msgid "Executing command: {}"
-msgstr "Mengeksekusi perintah: {}"
+#: lib/kernel_utils.py:181
+msgid "Run 'apt update' or use --force-update"
+msgstr "Jalankan 'apt update' atau gunakan --force-update"
 
-#: lib/minios_kernel_manager.py:1490
-msgid ""
-"Failed to start packaging process. Please check the log for detailed error "
-"information."
-msgstr ""
-"Gagal memulai proses pengemasan. Silakan periksa log untuk informasi "
-"kesalahan lebih lanjut."
-
-#: lib/minios_kernel_manager.py:1615 lib/minios_kernel_manager.py:1642
-#: lib/minios_kernel_manager.py:1952 lib/minios_kernel.py:212
-msgid "Kernel packaging completed successfully!"
-msgstr "Pengemasan kernel berhasil diselesaikan!"
-
-#: lib/minios_kernel_manager.py:1640
-msgid "CLI tool finished successfully, installing to repository..."
-msgstr "Alat CLI berhasil diselesaikan, menginstal ke repositori..."
-
-#: lib/minios_kernel_manager.py:1641
-msgid "Installing kernel to repository..."
-msgstr "Menginstal kernel ke repositori..."
-
-#: lib/minios_kernel_manager.py:1645
-msgid "CLI tool finished successfully."
-msgstr "Alat CLI berhasil diselesaikan."
-
-#: lib/minios_kernel_manager.py:1667
-msgid "Kernel packaging failed with exit code: {}"
-msgstr "Pengemasan kernel gagal dengan kode keluar: {}"
-
-#: lib/minios_kernel_manager.py:1671
-msgid ""
-"Kernel packaging failed with exit code: {}. Please check the log above for "
-"detailed error information."
-msgstr ""
-"Pengemasan kernel gagal dengan kode keluar: {}. Silakan periksa log di atas "
-"untuk informasi kesalahan lebih lanjut."
-
-#: lib/minios_kernel_manager.py:1686
-msgid "Starting packaging process..."
-msgstr "Memulai proses pengemasan..."
-
-#: lib/minios_kernel_manager.py:1697
-msgid "Packaging Log"
-msgstr "Log Pengemasan"
-
-#: lib/minios_kernel_manager.py:1709
-msgid "Cancelling and cleaning up..."
-msgstr "Membatalkan dan membersihkan..."
-
-#: lib/minios_kernel_manager.py:1792 lib/minios_kernel_manager.py:1884
-msgid "Back to Selection"
-msgstr "Kembali ke Pilihan"
-
-#: lib/minios_kernel_manager.py:1815
-msgid "Cancelling packaging..."
-msgstr "Membatalkan pengemasan..."
-
-#: lib/minios_kernel_manager.py:1932
-msgid "Error"
-msgstr "Kesalahan"
-
-#: lib/minios_kernel_manager.py:1946
-msgid "Packaging Complete"
-msgstr "Pengemasan Selesai"
-
-#: lib/minios_kernel_manager.py:1953
-msgid "The new kernel is now available in the 'Manage Kernels' tab."
-msgstr "Kernel baru kini tersedia di tab 'Kelola Kernel'."
-
-#: lib/build_utils.py:85
+#: lib/kernel_utils.py:397
 #, python-brace-format
-msgid "vmlinuz for kernel {kernel_version} not found"
-msgstr "vmlinuz untuk kernel {kernel_version} tidak ditemukan"
-
-#: lib/build_utils.py:103
-msgid "temp_dir is required and must exist for SquashFS creation"
-msgstr "temp_dir diperlukan dan harus ada untuk pembuatan SquashFS"
-
-#: lib/build_utils.py:129
-#, python-brace-format
-msgid ""
-"Kernel modules not found in extracted deb package for kernel {kernel_version}"
-msgstr ""
-"Modul kernel tidak ditemukan dalam paket deb yang diekstrak untuk kernel "
-"{kernel_version}"
-
-#: lib/build_utils.py:133
-#, python-brace-format
-msgid "Using system modules base: {base}"
-msgstr "Menggunakan basis modul sistem: {base}"
-
-#: lib/build_utils.py:147
-msgid "Generating module dependencies for SquashFS"
-msgstr "Menghasilkan dependensi modul untuk SquashFS"
-
-#: lib/build_utils.py:151 lib/build_utils.py:285
-msgid "depmod failed: {}"
-msgstr "depmod gagal: {}"
-
-#: lib/build_utils.py:153 lib/build_utils.py:287
-msgid "Module dependencies generated successfully"
-msgstr "Dependensi modul berhasil dibuat"
-
-#: lib/build_utils.py:155 lib/build_utils.py:289
-msgid "Failed to generate module dependencies: {}"
-msgstr "Gagal menghasilkan dependensi modul: {}"
-
-#: lib/build_utils.py:158
-#, python-brace-format
-msgid "Using extracted deb modules with structure: {path}"
-msgstr "Menggunakan modul deb yang diekstrak dengan struktur: {path}"
-
-#: lib/build_utils.py:194
-#, python-brace-format
-msgid "Starting SquashFS compression with {compression}..."
-msgstr "Memulai kompresi SquashFS dengan {compression}..."
-
-#: lib/build_utils.py:213
-msgid "Failed to create SquashFS image"
-msgstr "Gagal membuat citra SquashFS"
-
-#: lib/build_utils.py:215
-#, python-brace-format
-msgid "SquashFS image completed: {path}"
-msgstr "Citra SquashFS selesai: {path}"
-
-#: lib/build_utils.py:236
-msgid "mkinitrfs not found - this tool requires MiniOS live environment"
-msgstr ""
-"mkinitrfs tidak ditemukan - alat ini membutuhkan lingkungan langsung MiniOS"
-
-#: lib/build_utils.py:266
-msgid "Removed existing symlink: {}"
-msgstr "Symlink yang ada dihapus: {}"
-
-#: lib/build_utils.py:269
-msgid "Using existing modules directory: {}"
-msgstr "Menggunakan direktori modul yang ada: {}"
-
-#: lib/build_utils.py:277
-#, python-brace-format
-msgid "Created temporary symlink: {system_path} -> {extracted_path}"
-msgstr "Symlink sementara dibuat: {system_path} -> {extracted_path}"
-
-#: lib/build_utils.py:281
-msgid "Generating module dependencies for initramfs"
-msgstr "Menghasilkan dependensi modul untuk initramfs"
-
-#: lib/build_utils.py:309
-msgid "Using custom temporary directory for initramfs: {}"
-msgstr "Menggunakan direktori sementara khusus untuk initramfs: {}"
-
-#: lib/build_utils.py:312
-msgid "Starting initramfs generation..."
-msgstr "Memulai pembuatan initramfs..."
-
-#: lib/build_utils.py:340
-#, python-brace-format
-msgid "mkinitrfs failed with return code {code}"
-msgstr "mkinitrfs gagal dengan kode kembali {code}"
-
-#: lib/build_utils.py:346
-#, python-brace-format
-msgid "mkinitrfs failed: {error}"
-msgstr "mkinitrfs gagal: {error}"
-
-#: lib/build_utils.py:348
-#, python-brace-format
-msgid "mkinitrfs error: {error}"
-msgstr "Kesalahan mkinitrfs: {error}"
-
-#: lib/build_utils.py:370
-msgid "mkinitrfs output was:"
-msgstr "Output mkinitrfs adalah:"
-
-#: lib/build_utils.py:373
-msgid "mkinitrfs did not return valid initramfs path"
-msgstr "mkinitrfs tidak mengembalikan jalur initramfs yang valid"
-
-#: lib/build_utils.py:376
-#, python-brace-format
-msgid "Copying initramfs from {path}"
-msgstr "Menyalin initramfs dari {path}"
-
-#: lib/build_utils.py:378
-#, python-brace-format
-msgid "Initramfs created: {path}"
-msgstr "Initramfs dibuat: {path}"
-
-#: lib/build_utils.py:390
-#, python-brace-format
-msgid "Removed temporary symlink: {path}"
-msgstr "Symlink sementara dihapus: {path}"
+msgid "Kernel modules for {kernel_version} not found in package"
+msgstr "Modul kernel untuk {kernel_version} tidak ditemukan dalam paket"
 
 #: lib/minios_kernel.py:37
 msgid "Cleaning up on interruption: {}"
@@ -574,6 +189,17 @@ msgstr "Menginstal ke repositori kernel"
 #: lib/minios_kernel.py:210
 msgid "Finalizing installation"
 msgstr "Menyelesaikan instalasi"
+
+#: lib/minios_kernel.py:212 lib/minios_kernel_manager.py:1615
+#: lib/minios_kernel_manager.py:1642 lib/minios_kernel_manager.py:1952
+msgid "Kernel packaging completed successfully!"
+msgstr "Pengemasan kernel berhasil diselesaikan!"
+
+#: lib/minios_kernel.py:249 lib/minios_kernel.py:291 lib/minios_kernel.py:360
+#: lib/minios_kernel.py:409 lib/minios_kernel.py:488
+#: lib/minios_kernel_manager.py:396 lib/minios_kernel_manager.py:664
+msgid "MiniOS directory not found"
+msgstr "Direktori MiniOS tidak ditemukan"
 
 #: lib/minios_kernel.py:273 lib/minios_kernel.py:316
 msgid "Available kernels"
@@ -768,69 +394,410 @@ msgstr "Hapus kernel yang sudah dikemas"
 msgid "Kernel version to delete"
 msgstr "Versi kernel yang akan dihapus"
 
-#: lib/kernel_utils.py:170
-msgid "Package lists updated"
-msgstr "Daftar paket diperbarui"
+#: lib/build_utils.py:85
+#, python-brace-format
+msgid "vmlinuz for kernel {kernel_version} not found"
+msgstr "vmlinuz untuk kernel {kernel_version} tidak ditemukan"
 
-#: lib/kernel_utils.py:173
-msgid "Failed to update package lists: {}"
-msgstr "Gagal memperbarui daftar paket: {}"
+#: lib/build_utils.py:103
+msgid "temp_dir is required and must exist for SquashFS creation"
+msgstr "temp_dir diperlukan dan harus ada untuk pembuatan SquashFS"
 
-#: lib/kernel_utils.py:176
-msgid "Error updating package lists: {}"
-msgstr "Kesalahan memperbarui daftar paket: {error}"
+#: lib/build_utils.py:129
+#, python-brace-format
+msgid ""
+"Kernel modules not found in extracted deb package for kernel {kernel_version}"
+msgstr ""
+"Modul kernel tidak ditemukan dalam paket deb yang diekstrak untuk kernel "
+"{kernel_version}"
 
-#: lib/kernel_utils.py:180
-msgid "Package database is outdated"
+#: lib/build_utils.py:213
+msgid "Failed to create SquashFS image"
+msgstr "Gagal membuat citra SquashFS"
+
+#: lib/build_utils.py:236
+msgid "mkinitrfs not found - this tool requires MiniOS live environment"
+msgstr ""
+"mkinitrfs tidak ditemukan - alat ini membutuhkan lingkungan langsung MiniOS"
+
+#: lib/build_utils.py:340
+#, python-brace-format
+msgid "mkinitrfs failed with return code {code}"
+msgstr "mkinitrfs gagal dengan kode kembali {code}"
+
+#: lib/build_utils.py:346
+#, python-brace-format
+msgid "mkinitrfs failed: {error}"
+msgstr "mkinitrfs gagal: {error}"
+
+#: lib/build_utils.py:348
+#, python-brace-format
+msgid "mkinitrfs error: {error}"
+msgstr "Kesalahan mkinitrfs: {error}"
+
+#: lib/build_utils.py:373
+msgid "mkinitrfs did not return valid initramfs path"
+msgstr "mkinitrfs tidak mengembalikan jalur initramfs yang valid"
+
+#: lib/minios_kernel_manager.py:389
+msgid "MiniOS directory is writable"
+msgstr "Direktori MiniOS dapat ditulis"
+
+#: lib/minios_kernel_manager.py:394 lib/minios_kernel_manager.py:666
+msgid "MiniOS directory is read-only"
+msgstr "Direktori MiniOS hanya-baca"
+
+#: lib/minios_kernel_manager.py:434
+msgid "Manage Kernels"
+msgstr "Kelola Kernel"
+
+#: lib/minios_kernel_manager.py:439 lib/minios_kernel_manager.py:640
+msgid "Package Kernel"
+msgstr "Kemaskan Kernel"
+
+#: lib/minios_kernel_manager.py:476
+msgid "Select a packaged kernel to activate or delete:"
+msgstr "Pilih kernel yang sudah dikemas untuk diaktifkan atau dihapus:"
+
+#: lib/minios_kernel_manager.py:493 lib/minios_kernel_manager.py:1974
+msgid "Activating kernel..."
+msgstr "Mengaktifkan kernel..."
+
+#: lib/minios_kernel_manager.py:523
+msgid "Manual Package"
+msgstr "Paket Manual"
+
+#: lib/minios_kernel_manager.py:528
+msgid "Repository"
+msgstr "Repositori"
+
+#: lib/minios_kernel_manager.py:547
+msgid "SquashFS Compression:"
+msgstr "Kompresi SquashFS:"
+
+#: lib/minios_kernel_manager.py:566 lib/minios_kernel_manager.py:1386
+msgid "No file selected"
+msgstr "Tidak ada berkas yang dipilih"
+
+#: lib/minios_kernel_manager.py:571
+msgid "Browse..."
+msgstr "Jelajahi..."
+
+#: lib/minios_kernel_manager.py:584
+msgid "Package Information:"
+msgstr "Informasi Paket:"
+
+#: lib/minios_kernel_manager.py:614
+msgid "Available Kernels:"
+msgstr "Kernel Tersedia:"
+
+#: lib/minios_kernel_manager.py:641 lib/minios_kernel_manager.py:672
+msgid "Package kernel and add to repository"
+msgstr "Kemaskan kernel dan tambahkan ke repositori"
+
+#: lib/minios_kernel_manager.py:668 lib/minios_kernel_manager.py:1409
+msgid "Please select a kernel first"
+msgstr "Silakan pilih kernel terlebih dahulu"
+
+#: lib/minios_kernel_manager.py:670
+msgid "Build in progress..."
+msgstr "Pembangunan sedang berlangsung..."
+
+#: lib/minios_kernel_manager.py:772
+msgid "ACTIVE"
+msgstr "AKTIF"
+
+#: lib/minios_kernel_manager.py:775 lib/minios_kernel_manager.py:1210
+msgid "AVAILABLE"
+msgstr "TERSEDIA"
+
+#: lib/minios_kernel_manager.py:785
+msgid "RUNNING"
+msgstr "BERJALAN"
+
+#: lib/minios_kernel_manager.py:819
+msgid "Please select a kernel to activate"
+msgstr "Silakan pilih kernel untuk diaktifkan"
+
+#: lib/minios_kernel_manager.py:823 lib/minios_kernel_manager.py:890
+#: lib/minios_kernel_manager.py:1413
+msgid "MiniOS directory is not writable"
+msgstr "Direktori MiniOS tidak dapat ditulis"
+
+#: lib/minios_kernel_manager.py:831 lib/minios_kernel_manager.py:1995
+msgid "Activate Kernel"
+msgstr "Aktifkan Kernel"
+
+#: lib/minios_kernel_manager.py:834
+msgid ""
+"Are you sure you want to activate kernel {}?\n"
+"\n"
+"This will deactivate the current kernel and update the bootloader "
+"configuration."
+msgstr ""
+"Apakah Anda yakin ingin mengaktifkan kernel {}?\n"
+"\n"
+"Ini akan menonaktifkan kernel saat ini dan memperbarui konfigurasi "
+"bootloader."
+
+#: lib/minios_kernel_manager.py:848
+msgid "Activating kernel, please wait..."
+msgstr "Mengaktifkan kernel, mohon tunggu..."
+
+#: lib/minios_kernel_manager.py:886
+msgid "Please select a kernel to delete"
+msgstr "Silakan pilih kernel untuk dihapus"
+
+#: lib/minios_kernel_manager.py:898 lib/minios_kernel_manager.py:2005
+msgid "Delete Kernel"
+msgstr "Hapus Kernel"
+
+#: lib/minios_kernel_manager.py:901
+msgid ""
+"Are you sure you want to delete kernel '{}'?\n"
+"\n"
+"This action cannot be undone."
+msgstr ""
+"Apakah Anda yakin ingin menghapus kernel '{}'?\n"
+"\n"
+"Tindakan ini tidak dapat dibatalkan."
+
+#: lib/minios_kernel_manager.py:927
+msgid "Select Kernel Package"
+msgstr "Pilih Paket Kernel"
+
+#: lib/minios_kernel_manager.py:932 lib/minios_kernel_manager.py:1731
+#: lib/minios_kernel_manager.py:1892
+msgid "Cancel"
+msgstr "Batal"
+
+#: lib/minios_kernel_manager.py:933
+msgid "Open"
+msgstr "Buka"
+
+#: lib/minios_kernel_manager.py:948
+msgid "Debian Package Files (*.deb)"
+msgstr "Berkas Paket Debian (*.deb)"
+
+#: lib/minios_kernel_manager.py:953
+msgid "All Files"
+msgstr "Semua Berkas"
+
+#: lib/minios_kernel_manager.py:1090
+msgid "Fetching kernel list from repository..."
+msgstr "Mengambil daftar kernel dari repositori..."
+
+#: lib/minios_kernel_manager.py:1092
+msgid "Scanning for manual packages..."
+msgstr "Memindai paket manual..."
+
+#: lib/minios_kernel_manager.py:1172
+msgid "Manual package"
+msgstr "Paket manual"
+
+#: lib/minios_kernel_manager.py:1172
+msgid "Repository kernel"
+msgstr "Kernel repositori"
+
+#: lib/minios_kernel_manager.py:1232
+msgid "Package database outdated"
 msgstr "Basis data paket usang"
 
-#: lib/kernel_utils.py:181
-msgid "Run 'apt update' or use --force-update"
-msgstr "Jalankan 'apt update' atau gunakan --force-update"
+#: lib/minios_kernel_manager.py:1234
+msgid ""
+"The repository kernel list is empty. This may indicate an outdated package "
+"database. Update package lists now?"
+msgstr ""
+"Daftar kernel repositori kosong. Ini dapat menunjukkan bahwa basis data "
+"paket usang. Perbarui daftar paket sekarang?"
 
-#: lib/kernel_utils.py:244
+#: lib/minios_kernel_manager.py:1300
+msgid "Failed to update package lists"
+msgstr "Gagal memperbarui daftar paket"
+
+#: lib/minios_kernel_manager.py:1322
+msgid "No repository kernels found"
+msgstr "Tidak ada kernel repositori ditemukan"
+
+#: lib/minios_kernel_manager.py:1324
+msgid "No manual packages found"
+msgstr "Tidak ada paket manual ditemukan"
+
+#: lib/minios_kernel_manager.py:1456
+msgid "Executing command: {}"
+msgstr "Mengeksekusi perintah: {}"
+
+#: lib/minios_kernel_manager.py:1490
+msgid ""
+"Failed to start packaging process. Please check the log for detailed error "
+"information."
+msgstr ""
+"Gagal memulai proses pengemasan. Silakan periksa log untuk informasi "
+"kesalahan lebih lanjut."
+
+#: lib/minios_kernel_manager.py:1640
+msgid "CLI tool finished successfully, installing to repository..."
+msgstr "Alat CLI berhasil diselesaikan, menginstal ke repositori..."
+
+#: lib/minios_kernel_manager.py:1641
+msgid "Installing kernel to repository..."
+msgstr "Menginstal kernel ke repositori..."
+
+#: lib/minios_kernel_manager.py:1645
+msgid "CLI tool finished successfully."
+msgstr "Alat CLI berhasil diselesaikan."
+
+#: lib/minios_kernel_manager.py:1667
+msgid "Kernel packaging failed with exit code: {}"
+msgstr "Pengemasan kernel gagal dengan kode keluar: {}"
+
+#: lib/minios_kernel_manager.py:1671
+msgid ""
+"Kernel packaging failed with exit code: {}. Please check the log above for "
+"detailed error information."
+msgstr ""
+"Pengemasan kernel gagal dengan kode keluar: {}. Silakan periksa log di atas "
+"untuk informasi kesalahan lebih lanjut."
+
+#: lib/minios_kernel_manager.py:1686
+msgid "Starting packaging process..."
+msgstr "Memulai proses pengemasan..."
+
+#: lib/minios_kernel_manager.py:1697
+msgid "Packaging Log"
+msgstr "Log Pengemasan"
+
+#: lib/minios_kernel_manager.py:1709
+msgid "Cancelling and cleaning up..."
+msgstr "Membatalkan dan membersihkan..."
+
+#: lib/minios_kernel_manager.py:1792 lib/minios_kernel_manager.py:1884
+msgid "Back to Selection"
+msgstr "Kembali ke Pilihan"
+
+#: lib/minios_kernel_manager.py:1815
+msgid "Cancelling packaging..."
+msgstr "Membatalkan pengemasan..."
+
+#: lib/minios_kernel_manager.py:1932
+msgid "Error"
+msgstr "Kesalahan"
+
+#: lib/minios_kernel_manager.py:1946
+msgid "Packaging Complete"
+msgstr "Pengemasan Selesai"
+
+#: lib/minios_kernel_manager.py:1953
+msgid "The new kernel is now available in the 'Manage Kernels' tab."
+msgstr "Kernel baru kini tersedia di tab 'Kelola Kernel'."
+
 #, python-brace-format
-msgid "Downloading {package_name} from repository..."
-msgstr "Mengunduh {package_name} dari repositori..."
+#~ msgid "Error updating syslinux config: {error}"
+#~ msgstr "Kesalahan memperbarui konfigurasi syslinux: {error}"
 
-#: lib/kernel_utils.py:247
-msgid "Download completed successfully"
-msgstr "Unduhan berhasil diselesaikan"
-
-#: lib/kernel_utils.py:259
 #, python-brace-format
-msgid "Found package file: {filename}"
-msgstr "Berkas paket ditemukan: {filename}"
+#~ msgid "Error updating grub config: {error}"
+#~ msgstr "Kesalahan memperbarui konfigurasi grub: {error}"
 
-#: lib/kernel_utils.py:268
-msgid "Extracting package contents..."
-msgstr "Mengekstrak isi paket..."
+#~ msgid "No kernels packaged"
+#~ msgstr "Tidak ada kernel yang dikemas"
 
-#: lib/kernel_utils.py:271
-msgid "Package extracted successfully"
-msgstr "Paket berhasil diekstrak"
+#~ msgid "Package a kernel first using the Package Kernel tab"
+#~ msgstr "Kemaskan kernel terlebih dahulu menggunakan tab 'Kemaskan Kernel'"
 
-#: lib/kernel_utils.py:369
+#~ msgid "Failed to fetch repository kernels"
+#~ msgstr "Gagal mengambil kernel repositori"
+
 #, python-brace-format
-msgid "Removing existing kernel modules for {kernel_version}"
-msgstr "Menghapus modul kernel yang ada untuk {kernel_version}"
+#~ msgid "Using system modules base: {base}"
+#~ msgstr "Menggunakan basis modul sistem: {base}"
 
-#: lib/kernel_utils.py:387
+#~ msgid "Generating module dependencies for SquashFS"
+#~ msgstr "Menghasilkan dependensi modul untuk SquashFS"
+
+#~ msgid "depmod failed: {}"
+#~ msgstr "depmod gagal: {}"
+
+#~ msgid "Module dependencies generated successfully"
+#~ msgstr "Dependensi modul berhasil dibuat"
+
+#~ msgid "Failed to generate module dependencies: {}"
+#~ msgstr "Gagal menghasilkan dependensi modul: {}"
+
 #, python-brace-format
-msgid "Error reading modules directory: {error}"
-msgstr "Kesalahan membaca direktori modul: {error}"
+#~ msgid "Using extracted deb modules with structure: {path}"
+#~ msgstr "Menggunakan modul deb yang diekstrak dengan struktur: {path}"
 
-#: lib/kernel_utils.py:397
 #, python-brace-format
-msgid "Kernel modules for {kernel_version} not found in package"
-msgstr "Modul kernel untuk {kernel_version} tidak ditemukan dalam paket"
+#~ msgid "Starting SquashFS compression with {compression}..."
+#~ msgstr "Memulai kompresi SquashFS dengan {compression}..."
 
-#: lib/kernel_utils.py:400
 #, python-brace-format
-msgid "Installing kernel modules to {target_path}"
-msgstr "Menginstal modul kernel ke {target_path}"
+#~ msgid "SquashFS image completed: {path}"
+#~ msgstr "Citra SquashFS selesai: {path}"
 
-#: lib/kernel_utils.py:406
-msgid "Building module dependencies"
-msgstr "Membangun dependensi modul"
+#~ msgid "Removed existing symlink: {}"
+#~ msgstr "Symlink yang ada dihapus: {}"
 
+#~ msgid "Using existing modules directory: {}"
+#~ msgstr "Menggunakan direktori modul yang ada: {}"
+
+#, python-brace-format
+#~ msgid "Created temporary symlink: {system_path} -> {extracted_path}"
+#~ msgstr "Symlink sementara dibuat: {system_path} -> {extracted_path}"
+
+#~ msgid "Generating module dependencies for initramfs"
+#~ msgstr "Menghasilkan dependensi modul untuk initramfs"
+
+#~ msgid "Using custom temporary directory for initramfs: {}"
+#~ msgstr "Menggunakan direktori sementara khusus untuk initramfs: {}"
+
+#~ msgid "Starting initramfs generation..."
+#~ msgstr "Memulai pembuatan initramfs..."
+
+#~ msgid "mkinitrfs output was:"
+#~ msgstr "Output mkinitrfs adalah:"
+
+#, python-brace-format
+#~ msgid "Copying initramfs from {path}"
+#~ msgstr "Menyalin initramfs dari {path}"
+
+#, python-brace-format
+#~ msgid "Initramfs created: {path}"
+#~ msgstr "Initramfs dibuat: {path}"
+
+#, python-brace-format
+#~ msgid "Removed temporary symlink: {path}"
+#~ msgstr "Symlink sementara dihapus: {path}"
+
+#, python-brace-format
+#~ msgid "Downloading {package_name} from repository..."
+#~ msgstr "Mengunduh {package_name} dari repositori..."
+
+#~ msgid "Download completed successfully"
+#~ msgstr "Unduhan berhasil diselesaikan"
+
+#, python-brace-format
+#~ msgid "Found package file: {filename}"
+#~ msgstr "Berkas paket ditemukan: {filename}"
+
+#~ msgid "Extracting package contents..."
+#~ msgstr "Mengekstrak isi paket..."
+
+#~ msgid "Package extracted successfully"
+#~ msgstr "Paket berhasil diekstrak"
+
+#, python-brace-format
+#~ msgid "Removing existing kernel modules for {kernel_version}"
+#~ msgstr "Menghapus modul kernel yang ada untuk {kernel_version}"
+
+#, python-brace-format
+#~ msgid "Error reading modules directory: {error}"
+#~ msgstr "Kesalahan membaca direktori modul: {error}"
+
+#, python-brace-format
+#~ msgid "Installing kernel modules to {target_path}"
+#~ msgstr "Menginstal modul kernel ke {target_path}"
+
+#~ msgid "Building module dependencies"
+#~ msgstr "Membangun dependensi modul"
