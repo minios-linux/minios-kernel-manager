@@ -204,15 +204,25 @@ def _update_bootloader_configs(minios_path: str, kernel_version: str) -> bool:
     if os.path.exists(syslinux_cfg):
         success &= _update_syslinux_config(syslinux_cfg, kernel_version)
     
-    # Update GRUB configuration - check for mainmenu.cfg first
+    # Update GRUB configuration - check for all config files
     grub_dir = os.path.join(minios_path, "boot", "grub")
-    main_cfg = os.path.join(grub_dir, "mainmenu.cfg")
-    grub_cfg = os.path.join(grub_dir, "grub.cfg")
+    config_files = [
+        os.path.join(grub_dir, "main.cfg"),
+        os.path.join(grub_dir, "grub.multilang.cfg"),
+        os.path.join(grub_dir, "grub.english.cfg"),
+        os.path.join(grub_dir, "grub.cfg")
+    ]
     
-    if os.path.exists(main_cfg):
-        success &= _update_grub_config(main_cfg, kernel_version)
-    elif os.path.exists(grub_cfg):
-        success &= _update_grub_config(grub_cfg, kernel_version)
+    grub_updated = False
+    for config_file in config_files:
+        if os.path.exists(config_file):
+            if _update_grub_config(config_file, kernel_version):
+                grub_updated = True
+            else:
+                success = False
+    
+    if not grub_updated:
+        print("W: No GRUB configuration files found or updated")
     
     return success
 
@@ -258,7 +268,10 @@ def _update_syslinux_config(config_file: str, kernel_version: str) -> bool:
         return False
 
 def _update_grub_config(config_file: str, kernel_version: str) -> bool:
-    """Update GRUB configuration file with new kernel paths."""
+    """Update GRUB configuration file with new kernel paths.
+    
+    Supports main.cfg, grub.multilang.cfg, grub.english.cfg, and grub.cfg formats.
+    """
     try:
         # Check if file exists
         if not os.path.exists(config_file):

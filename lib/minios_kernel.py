@@ -59,29 +59,15 @@ signal.signal(signal.SIGINT, signal_handler)   # Ctrl+C
 signal.signal(signal.SIGTERM, signal_handler)  # Termination request
 atexit.register(cleanup_temp_dir)  # Normal exit cleanup
 
-# This check is to ensure the script can be run from the source tree
-script_dir = os.path.dirname(os.path.abspath(__file__))
-if os.path.basename(script_dir) == 'lib':
-    # Running from source tree
-    sys.path.insert(0, os.path.dirname(script_dir))
-    from lib.kernel_utils import (
-        download_kernel_package, process_manual_package, prepare_temp_modules, cleanup_temp_modules
-    )
-    from lib.build_utils import create_squashfs_image, generate_initramfs, copy_vmlinuz
-    from lib.minios_utils import (
-        find_minios_directory, activate_kernel, list_all_kernels, get_active_kernel,
-        get_temp_dir_with_space_check
-    )
-else:
-    # Running from installed location
-    from kernel_utils import (
-        download_kernel_package, process_manual_package, prepare_temp_modules, cleanup_temp_modules
-    )
-    from build_utils import create_squashfs_image, generate_initramfs, copy_vmlinuz
-    from minios_utils import (
-        find_minios_directory, activate_kernel, list_all_kernels, get_active_kernel,
-        get_temp_dir_with_space_check
-    )
+# Use only system installed modules
+from kernel_utils import (
+    download_kernel_package, process_manual_package, prepare_temp_modules, cleanup_temp_modules
+)
+from build_utils import create_squashfs_image, generate_initramfs, copy_vmlinuz
+from minios_utils import (
+    find_minios_directory, activate_kernel, list_all_kernels, get_active_kernel,
+    get_temp_dir_with_space_check
+)
 
 def activity_indicator(stop_event, message):
     """Show activity indicator during long operations"""

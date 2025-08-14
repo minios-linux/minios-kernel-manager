@@ -25,6 +25,6 @@ Depends: ${misc:Depends},
 Recommends: lz4, lzop, xz-utils, bzip2
 Description: Graphical and command-line tools for managing MiniOS kernels.
  This package provides a GTK3 graphical user interface and a command-line
- utility to package, install, and manage Linux kernels for the MiniOS distribution.
+ utility to package, install, and manage Linux kernels for the MiniOS.
  It allows creating SquashFS images of kernels, generating initramfs,
  and managing active and inactive kernels in the /minios/kernels repository.

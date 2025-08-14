@@ -14,17 +14,10 @@ import tempfile
 import gettext
 from typing import Optional, Callable
 
-# Handle imports based on whether we're installed or running from source
-if os.path.exists('/usr/lib/minios-kernel-manager'):
-    from compression_utils import get_compression_params
-    from kernel_utils import get_non_symlink_modules_dir
-    from minios_utils import get_temp_dir_with_space_check
-else:
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    sys.path.insert(0, script_dir)
-    from compression_utils import get_compression_params
-    from kernel_utils import get_non_symlink_modules_dir
-    from minios_utils import get_temp_dir_with_space_check
+# Use only system installed modules
+from compression_utils import get_compression_params
+from kernel_utils import get_non_symlink_modules_dir
+from minios_utils import get_temp_dir_with_space_check
 
 # Initialize gettext
 gettext.bindtextdomain('minios-kernel-manager', '/usr/share/locale')
@@ -136,6 +129,10 @@ def create_squashfs_image(kernel_version: str, compression: str, output_dir: str
     # Use parent directory of temp_dir as base to keep all temp files in one location
     base_temp_dir = os.path.dirname(temp_dir) if temp_dir else None
     temp_squashfs_dir = tempfile.mkdtemp(prefix=f"minios-kernel-{kernel_version}-squashfs-", dir=base_temp_dir)
+    
+    # Fix permissions to 755 to ensure proper access to SquashFS contents
+    # tempfile.mkdtemp() creates directories with 700 by default, but SquashFS needs 755
+    os.chmod(temp_squashfs_dir, 0o755)
     target_modules_dir = os.path.join(temp_squashfs_dir, system_modules_base)
     os.makedirs(target_modules_dir, exist_ok=True)
     
@@ -145,10 +142,22 @@ def create_squashfs_image(kernel_version: str, compression: str, output_dir: str
     # Generate modules.dep and other module dependency files for SquashFS
     try:
         print(f"I: {_('Generating module dependencies for SquashFS')}")
-        depmod_result = subprocess.run(['depmod', '-b', temp_squashfs_dir, '-m', system_modules_base, original_kernel_version], 
-                                     capture_output=True, text=True, timeout=30)
+        
+        if system_modules_base == "usr/lib/modules":
+            # For usr/lib/modules structure, point depmod to usr subdirectory
+            depmod_basedir = os.path.join(temp_squashfs_dir, "usr")
+            depmod_result = subprocess.run(['depmod', '-b', depmod_basedir, original_kernel_version], 
+                                         capture_output=True, text=True, timeout=30)
+        else:
+            # For lib/modules structure (traditional)
+            depmod_result = subprocess.run(['depmod', '-b', temp_squashfs_dir, original_kernel_version], 
+                                         capture_output=True, text=True, timeout=30)
         if depmod_result.returncode != 0:
-            print(f"W: {_('depmod failed: {}').format(depmod_result.stderr.strip())}")
+            error_msg = depmod_result.stderr.strip()
+            # Stop build on any ERROR, continue on WARNING
+            if "ERROR:" in error_msg:
+                raise RuntimeError(_('Critical depmod error: {}').format(error_msg))
+            print(f"W: {_('depmod failed: {}').format(error_msg)}")
         else:
             print(f"I: {_('Module dependencies generated successfully')}")
     except (subprocess.TimeoutExpired, subprocess.CalledProcessError, OSError) as e:
@@ -282,7 +291,11 @@ def generate_initramfs(kernel_version: str, output_dir: str, logger: Optional[Ca
                         depmod_result = subprocess.run(['depmod', build_version], 
                                                      capture_output=True, text=True, timeout=30)
                         if depmod_result.returncode != 0:
-                            print(f"W: {_('depmod failed: {}').format(depmod_result.stderr.strip())}")
+                            error_msg = depmod_result.stderr.strip()
+                            # Stop build on any ERROR, continue on WARNING
+                            if "ERROR:" in error_msg:
+                                raise RuntimeError(_('Critical depmod error: {}').format(error_msg))
+                            print(f"W: {_('depmod failed: {}').format(error_msg)}")
                         else:
                             print(f"I: {_('Module dependencies generated successfully')}")
                     except (subprocess.TimeoutExpired, subprocess.CalledProcessError, OSError) as e:

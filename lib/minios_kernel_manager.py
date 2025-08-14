@@ -39,25 +39,13 @@ import fcntl
 import json
 import re
 
-# If running from source, add the parent directory of 'lib' to the Python path
-script_dir = os.path.dirname(os.path.abspath(__file__))
-if os.path.basename(script_dir) == 'lib':
-    # Running from source tree
-    sys.path.insert(0, os.path.dirname(script_dir))
-    from lib.minios_utils import (
-        find_minios_directory, get_kernel_info,
-        get_currently_running_kernel, is_kernel_currently_running, get_system_type
-    )
-    from lib.kernel_utils import get_repository_kernels, get_manual_packages, _format_size
-    from lib.compression_utils import get_available_compressions
-else:
-    # Running from installed location
-    from minios_utils import (
-        find_minios_directory, get_kernel_info,
-        get_currently_running_kernel, is_kernel_currently_running, get_system_type
-    )
-    from kernel_utils import get_repository_kernels, get_manual_packages, _format_size
-    from compression_utils import get_available_compressions
+# Use only system installed modules
+from minios_utils import (
+    find_minios_directory, get_kernel_info,
+    get_currently_running_kernel, is_kernel_currently_running, get_system_type
+)
+from kernel_utils import get_repository_kernels, get_manual_packages, _format_size
+from compression_utils import get_available_compressions
 
 gi.require_version('Gtk', '3.0')
 gi.require_version('Gio', '2.0')
@@ -66,23 +54,10 @@ from gi.repository import Gtk, GLib, Gio, Pango
 # ──────────────────────────────────────────────────────────────────────────────
 # CLI Interface Functions
 # ──────────────────────────────────────────────────────────────────────────────
-def get_minios_kernel_cli_path():
-    """Get the path to minios-kernel CLI tool"""
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    if os.path.basename(script_dir) == 'lib':
-        # Running from source tree
-        cli_path = os.path.join(os.path.dirname(script_dir), 'bin', 'minios-kernel')
-    else:
-        # Running from installed location - assume it's in PATH
-        cli_path = 'minios-kernel'
-    return cli_path
-
 def run_minios_kernel(args):
     """Execute minios-kernel command with pkexec for administrative privileges"""
-    cli_path = get_minios_kernel_cli_path()
-    
     # Always use pkexec for kernel operations to ensure proper privileges
-    cmd = ['pkexec', 'bash', cli_path] + args
+    cmd = ['pkexec', 'minios-kernel'] + args
     
     return subprocess.run(cmd, capture_output=True, text=True)
 
@@ -143,7 +118,7 @@ def list_kernels_cli():
     except (subprocess.CalledProcessError, json.JSONDecodeError, KeyError) as e:
         # Fallback to text parsing if JSON fails
         try:
-            cmd = ['bash', cli_path, 'list']
+            cmd = ['minios-kernel', 'list']
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
             # Parse the output to extract kernel list
             kernels = []
@@ -1448,9 +1423,8 @@ class KernelPackWindow(Gtk.ApplicationWindow):
                 '--sqfs-comp', self.sqfs_compression
             ])
 
-            # Determine CLI path and build pkexec command
-            cli_path = get_minios_kernel_cli_path()
-            cmd = ['pkexec', 'bash', cli_path] + cmd_args
+            # Build pkexec command
+            cmd = ['pkexec', 'minios-kernel'] + cmd_args
 
             # Log the command being executed
             self._log_message(_("Executing command: {}").format(" ".join(cmd)))
