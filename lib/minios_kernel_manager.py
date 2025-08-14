@@ -40,12 +40,22 @@ import json
 import re
 
 # Use only system installed modules
-from minios_utils import (
-    find_minios_directory, get_kernel_info,
-    get_currently_running_kernel, is_kernel_currently_running, get_system_type
-)
-from kernel_utils import get_repository_kernels, get_manual_packages, _format_size
-from compression_utils import get_available_compressions
+try:
+    # Try relative imports first (when imported as module)
+    from .minios_utils import (
+        find_minios_directory, get_kernel_info,
+        get_currently_running_kernel, is_kernel_currently_running, get_system_type
+    )
+    from .kernel_utils import get_repository_kernels, get_manual_packages, _format_size
+    from .compression_utils import get_available_compressions
+except ImportError:
+    # Fall back to absolute imports (when run as main script)
+    from minios_utils import (
+        find_minios_directory, get_kernel_info,
+        get_currently_running_kernel, is_kernel_currently_running, get_system_type
+    )
+    from kernel_utils import get_repository_kernels, get_manual_packages, _format_size
+    from compression_utils import get_available_compressions
 
 gi.require_version('Gtk', '3.0')
 gi.require_version('Gio', '2.0')
@@ -253,6 +263,7 @@ APPLICATION_ID   = 'dev.minios.kernel-manager'
 APP_NAME         = 'minios-kernel-manager'
 APP_TITLE        = 'MiniOS Kernel Manager'
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+script_dir = os.path.dirname(os.path.abspath(__file__))
 CSS_FILE_PATH = '/usr/share/minios-kernel-manager/style.css'
 
 # Icons
@@ -627,21 +638,26 @@ class KernelPackWindow(Gtk.ApplicationWindow):
     def _update_buttons_state(self):
         """Update buttons state based on MiniOS directory writeability and selection"""
         # Check if build button should be enabled
-        if hasattr(self, 'build_button'):
-            can_build = (self.selected_kernel and 
-                        self.minios_path and 
-                        self.minios_writable and 
-                        not self.is_building)
+        if hasattr(self, 'build_button') and self.build_button is not None:
+            selected_kernel = getattr(self, 'selected_kernel', None)
+            minios_path = getattr(self, 'minios_path', None)
+            minios_writable = getattr(self, 'minios_writable', False)
+            is_building = getattr(self, 'is_building', False)
+            
+            can_build = (bool(selected_kernel) and 
+                        bool(minios_path) and 
+                        bool(minios_writable) and 
+                        not bool(is_building))
             self.build_button.set_sensitive(can_build)
             
             # Update tooltip
-            if not self.minios_path:
+            if not minios_path:
                 tooltip = _("MiniOS directory not found")
-            elif not self.minios_writable:
+            elif not minios_writable:
                 tooltip = _("MiniOS directory is read-only")
-            elif not self.selected_kernel:
+            elif not selected_kernel:
                 tooltip = _("Please select a kernel first")
-            elif self.is_building:
+            elif is_building:
                 tooltip = _("Build in progress...")
             else:
                 tooltip = _("Package kernel and add to repository")
@@ -1782,7 +1798,8 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         self._show_cancel_overlay()
         
         # Disable the cancel button to prevent multiple clicks
-        self.cancel_button.set_sensitive(False)
+        if hasattr(self, 'cancel_button') and self.cancel_button is not None:
+            self.cancel_button.set_sensitive(False)
         
         self.cancel_requested = True
         self.is_building = False
@@ -1995,8 +2012,12 @@ class KernelPackWindow(Gtk.ApplicationWindow):
                 self.selected_packaged_kernel = row.kernel_version
                 
                 # Update menu items based on kernel status
-                activate_item = self.context_menu.get_children()[0]
-                delete_item = self.context_menu.get_children()[2]
+                menu_children = self.context_menu.get_children()
+                if len(menu_children) >= 3:
+                    activate_item = menu_children[0]
+                    delete_item = menu_children[2]
+                else:
+                    return True  # Skip if menu items are not available
                 
                 # Get kernel info to check status
                 kernel_info = get_kernel_info(self.minios_path, row.kernel_version)
@@ -2009,24 +2030,28 @@ class KernelPackWindow(Gtk.ApplicationWindow):
                     minios_writable = self.minios_writable
                     
                     # Disable activate if already active or directory not writable
-                    if is_active:
-                        activate_item.set_sensitive(False)
-                    elif not minios_writable:
-                        activate_item.set_sensitive(False)
-                    else:
-                        activate_item.set_sensitive(True)
+                    if activate_item is not None:
+                        if is_active:
+                            activate_item.set_sensitive(False)
+                        elif not minios_writable:
+                            activate_item.set_sensitive(False)
+                        else:
+                            activate_item.set_sensitive(True)
                     
                     # Disable delete if active or running or directory not writable
-                    if is_active or is_running:
-                        delete_item.set_sensitive(False)
-                    elif not minios_writable:
-                        delete_item.set_sensitive(False)
-                    else:
-                        delete_item.set_sensitive(True)
+                    if delete_item is not None:
+                        if is_active or is_running:
+                            delete_item.set_sensitive(False)
+                        elif not minios_writable:
+                            delete_item.set_sensitive(False)
+                        else:
+                            delete_item.set_sensitive(True)
                 else:
                     # If we can't get kernel info, check writeability
-                    activate_item.set_sensitive(self.minios_writable)
-                    delete_item.set_sensitive(self.minios_writable)
+                    if activate_item is not None:
+                        activate_item.set_sensitive(self.minios_writable)
+                    if delete_item is not None:
+                        delete_item.set_sensitive(self.minios_writable)
                 
                 # Show context menu
                 self.context_menu.popup_at_pointer(event)

@@ -11,7 +11,7 @@ import subprocess
 import tempfile
 import shutil
 import gettext
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 # Initialize gettext
 gettext.bindtextdomain('minios-kernel-manager', '/usr/share/locale')
@@ -127,7 +127,7 @@ def _format_size(size_bytes: int) -> str:
     return f"{size_bytes:.1f} TB"
 
 
-def check_package_cache(force_update: bool = False) -> tuple[bool, str]:
+def check_package_cache(force_update: bool = False) -> Tuple[bool, str]:
     """
     Check if package cache is outdated and handle accordingly.
     

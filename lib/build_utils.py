@@ -15,9 +15,16 @@ import gettext
 from typing import Optional, Callable
 
 # Use only system installed modules
-from compression_utils import get_compression_params
-from kernel_utils import get_non_symlink_modules_dir
-from minios_utils import get_temp_dir_with_space_check
+try:
+    # Try relative imports first (when imported as module)
+    from .compression_utils import get_compression_params
+    from .kernel_utils import get_non_symlink_modules_dir
+    from .minios_utils import get_temp_dir_with_space_check
+except ImportError:
+    # Fall back to absolute imports (when run as main script)
+    from compression_utils import get_compression_params
+    from kernel_utils import get_non_symlink_modules_dir
+    from minios_utils import get_temp_dir_with_space_check
 
 # Initialize gettext
 gettext.bindtextdomain('minios-kernel-manager', '/usr/share/locale')
@@ -169,16 +176,34 @@ def create_squashfs_image(kernel_version: str, compression: str, output_dir: str
     # Get compression parameters
     comp_params = get_compression_params(compression, 'squashfs')
     
-    # Check mksquashfs version for -no-strip support
+    # Check mksquashfs version for -no-strip support and availability
     try:
         result = subprocess.run(['mksquashfs', '-version'], 
                               capture_output=True, text=True, check=True)
-        version_line = result.stderr.split('\n')[0]  # Version info is in stderr
-        version_str = version_line.split()[-1]  # Get version number
-        major, minor = map(int, version_str.split('.')[:2])
-        use_no_strip = (major > 4) or (major == 4 and minor >= 5)
-    except (subprocess.CalledProcessError, ValueError, IndexError):
+        # Version info can be in stdout or stderr
+        version_output = result.stdout if result.stdout else result.stderr
+        version_lines = version_output.split('\n')
+        version_line = next((line for line in version_lines if 'version' in line.lower()), '')
+        
+        if version_line:
+            # Extract version number - handle different formats
+            import re
+            version_match = re.search(r'version\s+(\d+)\.(\d+)', version_line.lower())
+            if version_match:
+                major, minor = int(version_match.group(1)), int(version_match.group(2))
+                use_no_strip = (major > 4) or (major == 4 and minor >= 5)
+                print(f"DEBUG: mksquashfs version detected: {major}.{minor}, no-strip support: {use_no_strip}", flush=True)
+            else:
+                print(f"DEBUG: Could not parse version from: {version_line}", flush=True)
+                use_no_strip = False
+        else:
+            print(f"DEBUG: No version line found in output", flush=True)
+            use_no_strip = False
+    except (subprocess.CalledProcessError, ValueError, IndexError) as e:
+        print(f"DEBUG: mksquashfs version check failed: {str(e)}", flush=True)
         use_no_strip = False
+    except FileNotFoundError:
+        raise RuntimeError(_("mksquashfs command not found. Please install squashfs-tools package."))
     
     # Build mksquashfs command
     cmd = [
@@ -192,34 +217,72 @@ def create_squashfs_image(kernel_version: str, compression: str, output_dir: str
     cmd.extend([
         '-b', '1024K',
         '-always-use-fragments',
-        '-noappend',
-        '-quiet'
+        '-noappend'
     ])
     
     if use_no_strip:
         cmd.append('-no-strip')
     
+    # Validate command arguments
+    for i, arg in enumerate(cmd):
+        if not arg or not isinstance(arg, str):
+            raise RuntimeError(f"Invalid command argument at position {i}: {repr(arg)}")
+    
     # Execute mksquashfs
     print(f"I: {_('Starting SquashFS compression with {compression}...').format(compression=compression)}", flush=True)
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     
-    if logger:
-        for line in iter(process.stdout.readline, ''):
-            if line.strip():
-                logger(line.strip())
-    else:
-        # Show progress for standalone execution
-        for line in iter(process.stdout.readline, ''):
-            if line.strip() and ('[' in line and ']' in line):
-                # This is a progress line from mksquashfs
-                print(f"\r{line.strip()}", end="", flush=True)
+    # Debug: print the exact command being executed
+    print(f"DEBUG: mksquashfs command: {' '.join(cmd)}", flush=True)
     
-    process.wait()
+    # Validate paths before execution
+    if not os.path.exists(source_path):
+        raise RuntimeError(f"Source path does not exist: {source_path}")
+    if not os.path.isdir(source_path):
+        raise RuntimeError(f"Source path is not a directory: {source_path}")
+    
+    # Ensure output directory exists
+    os.makedirs(os.path.dirname(output_image), exist_ok=True)
+    
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    
+    stdout_lines = []
+    stderr_lines = []
+    
+    # Capture both stdout and stderr
+    try:
+        stdout, stderr = process.communicate()
+        stdout_lines = stdout.splitlines() if stdout else []
+        stderr_lines = stderr.splitlines() if stderr else []
+        
+        if logger:
+            for line in stdout_lines:
+                if line.strip():
+                    logger(line.strip())
+        else:
+            # Show progress for standalone execution
+            for line in stdout_lines:
+                if line.strip() and ('[' in line and ']' in line):
+                    # This is a progress line from mksquashfs
+                    print(f"\r{line.strip()}", end="", flush=True)
+    except Exception as e:
+        process.kill()
+        if os.path.exists(temp_squashfs_dir):
+            shutil.rmtree(temp_squashfs_dir)
+        raise RuntimeError(f"Failed to execute mksquashfs: {str(e)}")
+    
     if process.returncode != 0:
         # Cleanup temporary directory
         if os.path.exists(temp_squashfs_dir):
             shutil.rmtree(temp_squashfs_dir)
-        raise RuntimeError(_("Failed to create SquashFS image"))
+        
+        # Combine error output for better debugging
+        error_msg = _("Failed to create SquashFS image")
+        if stderr_lines:
+            error_msg += f". Error: {' '.join(stderr_lines)}"
+        if stdout_lines:
+            error_msg += f". Output: {' '.join(stdout_lines[-5:])}"  # Last 5 lines
+        
+        raise RuntimeError(error_msg)
     
     print(f"\nI: {_('SquashFS image completed: {path}').format(path=output_image)}", flush=True)
     

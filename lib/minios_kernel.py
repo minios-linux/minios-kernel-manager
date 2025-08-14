@@ -60,14 +60,26 @@ signal.signal(signal.SIGTERM, signal_handler)  # Termination request
 atexit.register(cleanup_temp_dir)  # Normal exit cleanup
 
 # Use only system installed modules
-from kernel_utils import (
-    download_kernel_package, process_manual_package, prepare_temp_modules, cleanup_temp_modules
-)
-from build_utils import create_squashfs_image, generate_initramfs, copy_vmlinuz
-from minios_utils import (
-    find_minios_directory, activate_kernel, list_all_kernels, get_active_kernel,
-    get_temp_dir_with_space_check
-)
+try:
+    # Try relative imports first (when imported as module)
+    from .kernel_utils import (
+        download_kernel_package, process_manual_package, prepare_temp_modules, cleanup_temp_modules
+    )
+    from .build_utils import create_squashfs_image, generate_initramfs, copy_vmlinuz
+    from .minios_utils import (
+        find_minios_directory, activate_kernel, list_all_kernels, get_active_kernel,
+        get_temp_dir_with_space_check
+    )
+except ImportError:
+    # Fall back to absolute imports (when run as main script)
+    from kernel_utils import (
+        download_kernel_package, process_manual_package, prepare_temp_modules, cleanup_temp_modules
+    )
+    from build_utils import create_squashfs_image, generate_initramfs, copy_vmlinuz
+    from minios_utils import (
+        find_minios_directory, activate_kernel, list_all_kernels, get_active_kernel,
+        get_temp_dir_with_space_check
+    )
 
 def activity_indicator(stop_event, message):
     """Show activity indicator during long operations"""
