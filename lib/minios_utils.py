@@ -209,7 +209,7 @@ def _update_bootloader_configs(minios_path: str, kernel_version: str) -> bool:
     config_files = [
         os.path.join(grub_dir, "main.cfg"),
         os.path.join(grub_dir, "grub.multilang.cfg"),
-        os.path.join(grub_dir, "grub.english.cfg"),
+        os.path.join(grub_dir, "grub.template.cfg"),
         os.path.join(grub_dir, "grub.cfg")
     ]
     
@@ -270,7 +270,7 @@ def _update_syslinux_config(config_file: str, kernel_version: str) -> bool:
 def _update_grub_config(config_file: str, kernel_version: str) -> bool:
     """Update GRUB configuration file with new kernel paths.
     
-    Supports main.cfg, grub.multilang.cfg, grub.english.cfg, and grub.cfg formats.
+    Supports main.cfg, grub.multilang.cfg, grub.template.cfg, and grub.cfg formats.
     """
     try:
         # Check if file exists

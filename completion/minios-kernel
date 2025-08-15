@@ -1,0 +1,102 @@
+_minios_kernel() {
+    local cur prev opts subcommands
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD - 1]}"
+    
+    # Main commands
+    subcommands="package list activate info status delete"
+    
+    # Global options
+    global_opts="--help --json"
+    
+    # Get the position of the subcommand in the command line
+    local subcommand=""
+    local subcommand_pos=1
+    for ((i=1; i<${#COMP_WORDS[@]}; i++)); do
+        if [[ "${COMP_WORDS[i]}" =~ ^(package|list|activate|info|status|delete)$ ]]; then
+            subcommand="${COMP_WORDS[i]}"
+            subcommand_pos=$i
+            break
+        fi
+    done
+    
+    # If no subcommand found yet, complete subcommands and global options
+    if [[ -z "$subcommand" ]]; then
+        if [[ ${cur} == -* ]]; then
+            COMPREPLY=($(compgen -W "${global_opts}" -- ${cur}))
+        else
+            COMPREPLY=($(compgen -W "${subcommands}" -- ${cur}))
+        fi
+        return 0
+    fi
+    
+    # Complete based on subcommand
+    case "${subcommand}" in
+        package)
+            case "${prev}" in
+                --repo)
+                    # Get available kernel packages from repository
+                    local kernel_packages
+                    if command -v apt-cache >/dev/null 2>&1; then
+                        kernel_packages=$(apt-cache search --names-only "^linux-image-" 2>/dev/null | cut -d' ' -f1 | head -20)
+                    fi
+                    COMPREPLY=($(compgen -W "${kernel_packages}" -- ${cur}))
+                    ;;
+                --deb)
+                    # Complete .deb files
+                    COMPREPLY=($(compgen -f -X "!*.deb" -- ${cur}))
+                    ;;
+                -o|--output)
+                    # Complete directories
+                    COMPREPLY=($(compgen -d -- ${cur}))
+                    ;;
+                --sqfs-comp)
+                    local comp_methods="zstd lz4 xz gzip lzo"
+                    COMPREPLY=($(compgen -W "${comp_methods}" -- ${cur}))
+                    ;;
+                --temp-dir)
+                    # Complete directories
+                    COMPREPLY=($(compgen -d -- ${cur}))
+                    ;;
+                *)
+                    if [[ ${cur} == -* ]]; then
+                        local package_opts="--help --json --repo --deb -o --output --sqfs-comp --temp-dir --force-update"
+                        COMPREPLY=($(compgen -W "${package_opts}" -- ${cur}))
+                    fi
+                    ;;
+            esac
+            ;;
+        
+        list|info|status)
+            if [[ ${cur} == -* ]]; then
+                local list_opts="--help --json"
+                COMPREPLY=($(compgen -W "${list_opts}" -- ${cur}))
+            fi
+            ;;
+        
+        activate|delete)
+            case "${prev}" in
+                activate|delete)
+                    # Get available kernels from current directory
+                    local kernel_files
+                    if [[ -d "." ]]; then
+                        kernel_files=$(find . -maxdepth 1 -name "*.sb" -o -name "vmlinuz-*" 2>/dev/null | sed 's|^\./||' | head -20)
+                    fi
+                    COMPREPLY=($(compgen -W "${kernel_files}" -- ${cur}))
+                    ;;
+                *)
+                    if [[ ${cur} == -* ]]; then
+                        local cmd_opts="--help --json"
+                        COMPREPLY=($(compgen -W "${cmd_opts}" -- ${cur}))
+                    fi
+                    ;;
+            esac
+            ;;
+    esac
+    
+    return 0
+}
+
+# Register completion function
+complete -F _minios_kernel minios-kernel

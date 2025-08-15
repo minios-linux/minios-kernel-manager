@@ -3,6 +3,7 @@ LIBRARIES = lib/*.py
 APPLICATIONS = share/applications/minios-kernel-manager.desktop
 POLICIES = share/polkit/dev.minios.kernel-manager.policy
 STYLES = share/styles/style.css
+COMPLETIONS = completion/minios-kernel
 
 BINDIR = usr/bin
 LIBDIR = usr/lib/minios-kernel-manager
@@ -10,6 +11,7 @@ APPLICATIONSDIR = usr/share/applications
 POLKITACTIONSDIR = usr/share/polkit-1/actions
 LOCALEDIR = usr/share/locale
 SHAREDIR = usr/share/minios-kernel-manager
+COMPLETIONDIR = usr/share/bash-completion/completions
 
 PO_FILES = $(shell find po -maxdepth 1 -name "*.po")
 MO_FILES = $(patsubst %.po,%.mo,$(PO_FILES))
@@ -36,7 +38,8 @@ install: build
 				$(DESTDIR)/$(APPLICATIONSDIR) \
 				$(DESTDIR)/$(POLKITACTIONSDIR) \
 				$(DESTDIR)/$(LOCALEDIR) \
-				$(DESTDIR)/$(SHAREDIR)
+				$(DESTDIR)/$(SHAREDIR) \
+				$(DESTDIR)/$(COMPLETIONDIR)
 
 	cp $(EXECUTABLES) $(DESTDIR)/$(BINDIR)/
 	cp $(LIBRARIES) $(DESTDIR)/$(LIBDIR)/
@@ -45,6 +48,7 @@ install: build
 	cp $(APPLICATIONS) $(DESTDIR)/$(APPLICATIONSDIR)
 	cp $(POLICIES) $(DESTDIR)/$(POLKITACTIONSDIR)
 	cp $(STYLES) $(DESTDIR)/$(SHAREDIR)
+	cp $(COMPLETIONS) $(DESTDIR)/$(COMPLETIONDIR)/
 
 	@for MO_FILE in $(MO_FILES); do \
 		LOCALE=$$(basename $$MO_FILE .mo); \
@@ -85,6 +89,9 @@ uninstall:
 	
 	# Remove lintian overrides (if installed by debhelper)  
 	rm -f $(DESTDIR)/usr/share/lintian/overrides/minios-kernel-manager
+	
+	# Remove bash completion
+	rm -f $(DESTDIR)/$(COMPLETIONDIR)/minios-kernel
 	
 	@echo "MiniOS Kernel Manager uninstalled successfully"
 

@@ -58,14 +58,14 @@ def find_grub_config_files(minios_path: str) -> List[str]:
     Find all GRUB configuration files that may contain boot commands:
     - main.cfg (main config for multilingual configuration)
     - grub.multilang.cfg (multilingual configuration)
-    - grub.english.cfg (english-only configuration)  
+    - grub.template.cfg (template configuration)  
     - grub.cfg (active configuration)
     """
     grub_dir = os.path.join(minios_path, "boot", "grub")
     config_files = []
     
     # Check for all possible GRUB config files
-    for config_name in ["main.cfg", "grub.multilang.cfg", "grub.english.cfg", "grub.cfg"]:
+    for config_name in ["main.cfg", "grub.multilang.cfg", "grub.template.cfg", "grub.cfg"]:
         config_path = os.path.join(grub_dir, config_name)
         if os.path.exists(config_path):
             config_files.append(config_path)
@@ -102,7 +102,7 @@ def update_grub_config(minios_path: str, kernel_version: str) -> bool:
     - Direct linux/initrd commands  
     - search --set -f patterns
     - All other kernel/initrd file references
-    - Processes main.cfg, grub.multilang.cfg, grub.english.cfg, and grub.cfg if they exist
+    - Processes main.cfg, grub.multilang.cfg, grub.template.cfg, and grub.cfg if they exist
     """
     try:
         config_files = find_grub_config_files(minios_path)
