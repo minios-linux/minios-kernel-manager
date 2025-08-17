@@ -170,7 +170,8 @@ def create_squashfs_image(kernel_version: str, compression: str, output_dir: str
     except (subprocess.TimeoutExpired, subprocess.CalledProcessError, OSError) as e:
         print(f"W: {_('Failed to generate module dependencies: {}').format(str(e))}")
     
-    source_path = temp_squashfs_dir
+    # Use the modules directory structure directly as source for SquashFS
+    source_path = system_modules_base
     print(f"I: {_('Using extracted deb modules with structure: {path}').format(path=f'{temp_squashfs_dir}/{system_modules_base}/{original_kernel_version}')}")
     
     # Get compression parameters
@@ -234,16 +235,24 @@ def create_squashfs_image(kernel_version: str, compression: str, output_dir: str
     # Debug: print the exact command being executed
     print(f"DEBUG: {_('mksquashfs command: {command}').format(command=' '.join(cmd))}", flush=True)
     
-    # Validate paths before execution
-    if not os.path.exists(source_path):
-        raise RuntimeError(f"Source path does not exist: {source_path}")
-    if not os.path.isdir(source_path):
-        raise RuntimeError(f"Source path is not a directory: {source_path}")
+    # Validate paths before execution (check relative to temp_squashfs_dir)
+    full_source_path = os.path.join(temp_squashfs_dir, source_path)
+    if not os.path.exists(full_source_path):
+        raise RuntimeError(f"Source path does not exist: {full_source_path}")
+    if not os.path.isdir(full_source_path):
+        raise RuntimeError(f"Source path is not a directory: {full_source_path}")
     
     # Ensure output directory exists
     os.makedirs(os.path.dirname(output_image), exist_ok=True)
     
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    # Change working directory to temp_squashfs_dir to use relative paths
+    old_cwd = os.getcwd()
+    try:
+        os.chdir(temp_squashfs_dir)
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    finally:
+        # Always restore working directory after starting process
+        os.chdir(old_cwd)
     
     stdout_lines = []
     stderr_lines = []

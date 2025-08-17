@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: minios-kernel-manager 1.0.0\n"
 "Report-Msgid-Bugs-To: support@minios.dev\n"
-"POT-Creation-Date: 2025-08-17 15:07+0300\n"
+"POT-Creation-Date: 2025-08-17 17:21+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -394,38 +394,38 @@ msgid ""
 "Kernel modules not found in extracted deb package for kernel {kernel_version}"
 msgstr ""
 
-#: lib/build_utils.py:166 lib/build_utils.py:360
+#: lib/build_utils.py:166 lib/build_utils.py:369
 msgid "Critical depmod error: {}"
 msgstr ""
 
-#: lib/build_utils.py:206
+#: lib/build_utils.py:207
 msgid "mksquashfs command not found. Please install squashfs-tools package."
 msgstr ""
 
-#: lib/build_utils.py:279
+#: lib/build_utils.py:288
 msgid "Failed to create SquashFS image"
 msgstr ""
 
-#: lib/build_utils.py:308
+#: lib/build_utils.py:317
 msgid "mkinitrfs not found - this tool requires MiniOS live environment"
 msgstr ""
 
-#: lib/build_utils.py:416
+#: lib/build_utils.py:425
 #, python-brace-format
 msgid "mkinitrfs failed with return code {code}"
 msgstr ""
 
-#: lib/build_utils.py:422
+#: lib/build_utils.py:431
 #, python-brace-format
 msgid "mkinitrfs failed: {error}"
 msgstr ""
 
-#: lib/build_utils.py:424
+#: lib/build_utils.py:433
 #, python-brace-format
 msgid "mkinitrfs error: {error}"
 msgstr ""
 
-#: lib/build_utils.py:449
+#: lib/build_utils.py:458
 msgid "mkinitrfs did not return valid initramfs path"
 msgstr ""
 
