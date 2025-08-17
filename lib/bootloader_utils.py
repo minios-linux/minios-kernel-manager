@@ -22,7 +22,7 @@ def update_syslinux_config(minios_path: str, kernel_version: str) -> bool:
     Returns True if updated or if file doesn't exist (optional)
     """
     try:
-        syslinux_cfg = os.path.join(minios_path, "boot", "syslinux.cfg")
+        syslinux_cfg = os.path.join(minios_path, "boot", "syslinux", "syslinux.cfg")
         
         # SYSLINUX is optional
         if not os.path.exists(syslinux_cfg):

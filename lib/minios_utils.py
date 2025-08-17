@@ -200,7 +200,7 @@ def _update_bootloader_configs(minios_path: str, kernel_version: str) -> bool:
     print(f"Updating bootloader configs on filesystem type: {fs_type}")
     
     # Update Syslinux configuration
-    syslinux_cfg = os.path.join(minios_path, "boot", "syslinux.cfg")
+    syslinux_cfg = os.path.join(minios_path, "boot", "syslinux", "syslinux.cfg")
     if os.path.exists(syslinux_cfg):
         success &= _update_syslinux_config(syslinux_cfg, kernel_version)
     
