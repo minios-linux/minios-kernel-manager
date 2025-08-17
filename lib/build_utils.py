@@ -192,15 +192,15 @@ def create_squashfs_image(kernel_version: str, compression: str, output_dir: str
             if version_match:
                 major, minor = int(version_match.group(1)), int(version_match.group(2))
                 use_no_strip = (major > 4) or (major == 4 and minor >= 5)
-                print(f"DEBUG: mksquashfs version detected: {major}.{minor}, no-strip support: {use_no_strip}", flush=True)
+                print(f"DEBUG: {_('mksquashfs version detected: {major}.{minor}, no-strip support: {use_no_strip}').format(major=major, minor=minor, use_no_strip=use_no_strip)}", flush=True)
             else:
-                print(f"DEBUG: Could not parse version from: {version_line}", flush=True)
+                print(f"DEBUG: {_('Could not parse version from: {version_line}').format(version_line=version_line)}", flush=True)
                 use_no_strip = False
         else:
-            print(f"DEBUG: No version line found in output", flush=True)
+            print(f"DEBUG: {_('No version line found in output')}", flush=True)
             use_no_strip = False
     except (subprocess.CalledProcessError, ValueError, IndexError) as e:
-        print(f"DEBUG: mksquashfs version check failed: {str(e)}", flush=True)
+        print(f"DEBUG: {_('mksquashfs version check failed: {error}').format(error=str(e))}", flush=True)
         use_no_strip = False
     except FileNotFoundError:
         raise RuntimeError(_("mksquashfs command not found. Please install squashfs-tools package."))
@@ -232,7 +232,7 @@ def create_squashfs_image(kernel_version: str, compression: str, output_dir: str
     print(f"I: {_('Starting SquashFS compression with {compression}...').format(compression=compression)}", flush=True)
     
     # Debug: print the exact command being executed
-    print(f"DEBUG: mksquashfs command: {' '.join(cmd)}", flush=True)
+    print(f"DEBUG: {_('mksquashfs command: {command}').format(command=' '.join(cmd))}", flush=True)
     
     # Validate paths before execution
     if not os.path.exists(source_path):
