@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: minios-kernel-manager 1.0.0\n"
 "Report-Msgid-Bugs-To: support@minios.dev\n"
-"POT-Creation-Date: 2025-08-14 12:42+0300\n"
+"POT-Creation-Date: 2025-08-17 15:03+0300\n"
 "PO-Revision-Date: 2025-08-09 21:38+0000\n"
 "Last-Translator: crims0n <crims0n@minios.dev>\n"
 "Language-Team: none\n"
@@ -136,403 +136,408 @@ msgstr "Не удалось очистить временный каталог: 
 msgid "Received {} - cleaning up..."
 msgstr "Получено {} - очистка..."
 
-#: lib/minios_kernel.py:104
+#: lib/minios_kernel.py:116
 msgid "Created output directory: {}"
 msgstr "Создан выходной каталог: {}"
 
-#: lib/minios_kernel.py:106
+#: lib/minios_kernel.py:118
 msgid "Failed to create output directory '{}': {}"
 msgstr "Не удалось создать выходной каталог '{}': {}"
 
-#: lib/minios_kernel.py:110
+#: lib/minios_kernel.py:122
 msgid "Output directory '{}' is not writable"
 msgstr "Выходной каталог '{}' недоступен для записи"
 
-#: lib/minios_kernel.py:118
+#: lib/minios_kernel.py:130
 msgid "Created temporary directory: {}"
 msgstr "Создан временный каталог: {}"
 
-#: lib/minios_kernel.py:121
+#: lib/minios_kernel.py:133
 msgid "Downloading kernel package {}"
 msgstr "Загрузка пакета ядра {}"
 
-#: lib/minios_kernel.py:124
+#: lib/minios_kernel.py:136
 msgid "Processing manual package {}"
 msgstr "Обработка ручного пакета {}"
 
-#: lib/minios_kernel.py:127
+#: lib/minios_kernel.py:139
 msgid "Download completed"
 msgstr "Загрузка завершена"
 
-#: lib/minios_kernel.py:128
+#: lib/minios_kernel.py:140
 msgid "Extracting package"
 msgstr "Распаковка пакета"
 
-#: lib/minios_kernel.py:130
+#: lib/minios_kernel.py:142
 msgid "Preparing kernel modules"
 msgstr "Подготовка модулей ядра"
 
-#: lib/minios_kernel.py:133
+#: lib/minios_kernel.py:145
 msgid "Copying kernel files"
 msgstr "Копирование файлов ядра"
 
-#: lib/minios_kernel.py:136
+#: lib/minios_kernel.py:148
 msgid "Creating SquashFS image"
 msgstr "Создание образа SquashFS"
 
-#: lib/minios_kernel.py:139
+#: lib/minios_kernel.py:151
 msgid "Generating initramfs"
 msgstr "Генерация initramfs"
 
-#: lib/minios_kernel.py:183
+#: lib/minios_kernel.py:195
 msgid "Installing to kernel repository"
 msgstr "Установка в репозиторий ядра"
 
-#: lib/minios_kernel.py:196
+#: lib/minios_kernel.py:208
 msgid "Finalizing installation"
 msgstr "Завершение установки"
 
-#: lib/minios_kernel.py:198 lib/minios_kernel_manager.py:1589
-#: lib/minios_kernel_manager.py:1616 lib/minios_kernel_manager.py:1926
+#: lib/minios_kernel.py:210 lib/minios_kernel_manager.py:1605
+#: lib/minios_kernel_manager.py:1632 lib/minios_kernel_manager.py:1943
 msgid "Kernel packaging completed successfully!"
 msgstr "Упаковка ядра успешно завершена!"
 
-#: lib/minios_kernel.py:235 lib/minios_kernel.py:277 lib/minios_kernel.py:346
-#: lib/minios_kernel.py:395 lib/minios_kernel.py:474
-#: lib/minios_kernel_manager.py:371 lib/minios_kernel_manager.py:639
+#: lib/minios_kernel.py:247 lib/minios_kernel.py:289 lib/minios_kernel.py:358
+#: lib/minios_kernel.py:407 lib/minios_kernel.py:486
+#: lib/minios_kernel_manager.py:382 lib/minios_kernel_manager.py:655
 msgid "MiniOS directory not found"
 msgstr "Каталог MiniOS не найден"
 
-#: lib/minios_kernel.py:259 lib/minios_kernel.py:302
+#: lib/minios_kernel.py:271 lib/minios_kernel.py:314
 msgid "Available kernels"
 msgstr "Доступные ядра"
 
-#: lib/minios_kernel.py:261
+#: lib/minios_kernel.py:273
 msgid "active"
 msgstr "активно"
 
-#: lib/minios_kernel.py:265
+#: lib/minios_kernel.py:277
 msgid "Currently active kernel"
 msgstr "Текущее активное ядро"
 
-#: lib/minios_kernel.py:267
+#: lib/minios_kernel.py:279
 msgid "No currently active kernel found"
 msgstr "Активное ядро не найдено"
 
-#: lib/minios_kernel.py:281
+#: lib/minios_kernel.py:293
 msgid "Found MiniOS directory: {}"
 msgstr "Найден каталог MiniOS: {}"
 
-#: lib/minios_kernel.py:289
+#: lib/minios_kernel.py:301
 msgid "Currently active kernel: {}"
 msgstr "Текущее активное ядро: {}"
 
-#: lib/minios_kernel.py:315
+#: lib/minios_kernel.py:327
 msgid "Kernel {} is already active"
 msgstr "Ядро {} уже активно"
 
-#: lib/minios_kernel.py:320
+#: lib/minios_kernel.py:332
 msgid "Activating kernel {}..."
 msgstr "Активация ядра {}..."
 
-#: lib/minios_kernel.py:333
+#: lib/minios_kernel.py:345
 msgid "Kernel {} activated successfully!"
 msgstr "Ядро {} успешно активировано!"
 
-#: lib/minios_kernel.py:335
+#: lib/minios_kernel.py:347
 msgid "Failed to activate kernel {}"
 msgstr "Не удалось активировать ядро {}"
 
-#: lib/minios_kernel.py:355
+#: lib/minios_kernel.py:367
 msgid "Kernel {} not found"
 msgstr "Ядро {} не найдено"
 
-#: lib/minios_kernel.py:364
+#: lib/minios_kernel.py:376
 msgid "No active kernel found"
 msgstr "Активное ядро не найдено"
 
-#: lib/minios_kernel.py:382
+#: lib/minios_kernel.py:394
 msgid "Kernel"
 msgstr "Ядро"
 
-#: lib/minios_kernel.py:383
+#: lib/minios_kernel.py:395
 msgid "Active"
 msgstr "Активно"
 
-#: lib/minios_kernel.py:383
+#: lib/minios_kernel.py:395
 msgid "Available"
 msgstr "Доступно"
 
-#: lib/minios_kernel.py:384 lib/minios_kernel.py:462 lib/minios_kernel.py:464
+#: lib/minios_kernel.py:396 lib/minios_kernel.py:474 lib/minios_kernel.py:476
 msgid "Status"
 msgstr "Статус"
 
-#: lib/minios_kernel.py:385 lib/minios_kernel.py:459
+#: lib/minios_kernel.py:397 lib/minios_kernel.py:471
 msgid "MiniOS path"
 msgstr "Путь MiniOS"
 
-#: lib/minios_kernel.py:387
+#: lib/minios_kernel.py:399
 msgid "Current active kernel"
 msgstr "Текущее активное ядро"
 
-#: lib/minios_kernel.py:388
+#: lib/minios_kernel.py:400
 msgid "Total available kernels"
 msgstr "Всего доступных ядер"
 
-#: lib/minios_kernel.py:431
+#: lib/minios_kernel.py:443
 msgid "Directory is on a SquashFS filesystem (read-only)"
 msgstr "Каталог находится на файловой системе SquashFS (только для чтения)"
 
-#: lib/minios_kernel.py:441
+#: lib/minios_kernel.py:453
 msgid "Permission denied: {}"
 msgstr "Доступ запрещён: {}"
 
-#: lib/minios_kernel.py:445
+#: lib/minios_kernel.py:457
 msgid "Error checking directory: {}"
 msgstr "Ошибка проверки каталога: {}"
 
-#: lib/minios_kernel.py:460
+#: lib/minios_kernel.py:472
 msgid "Filesystem type"
 msgstr "Тип файловой системы"
 
-#: lib/minios_kernel.py:462
+#: lib/minios_kernel.py:474
 msgid "Writable"
 msgstr "Доступен для записи"
 
-#: lib/minios_kernel.py:464
+#: lib/minios_kernel.py:476
 msgid "Read-only"
 msgstr "Только для чтения"
 
-#: lib/minios_kernel.py:466
+#: lib/minios_kernel.py:478
 msgid "Reason"
 msgstr "Причина"
 
-#: lib/minios_kernel.py:487 lib/minios_kernel.py:493
+#: lib/minios_kernel.py:499 lib/minios_kernel.py:505
 msgid "Kernel {} deleted successfully"
 msgstr "Ядро {} успешно удалено"
 
-#: lib/minios_kernel.py:489 lib/minios_kernel.py:495
+#: lib/minios_kernel.py:501 lib/minios_kernel.py:507
 msgid "Failed to delete kernel {}"
 msgstr "Не удалось удалить ядро {}"
 
-#: lib/minios_kernel.py:502
+#: lib/minios_kernel.py:514
 msgid ""
 "This tool requires root privileges. Please run with sudo or through pkexec."
 msgstr ""
 "Этот инструмент требует привилегий root. Пожалуйста, запустите его с помощью "
 "sudo или pkexec."
 
-#: lib/minios_kernel.py:510
+#: lib/minios_kernel.py:522
 msgid "MiniOS Kernel Manager CLI"
 msgstr "MiniOS Kernel Manager CLI"
 
-#: lib/minios_kernel.py:511 lib/minios_kernel.py:515
+#: lib/minios_kernel.py:523 lib/minios_kernel.py:527
 msgid "Output in JSON format"
 msgstr "Вывод в формате JSON"
 
-#: lib/minios_kernel.py:517
+#: lib/minios_kernel.py:529
 msgid "Available commands"
 msgstr "Доступные команды"
 
-#: lib/minios_kernel.py:520
+#: lib/minios_kernel.py:532
 msgid "Package a kernel"
 msgstr "Упаковать ядро"
 
-#: lib/minios_kernel.py:522
+#: lib/minios_kernel.py:534
 msgid "Name of the kernel package in the repository"
 msgstr "Имя пакета ядра в репозитории"
 
-#: lib/minios_kernel.py:523
+#: lib/minios_kernel.py:535
 msgid "Path to the kernel .deb package"
 msgstr "Путь к пакету ядра .deb"
 
-#: lib/minios_kernel.py:524
+#: lib/minios_kernel.py:536
 msgid "Directory to save the packaged kernel files"
 msgstr "Каталог для сохранения файлов упакованного ядра"
 
-#: lib/minios_kernel.py:525
+#: lib/minios_kernel.py:537
 msgid "Compression method for SquashFS"
 msgstr "Метод сжатия для SquashFS"
 
-#: lib/minios_kernel.py:526
+#: lib/minios_kernel.py:538
 msgid "Custom temporary directory (must have at least 1024MB free space)"
 msgstr ""
 "Настраиваемый временный каталог (должен иметь не менее 1024 МБ свободного "
 "места)"
 
-#: lib/minios_kernel.py:527
+#: lib/minios_kernel.py:539
 msgid "Force package lists update if outdated"
 msgstr "Принудительное обновление списков пакетов, если они устарели"
 
-#: lib/minios_kernel.py:530
+#: lib/minios_kernel.py:542
 msgid "List available kernels"
 msgstr "Список доступных ядер"
 
-#: lib/minios_kernel.py:533
+#: lib/minios_kernel.py:545
 msgid "Activate a kernel"
 msgstr "Активировать ядро"
 
-#: lib/minios_kernel.py:534
+#: lib/minios_kernel.py:546
 msgid "Kernel version to activate"
 msgstr "Версия ядра для активации"
 
-#: lib/minios_kernel.py:537
+#: lib/minios_kernel.py:549
 msgid "Show kernel information"
 msgstr "Показать информацию о ядре"
 
-#: lib/minios_kernel.py:538
+#: lib/minios_kernel.py:550
 msgid "Kernel version to get info about (current if not specified)"
 msgstr "Версия ядра для получения информации (текущая, если не указана)"
 
-#: lib/minios_kernel.py:541
+#: lib/minios_kernel.py:553
 msgid "Check MiniOS directory status"
 msgstr "Проверить состояние каталога MiniOS"
 
-#: lib/minios_kernel.py:544
+#: lib/minios_kernel.py:556
 msgid "Delete a packaged kernel"
 msgstr "Удалить упакованное ядро"
 
-#: lib/minios_kernel.py:545
+#: lib/minios_kernel.py:557
 msgid "Kernel version to delete"
 msgstr "Версия ядра для удаления"
 
-#: lib/build_utils.py:78
+#: lib/build_utils.py:85
 #, python-brace-format
 msgid "vmlinuz for kernel {kernel_version} not found"
 msgstr "vmlinuz для ядра {kernel_version} не найден"
 
-#: lib/build_utils.py:96
+#: lib/build_utils.py:103
 msgid "temp_dir is required and must exist for SquashFS creation"
 msgstr "temp_dir требуется и должен существовать для создания SquashFS"
 
-#: lib/build_utils.py:122
+#: lib/build_utils.py:129
 #, python-brace-format
 msgid ""
 "Kernel modules not found in extracted deb package for kernel {kernel_version}"
 msgstr ""
 "Модули ядра не найдены в извлеченном deb-пакете для ядра {kernel_version}"
 
-#: lib/build_utils.py:159 lib/build_utils.py:297
+#: lib/build_utils.py:166 lib/build_utils.py:360
 msgid "Critical depmod error: {}"
 msgstr "Критическая ошибка depmod: {}"
 
-#: lib/build_utils.py:222
+#: lib/build_utils.py:206
+msgid "mksquashfs command not found. Please install squashfs-tools package."
+msgstr ""
+"Команда mksquashfs не найдена. Пожалуйста, установите пакет squashfs-tools."
+
+#: lib/build_utils.py:279
 msgid "Failed to create SquashFS image"
 msgstr "Не удалось создать образ SquashFS"
 
-#: lib/build_utils.py:245
+#: lib/build_utils.py:308
 msgid "mkinitrfs not found - this tool requires MiniOS live environment"
 msgstr "mkinitrfs не найден - этот инструмент требует живой среды MiniOS"
 
-#: lib/build_utils.py:353
+#: lib/build_utils.py:416
 #, python-brace-format
 msgid "mkinitrfs failed with return code {code}"
 msgstr "mkinitrfs завершился с ошибкой: код возврата {}"
 
-#: lib/build_utils.py:359
+#: lib/build_utils.py:422
 #, python-brace-format
 msgid "mkinitrfs failed: {error}"
 msgstr "mkinitrfs завершился с ошибкой: {error}"
 
-#: lib/build_utils.py:361
+#: lib/build_utils.py:424
 #, python-brace-format
 msgid "mkinitrfs error: {error}"
 msgstr "Ошибка mkinitrfs: {error}"
 
-#: lib/build_utils.py:386
+#: lib/build_utils.py:449
 msgid "mkinitrfs did not return valid initramfs path"
 msgstr "mkinitrfs не вернул действительный путь к initramfs"
 
-#: lib/minios_kernel_manager.py:364
+#: lib/minios_kernel_manager.py:375
 msgid "MiniOS directory is writable"
 msgstr "Каталог MiniOS доступен для записи"
 
-#: lib/minios_kernel_manager.py:369 lib/minios_kernel_manager.py:641
+#: lib/minios_kernel_manager.py:380 lib/minios_kernel_manager.py:657
 msgid "MiniOS directory is read-only"
 msgstr "Каталог MiniOS доступен только для чтения"
 
-#: lib/minios_kernel_manager.py:409
+#: lib/minios_kernel_manager.py:420
 msgid "Manage Kernels"
 msgstr "Управление ядрами"
 
-#: lib/minios_kernel_manager.py:414 lib/minios_kernel_manager.py:615
+#: lib/minios_kernel_manager.py:425 lib/minios_kernel_manager.py:626
 msgid "Package Kernel"
 msgstr "Собрать ядро в пакет"
 
-#: lib/minios_kernel_manager.py:451
+#: lib/minios_kernel_manager.py:462
 msgid "Select a packaged kernel to activate or delete:"
 msgstr "Выберите упакованное ядро для активации или удаления:"
 
-#: lib/minios_kernel_manager.py:468 lib/minios_kernel_manager.py:1948
+#: lib/minios_kernel_manager.py:479 lib/minios_kernel_manager.py:1965
 msgid "Activating kernel..."
 msgstr "Активация ядра..."
 
-#: lib/minios_kernel_manager.py:498
+#: lib/minios_kernel_manager.py:509
 msgid "Manual Package"
 msgstr "Ручной пакет"
 
-#: lib/minios_kernel_manager.py:503
+#: lib/minios_kernel_manager.py:514
 msgid "Repository"
 msgstr "Репозиторий"
 
-#: lib/minios_kernel_manager.py:522
+#: lib/minios_kernel_manager.py:533
 msgid "SquashFS Compression:"
 msgstr "Сжатие SquashFS:"
 
-#: lib/minios_kernel_manager.py:541 lib/minios_kernel_manager.py:1361
+#: lib/minios_kernel_manager.py:552 lib/minios_kernel_manager.py:1377
 msgid "No file selected"
 msgstr "Файл не выбран"
 
-#: lib/minios_kernel_manager.py:546
+#: lib/minios_kernel_manager.py:557
 msgid "Browse..."
 msgstr "Обзор..."
 
-#: lib/minios_kernel_manager.py:559
+#: lib/minios_kernel_manager.py:570
 msgid "Package Information:"
 msgstr "Информация о пакете:"
 
-#: lib/minios_kernel_manager.py:589
+#: lib/minios_kernel_manager.py:600
 msgid "Available Kernels:"
 msgstr "Доступные ядра:"
 
-#: lib/minios_kernel_manager.py:616 lib/minios_kernel_manager.py:647
+#: lib/minios_kernel_manager.py:627 lib/minios_kernel_manager.py:663
 msgid "Package kernel and add to repository"
 msgstr "Собрать ядро в пакет и добавить в репозиторий"
 
-#: lib/minios_kernel_manager.py:643 lib/minios_kernel_manager.py:1384
+#: lib/minios_kernel_manager.py:659 lib/minios_kernel_manager.py:1400
 msgid "Please select a kernel first"
 msgstr "Пожалуйста, сначала выберите ядро"
 
-#: lib/minios_kernel_manager.py:645
+#: lib/minios_kernel_manager.py:661
 msgid "Build in progress..."
 msgstr "Сборка в процессе..."
 
-#: lib/minios_kernel_manager.py:747
+#: lib/minios_kernel_manager.py:763
 msgid "ACTIVE"
 msgstr "АКТИВНО"
 
-#: lib/minios_kernel_manager.py:750 lib/minios_kernel_manager.py:1185
+#: lib/minios_kernel_manager.py:766 lib/minios_kernel_manager.py:1201
 msgid "AVAILABLE"
 msgstr "ДОСТУПНО"
 
-#: lib/minios_kernel_manager.py:760
+#: lib/minios_kernel_manager.py:776
 msgid "RUNNING"
 msgstr "РАБОТАЕТ"
 
-#: lib/minios_kernel_manager.py:794
+#: lib/minios_kernel_manager.py:810
 msgid "Please select a kernel to activate"
 msgstr "Пожалуйста, выберите ядро для активации"
 
-#: lib/minios_kernel_manager.py:798 lib/minios_kernel_manager.py:865
-#: lib/minios_kernel_manager.py:1388
+#: lib/minios_kernel_manager.py:814 lib/minios_kernel_manager.py:881
+#: lib/minios_kernel_manager.py:1404
 msgid "MiniOS directory is not writable"
 msgstr "Каталог MiniOS недоступен для записи"
 
-#: lib/minios_kernel_manager.py:806 lib/minios_kernel_manager.py:1969
+#: lib/minios_kernel_manager.py:822 lib/minios_kernel_manager.py:1986
 msgid "Activate Kernel"
 msgstr "Активировать ядро"
 
-#: lib/minios_kernel_manager.py:809
+#: lib/minios_kernel_manager.py:825
 msgid ""
 "Are you sure you want to activate kernel {}?\n"
 "\n"
@@ -543,19 +548,19 @@ msgstr ""
 "\n"
 "Это деактивирует текущее ядро и обновит конфигурацию загрузчика."
 
-#: lib/minios_kernel_manager.py:823
+#: lib/minios_kernel_manager.py:839
 msgid "Activating kernel, please wait..."
 msgstr "Активация ядра, пожалуйста, подождите..."
 
-#: lib/minios_kernel_manager.py:861
+#: lib/minios_kernel_manager.py:877
 msgid "Please select a kernel to delete"
 msgstr "Пожалуйста, выберите ядро для удаления"
 
-#: lib/minios_kernel_manager.py:873 lib/minios_kernel_manager.py:1979
+#: lib/minios_kernel_manager.py:889 lib/minios_kernel_manager.py:1996
 msgid "Delete Kernel"
 msgstr "Удалить ядро"
 
-#: lib/minios_kernel_manager.py:876
+#: lib/minios_kernel_manager.py:892
 msgid ""
 "Are you sure you want to delete kernel '{}'?\n"
 "\n"
@@ -565,48 +570,48 @@ msgstr ""
 "\n"
 "Это действие невозможно отменить."
 
-#: lib/minios_kernel_manager.py:902
+#: lib/minios_kernel_manager.py:918
 msgid "Select Kernel Package"
 msgstr "Выберите пакет ядра"
 
-#: lib/minios_kernel_manager.py:907 lib/minios_kernel_manager.py:1705
-#: lib/minios_kernel_manager.py:1866
+#: lib/minios_kernel_manager.py:923 lib/minios_kernel_manager.py:1721
+#: lib/minios_kernel_manager.py:1883
 msgid "Cancel"
 msgstr "Отмена"
 
-#: lib/minios_kernel_manager.py:908
+#: lib/minios_kernel_manager.py:924
 msgid "Open"
 msgstr "Открыть"
 
-#: lib/minios_kernel_manager.py:923
+#: lib/minios_kernel_manager.py:939
 msgid "Debian Package Files (*.deb)"
 msgstr "Файлы пакетов Debian (*.deb)"
 
-#: lib/minios_kernel_manager.py:928
+#: lib/minios_kernel_manager.py:944
 msgid "All Files"
 msgstr "Все файлы"
 
-#: lib/minios_kernel_manager.py:1065
+#: lib/minios_kernel_manager.py:1081
 msgid "Fetching kernel list from repository..."
 msgstr "Получение списка ядер из репозитория..."
 
-#: lib/minios_kernel_manager.py:1067
+#: lib/minios_kernel_manager.py:1083
 msgid "Scanning for manual packages..."
 msgstr "Сканирование на наличие ручных пакетов..."
 
-#: lib/minios_kernel_manager.py:1147
+#: lib/minios_kernel_manager.py:1163
 msgid "Manual package"
 msgstr "Ручной пакет"
 
-#: lib/minios_kernel_manager.py:1147
+#: lib/minios_kernel_manager.py:1163
 msgid "Repository kernel"
 msgstr "Ядро репозитория"
 
-#: lib/minios_kernel_manager.py:1207
+#: lib/minios_kernel_manager.py:1223
 msgid "Package database outdated"
 msgstr "База данных пакетов устарела"
 
-#: lib/minios_kernel_manager.py:1209
+#: lib/minios_kernel_manager.py:1225
 msgid ""
 "The repository kernel list is empty. This may indicate an outdated package "
 "database. Update package lists now?"
@@ -614,23 +619,23 @@ msgstr ""
 "Список ядер репозитория пуст. Это может указывать на устаревшую базу данных "
 "пакетов. Обновить списки пакетов сейчас?"
 
-#: lib/minios_kernel_manager.py:1275
+#: lib/minios_kernel_manager.py:1291
 msgid "Failed to update package lists"
 msgstr "Не удалось обновить списки пакетов"
 
-#: lib/minios_kernel_manager.py:1297
+#: lib/minios_kernel_manager.py:1313
 msgid "No repository kernels found"
 msgstr "Ядра репозитория не найдены"
 
-#: lib/minios_kernel_manager.py:1299
+#: lib/minios_kernel_manager.py:1315
 msgid "No manual packages found"
 msgstr "Ручные пакеты не найдены"
 
-#: lib/minios_kernel_manager.py:1430
+#: lib/minios_kernel_manager.py:1446
 msgid "Executing command: {}"
 msgstr "Выполняется команда: {}"
 
-#: lib/minios_kernel_manager.py:1464
+#: lib/minios_kernel_manager.py:1480
 msgid ""
 "Failed to start packaging process. Please check the log for detailed error "
 "information."
@@ -638,23 +643,23 @@ msgstr ""
 "Не удалось запустить процесс упаковки. Пожалуйста, проверьте журнал для "
 "получения подробной информации об ошибке."
 
-#: lib/minios_kernel_manager.py:1614
+#: lib/minios_kernel_manager.py:1630
 msgid "CLI tool finished successfully, installing to repository..."
 msgstr "Инструмент CLI успешно завершил работу, установка в репозиторий..."
 
-#: lib/minios_kernel_manager.py:1615
+#: lib/minios_kernel_manager.py:1631
 msgid "Installing kernel to repository..."
 msgstr "Установка ядра в репозиторий..."
 
-#: lib/minios_kernel_manager.py:1619
+#: lib/minios_kernel_manager.py:1635
 msgid "CLI tool finished successfully."
 msgstr "Инструмент CLI успешно завершил работу."
 
-#: lib/minios_kernel_manager.py:1641
+#: lib/minios_kernel_manager.py:1657
 msgid "Kernel packaging failed with exit code: {}"
 msgstr "Упаковка ядра завершилась с ошибкой: код выхода {}"
 
-#: lib/minios_kernel_manager.py:1645
+#: lib/minios_kernel_manager.py:1661
 msgid ""
 "Kernel packaging failed with exit code: {}. Please check the log above for "
 "detailed error information."
@@ -662,34 +667,34 @@ msgstr ""
 "Упаковка ядра завершилась с ошибкой: код выхода {}. Пожалуйста, проверьте "
 "журнал выше для получения подробной информации об ошибке."
 
-#: lib/minios_kernel_manager.py:1660
+#: lib/minios_kernel_manager.py:1676
 msgid "Starting packaging process..."
 msgstr "Запуск процесса упаковки..."
 
-#: lib/minios_kernel_manager.py:1671
+#: lib/minios_kernel_manager.py:1687
 msgid "Packaging Log"
 msgstr "Журнал упаковки"
 
-#: lib/minios_kernel_manager.py:1683
+#: lib/minios_kernel_manager.py:1699
 msgid "Cancelling and cleaning up..."
 msgstr "Отмена и очистка..."
 
-#: lib/minios_kernel_manager.py:1766 lib/minios_kernel_manager.py:1858
+#: lib/minios_kernel_manager.py:1782 lib/minios_kernel_manager.py:1875
 msgid "Back to Selection"
 msgstr "Вернуться к выбору"
 
-#: lib/minios_kernel_manager.py:1789
+#: lib/minios_kernel_manager.py:1806
 msgid "Cancelling packaging..."
 msgstr "Отмена упаковки..."
 
-#: lib/minios_kernel_manager.py:1906
+#: lib/minios_kernel_manager.py:1923
 msgid "Error"
 msgstr "Ошибка"
 
-#: lib/minios_kernel_manager.py:1920
+#: lib/minios_kernel_manager.py:1937
 msgid "Packaging Complete"
 msgstr "Упаковка завершена"
 
-#: lib/minios_kernel_manager.py:1927
+#: lib/minios_kernel_manager.py:1944
 msgid "The new kernel is now available in the 'Manage Kernels' tab."
 msgstr "Новое ядро теперь доступно на вкладке 'Управление ядрами'."
