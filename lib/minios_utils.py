@@ -20,9 +20,9 @@ _ = gettext.gettext
 
 def find_minios_directory() -> Optional[str]:
     """Find MiniOS directory on the system"""
-    # Common locations where MiniOS might be mounted
     common_paths = [
-        "/run/initramfs/memory/data/minios"
+        "/run/initramfs/memory/data/minios",
+        "/lib/live/mount/data/minios"
     ]
 
     # Check each path
@@ -670,10 +670,9 @@ def is_kernel_currently_running(kernel_version: str, minios_path: str = None) ->
 def get_system_type() -> str:
     """Get type of system (live, installed, etc.)"""
     if os.path.exists('/run/initramfs/memory'):
-        if os.path.exists('/run/initramfs/memory/toram'):
-            return "Live system (running from RAM)"
-        else:
-            return "Live system (running from media)"
+        return "Live system (running from media)"
+    elif os.path.exists('/lib/live/mount'):
+        return "Live system (running from media)"
     else:
         return "Installed system"
 
@@ -762,12 +761,21 @@ def get_temp_dir_with_space_check(required_mb: int = 1024, prefix: str = "minios
             print("I: {}".format(_('Insufficient space in /tmp for {operation} ({available:.1f}MB available, {needed:.1f}MB needed)')).format(
                 operation=operation_type, available=available_space / (1024*1024), needed=REQUIRED_SPACE / (1024*1024)), flush=True)
 
-            # Alternative directory depends on filesystem type
+            # Alternative directory depends on filesystem type and initramfs type
             fs_type = get_union_filesystem_type()
-            if fs_type == 'aufs':
-                alt_tmp = "/run/initramfs/memory/changes/tmp"
-            else:  # overlayfs
-                alt_tmp = "/run/initramfs/memory/changes/changes/tmp"
+            if os.path.exists('/run/initramfs/memory/changes'):
+                if fs_type == 'aufs':
+                    alt_tmp = "/run/initramfs/memory/changes/tmp"
+                else:  # overlayfs
+                    alt_tmp = "/run/initramfs/memory/changes/changes/tmp"
+            elif os.path.exists('/lib/live/mount/changes'):
+                if fs_type == 'aufs':
+                    alt_tmp = "/lib/live/mount/changes/tmp"
+                else:  # overlayfs
+                    alt_tmp = "/lib/live/mount/changes/changes/tmp"
+            else:
+                print("W: {}".format(_('No live system changes directory found, using /tmp anyway')), flush=True)
+                return tempfile.mkdtemp(dir=default_tmp, prefix=prefix)
 
             print("I: {}".format(_('Detected {} filesystem, using alternative: {}')).format(
                 fs_type, alt_tmp), flush=True)

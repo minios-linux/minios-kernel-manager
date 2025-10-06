@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: minios-kernel-manager 1.0.1\n"
+"Project-Id-Version: minios-kernel-manager 1.0.3\n"
 "Report-Msgid-Bugs-To: support@minios.dev\n"
-"POT-Creation-Date: 2025-08-31 00:48+0300\n"
+"POT-Creation-Date: 2025-10-06 23:18+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,160 +17,98 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: lib/build_utils.py:85
-#, python-brace-format
-msgid "vmlinuz for kernel {kernel_version} not found"
+#: lib/minios_utils.py:728
+msgid "Custom temporary directory does not exist: {}"
 msgstr ""
 
-#: lib/build_utils.py:103
-msgid "temp_dir is required and must exist for SquashFS creation"
+#: lib/minios_utils.py:731
+msgid "Custom temporary directory is not writable: {}"
 msgstr ""
 
-#: lib/build_utils.py:129
-#, python-brace-format
-msgid ""
-"Kernel modules not found in extracted deb package for kernel {kernel_version}"
-msgstr ""
-
-#: lib/build_utils.py:133
-#, python-brace-format
-msgid "Using system modules base: {base}"
-msgstr ""
-
-#: lib/build_utils.py:151
-msgid "Generating module dependencies for SquashFS"
-msgstr ""
-
-#: lib/build_utils.py:166 lib/build_utils.py:369
-msgid "Critical depmod error: {}"
-msgstr ""
-
-#: lib/build_utils.py:167 lib/build_utils.py:370
-msgid "depmod failed: {}"
-msgstr ""
-
-#: lib/build_utils.py:169 lib/build_utils.py:372
-msgid "Module dependencies generated successfully"
-msgstr ""
-
-#: lib/build_utils.py:171 lib/build_utils.py:374
-msgid "Failed to generate module dependencies: {}"
-msgstr ""
-
-#: lib/build_utils.py:175
-#, python-brace-format
-msgid "Using extracted deb modules with structure: {path}"
-msgstr ""
-
-#: lib/build_utils.py:196
+#: lib/minios_utils.py:738
 #, python-brace-format
 msgid ""
-"mksquashfs version detected: {major}.{minor}, no-strip support: "
-"{use_no_strip}"
+"Using custom temporary directory for {operation} ({available:.1f}MB "
+"available, {needed:.1f}MB needed)"
 msgstr ""
 
-#: lib/build_utils.py:198
+#: lib/minios_utils.py:742
+msgid ""
+"Insufficient space in custom temporary directory '{}' for {}: {:.1f}MB "
+"available, {:.1f}MB needed"
+msgstr ""
+
+#: lib/minios_utils.py:745
+msgid "Cannot check space in custom temporary directory '{}': {}"
+msgstr ""
+
+#: lib/minios_utils.py:757
 #, python-brace-format
-msgid "Could not parse version from: {version_line}"
+msgid ""
+"Using /tmp for {operation} ({available:.1f}MB available, {needed:.1f}MB "
+"needed)"
 msgstr ""
 
-#: lib/build_utils.py:201
-msgid "No version line found in output"
-msgstr ""
-
-#: lib/build_utils.py:204
+#: lib/minios_utils.py:761
 #, python-brace-format
-msgid "mksquashfs version check failed: {error}"
+msgid ""
+"Insufficient space in /tmp for {operation} ({available:.1f}MB available, "
+"{needed:.1f}MB needed)"
 msgstr ""
 
-#: lib/build_utils.py:207
-msgid "mksquashfs command not found. Please install squashfs-tools package."
+#: lib/minios_utils.py:777
+msgid "No live system changes directory found, using /tmp anyway"
 msgstr ""
 
-#: lib/build_utils.py:233
+#: lib/minios_utils.py:780
+msgid "Detected {} filesystem, using alternative: {}"
+msgstr ""
+
+#: lib/minios_utils.py:786
+msgid "Created alternative temporary directory: {}"
+msgstr ""
+
+#: lib/minios_utils.py:793
+msgid "Using alternative temporary directory: {} ({:.1f}MB available)"
+msgstr ""
+
+#: lib/minios_utils.py:799
+msgid ""
+"Insufficient disk space for operation. Need {:.1f}MB, but only {:.1f}MB "
+"available in /tmp and {:.1f}MB in {}"
+msgstr ""
+
+#: lib/minios_utils.py:809
+msgid "Could not check disk space: {}. Using default temporary directory."
+msgstr ""
+
+#: lib/kernel_utils.py:168
+msgid "Updating package lists..."
+msgstr ""
+
+#: lib/kernel_utils.py:170
+msgid "Package lists updated"
+msgstr ""
+
+#: lib/kernel_utils.py:173
+msgid "Failed to update package lists: {}"
+msgstr ""
+
+#: lib/kernel_utils.py:176
+msgid "Error updating package lists: {}"
+msgstr ""
+
+#: lib/kernel_utils.py:180
+msgid "Package database is outdated"
+msgstr ""
+
+#: lib/kernel_utils.py:181
+msgid "Run 'apt update' or use --force-update"
+msgstr ""
+
+#: lib/kernel_utils.py:397
 #, python-brace-format
-msgid "Starting SquashFS compression with {compression}..."
-msgstr ""
-
-#: lib/build_utils.py:236
-#, python-brace-format
-msgid "mksquashfs command: {command}"
-msgstr ""
-
-#: lib/build_utils.py:288
-msgid "Failed to create SquashFS image"
-msgstr ""
-
-#: lib/build_utils.py:296
-#, python-brace-format
-msgid "SquashFS image completed: {path}"
-msgstr ""
-
-#: lib/build_utils.py:317
-msgid "mkinitrfs not found - this tool requires MiniOS live environment"
-msgstr ""
-
-#: lib/build_utils.py:347
-msgid "Removed existing symlink: {}"
-msgstr ""
-
-#: lib/build_utils.py:350
-msgid "Using existing modules directory: {}"
-msgstr ""
-
-#: lib/build_utils.py:358
-#, python-brace-format
-msgid "Created temporary symlink: {system_path} -> {extracted_path}"
-msgstr ""
-
-#: lib/build_utils.py:362
-msgid "Generating module dependencies for initramfs"
-msgstr ""
-
-#: lib/build_utils.py:394
-msgid "Using custom temporary directory for initramfs: {}"
-msgstr ""
-
-#: lib/build_utils.py:397
-msgid "Starting initramfs generation..."
-msgstr ""
-
-#: lib/build_utils.py:425
-#, python-brace-format
-msgid "mkinitrfs failed with return code {code}"
-msgstr ""
-
-#: lib/build_utils.py:431
-#, python-brace-format
-msgid "mkinitrfs failed: {error}"
-msgstr ""
-
-#: lib/build_utils.py:433
-#, python-brace-format
-msgid "mkinitrfs error: {error}"
-msgstr ""
-
-#: lib/build_utils.py:455
-msgid "mkinitrfs output was:"
-msgstr ""
-
-#: lib/build_utils.py:458
-msgid "mkinitrfs did not return valid initramfs path"
-msgstr ""
-
-#: lib/build_utils.py:461
-#, python-brace-format
-msgid "Copying initramfs from {path}"
-msgstr ""
-
-#: lib/build_utils.py:463
-#, python-brace-format
-msgid "Initramfs created: {path}"
-msgstr ""
-
-#: lib/build_utils.py:475
-#, python-brace-format
-msgid "Removed temporary symlink: {path}"
+msgid "Kernel modules for {kernel_version} not found in package"
 msgstr ""
 
 #: lib/minios_kernel.py:37
@@ -445,104 +383,54 @@ msgstr ""
 msgid "Kernel version to delete"
 msgstr ""
 
-#: lib/bootloader_utils.py:49
-msgid "Updated SYSLINUX config"
-msgstr ""
-
-#: lib/bootloader_utils.py:53
+#: lib/build_utils.py:85
 #, python-brace-format
-msgid "Error updating syslinux config: {error}"
+msgid "vmlinuz for kernel {kernel_version} not found"
 msgstr ""
 
-#: lib/bootloader_utils.py:111
-msgid "No GRUB configuration files found"
+#: lib/build_utils.py:103
+msgid "temp_dir is required and must exist for SquashFS creation"
 msgstr ""
 
-#: lib/bootloader_utils.py:162
-msgid "Failed to update GRUB config {}: {}"
-msgstr ""
-
-#: lib/bootloader_utils.py:166
-msgid "Updated GRUB configs: {}"
-msgstr ""
-
-#: lib/bootloader_utils.py:168
-msgid "No GRUB config changes needed"
-msgstr ""
-
-#: lib/bootloader_utils.py:173
+#: lib/build_utils.py:129
 #, python-brace-format
-msgid "Error updating grub configs: {error}"
+msgid ""
+"Kernel modules not found in extracted deb package for kernel {kernel_version}"
 msgstr ""
 
-#: lib/kernel_utils.py:168 lib/minios_kernel_manager.py:1257
-msgid "Updating package lists..."
+#: lib/build_utils.py:166 lib/build_utils.py:369
+msgid "Critical depmod error: {}"
 msgstr ""
 
-#: lib/kernel_utils.py:170
-msgid "Package lists updated"
+#: lib/build_utils.py:207
+msgid "mksquashfs command not found. Please install squashfs-tools package."
 msgstr ""
 
-#: lib/kernel_utils.py:173
-msgid "Failed to update package lists: {}"
+#: lib/build_utils.py:288
+msgid "Failed to create SquashFS image"
 msgstr ""
 
-#: lib/kernel_utils.py:176
-msgid "Error updating package lists: {}"
+#: lib/build_utils.py:317
+msgid "mkinitrfs not found - this tool requires MiniOS live environment"
 msgstr ""
 
-#: lib/kernel_utils.py:180
-msgid "Package database is outdated"
-msgstr ""
-
-#: lib/kernel_utils.py:181
-msgid "Run 'apt update' or use --force-update"
-msgstr ""
-
-#: lib/kernel_utils.py:244
+#: lib/build_utils.py:425
 #, python-brace-format
-msgid "Downloading {package_name} from repository..."
+msgid "mkinitrfs failed with return code {code}"
 msgstr ""
 
-#: lib/kernel_utils.py:247
-msgid "Download completed successfully"
-msgstr ""
-
-#: lib/kernel_utils.py:259
+#: lib/build_utils.py:431
 #, python-brace-format
-msgid "Found package file: {filename}"
+msgid "mkinitrfs failed: {error}"
 msgstr ""
 
-#: lib/kernel_utils.py:268
-msgid "Extracting package contents..."
-msgstr ""
-
-#: lib/kernel_utils.py:271
-msgid "Package extracted successfully"
-msgstr ""
-
-#: lib/kernel_utils.py:369
+#: lib/build_utils.py:433
 #, python-brace-format
-msgid "Removing existing kernel modules for {kernel_version}"
+msgid "mkinitrfs error: {error}"
 msgstr ""
 
-#: lib/kernel_utils.py:387
-#, python-brace-format
-msgid "Error reading modules directory: {error}"
-msgstr ""
-
-#: lib/kernel_utils.py:397
-#, python-brace-format
-msgid "Kernel modules for {kernel_version} not found in package"
-msgstr ""
-
-#: lib/kernel_utils.py:400
-#, python-brace-format
-msgid "Installing kernel modules to {target_path}"
-msgstr ""
-
-#: lib/kernel_utils.py:406
-msgid "Building module dependencies"
+#: lib/build_utils.py:458
+msgid "mkinitrfs did not return valid initramfs path"
 msgstr ""
 
 #: lib/minios_kernel_manager.py:375
@@ -589,7 +477,7 @@ msgstr ""
 msgid "Browse..."
 msgstr ""
 
-#: lib/minios_kernel_manager.py:570 lib/minios_kernel_manager.py:571
+#: lib/minios_kernel_manager.py:570
 msgid "Package Information:"
 msgstr ""
 
@@ -607,14 +495,6 @@ msgstr ""
 
 #: lib/minios_kernel_manager.py:661
 msgid "Build in progress..."
-msgstr ""
-
-#: lib/minios_kernel_manager.py:691
-msgid "No kernels packaged"
-msgstr ""
-
-#: lib/minios_kernel_manager.py:696
-msgid "Package a kernel first using the Package Kernel tab"
 msgstr ""
 
 #: lib/minios_kernel_manager.py:763
@@ -728,10 +608,6 @@ msgstr ""
 msgid "No manual packages found"
 msgstr ""
 
-#: lib/minios_kernel_manager.py:1342
-msgid "Failed to fetch repository kernels"
-msgstr ""
-
 #: lib/minios_kernel_manager.py:1446
 msgid "Executing command: {}"
 msgstr ""
@@ -794,65 +670,4 @@ msgstr ""
 
 #: lib/minios_kernel_manager.py:1944
 msgid "The new kernel is now available in the 'Manage Kernels' tab."
-msgstr ""
-
-#: lib/minios_utils.py:711
-msgid "Custom temporary directory does not exist: {}"
-msgstr ""
-
-#: lib/minios_utils.py:714
-msgid "Custom temporary directory is not writable: {}"
-msgstr ""
-
-#: lib/minios_utils.py:721
-#, python-brace-format
-msgid ""
-"Using custom temporary directory for {operation} ({available:.1f}MB "
-"available, {needed:.1f}MB needed)"
-msgstr ""
-
-#: lib/minios_utils.py:725
-msgid ""
-"Insufficient space in custom temporary directory '{}' for {}: {:.1f}MB "
-"available, {:.1f}MB needed"
-msgstr ""
-
-#: lib/minios_utils.py:728
-msgid "Cannot check space in custom temporary directory '{}': {}"
-msgstr ""
-
-#: lib/minios_utils.py:740
-#, python-brace-format
-msgid ""
-"Using /tmp for {operation} ({available:.1f}MB available, {needed:.1f}MB "
-"needed)"
-msgstr ""
-
-#: lib/minios_utils.py:744
-#, python-brace-format
-msgid ""
-"Insufficient space in /tmp for {operation} ({available:.1f}MB available, "
-"{needed:.1f}MB needed)"
-msgstr ""
-
-#: lib/minios_utils.py:754
-msgid "Detected {} filesystem, using alternative: {}"
-msgstr ""
-
-#: lib/minios_utils.py:760
-msgid "Created alternative temporary directory: {}"
-msgstr ""
-
-#: lib/minios_utils.py:767
-msgid "Using alternative temporary directory: {} ({:.1f}MB available)"
-msgstr ""
-
-#: lib/minios_utils.py:773
-msgid ""
-"Insufficient disk space for operation. Need {:.1f}MB, but only {:.1f}MB "
-"available in /tmp and {:.1f}MB in {}"
-msgstr ""
-
-#: lib/minios_utils.py:783
-msgid "Could not check disk space: {}. Using default temporary directory."
 msgstr ""

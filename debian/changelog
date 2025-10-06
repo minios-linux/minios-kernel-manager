@@ -1,3 +1,9 @@
+minios-kernel-manager (1.0.3) unstable; urgency=medium
+
+  * Add dracut-based initrd support
+
+ -- crims0n <crims0n@minios.dev>  Mon, 06 Oct 2025 23:16:36 +0300
+
 minios-kernel-manager (1.0.2) unstable; urgency=medium
 
   * Add compatibility symlinks for Ventoy

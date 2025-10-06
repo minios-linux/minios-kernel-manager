@@ -65,14 +65,14 @@ def copy_vmlinuz(kernel_version: str, temp_dir: str, output_dir: str, kernel_sou
                 shutil.copy2(vmlinuz_files[0], output_path)
                 return output_path
     
-    # Search paths for vmlinuz (fallback for system kernels)
+    # Search paths for vmlinuz
     search_paths = [
         os.path.join(temp_dir, "boot", f"vmlinuz-{kernel_version}"),
         f"/boot/vmlinuz-{kernel_version}",
         f"/run/initramfs/memory/data/minios/boot/vmlinuz-{kernel_version}",
         f"/run/initramfs/memory/data/minios/boot/vmlinuz",
-        f"/run/initramfs/memory/toram/minios/boot/vmlinuz-{kernel_version}",
-        f"/run/initramfs/memory/toram/minios/boot/vmlinuz"
+        f"/lib/live/mount/data/minios/boot/vmlinuz-{kernel_version}",
+        f"/lib/live/mount/data/minios/boot/vmlinuz"
     ]
     
     vmlinuz_path = None
