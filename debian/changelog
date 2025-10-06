@@ -1,3 +1,10 @@
+minios-kernel-manager (1.0.4) unstable; urgency=medium
+
+  * Add automatic detection of initramfs builder (dracut/livekit)
+  * Add support for dracut-based initramfs generation
+
+ -- crims0n <crims0n@minios.dev>  Tue, 07 Oct 2025 01:45:39 +0300
+
 minios-kernel-manager (1.0.3) unstable; urgency=medium
 
   * Add dracut-based initrd support

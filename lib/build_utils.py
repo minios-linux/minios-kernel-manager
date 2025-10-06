@@ -32,6 +32,20 @@ gettext.textdomain('minios-kernel-manager')
 _ = gettext.gettext
 
 
+def detect_initramfs_builder() -> str:
+    """Detect which initramfs builder is available: 'dracut' or 'livekit'"""
+    # Check for dracut first (preferred if installed)
+    if shutil.which('mkdracut') and os.path.exists('/usr/lib/dracut/modules.d/90minios'):
+        return 'dracut'
+    
+    # Check for livekit
+    if os.path.exists('/run/initramfs/mkinitrfs'):
+        return 'livekit'
+    
+    # Neither found
+    raise RuntimeError(_("No initramfs builder found. Please install minios-dracut package or ensure mkinitrfs is available."))
+
+
 def get_system_modules_base() -> str:
     """Determine the modules base path used by the current system"""
     # Check where modules are actually located in the current system
@@ -303,14 +317,135 @@ def create_squashfs_image(kernel_version: str, compression: str, output_dir: str
 
 
 def generate_initramfs(kernel_version: str, output_dir: str, logger: Optional[Callable] = None, temp_dir: str = None, custom_temp_dir: str = None, original_kernel_version: str = None) -> str:
-    """Generate initramfs image"""
-    # Use original kernel version for mkinitrfs if provided, otherwise use kernel_version
+    """Generate initramfs image using either livekit or dracut"""
+    # Use original kernel version if provided, otherwise use kernel_version
     build_version = original_kernel_version if original_kernel_version else kernel_version
     output_image = os.path.join(output_dir, f"initrfs-{kernel_version}.img")
+    
+    # Detect which initramfs builder to use
+    try:
+        builder = detect_initramfs_builder()
+    except RuntimeError as e:
+        raise RuntimeError(_("Failed to detect initramfs builder: {}").format(str(e)))
+    
+    print(f"I: {_('Using initramfs builder: {}').format(builder)}", flush=True)
     
     # Get modules directory
     modules_dir = get_non_symlink_modules_dir()
     
+    if builder == 'dracut':
+        return _generate_initramfs_dracut(kernel_version, build_version, output_image, modules_dir, temp_dir, custom_temp_dir)
+    else:  # livekit
+        return _generate_initramfs_livekit(kernel_version, build_version, output_image, modules_dir, temp_dir, custom_temp_dir)
+
+
+def _generate_initramfs_dracut(kernel_version: str, build_version: str, output_image: str, 
+                                modules_dir: str, temp_dir: str = None, custom_temp_dir: str = None) -> str:
+    """Generate initramfs using dracut/mkdracut"""
+    mkdracut_path = shutil.which('mkdracut')
+    if not mkdracut_path:
+        raise RuntimeError(_("mkdracut not found - please install minios-dracut package"))
+    
+    # Handle module path for extracted deb packages
+    system_modules_path = os.path.join(modules_dir, build_version)
+    temp_symlink_created = False
+    
+    if temp_dir and os.path.exists(temp_dir):
+        # Find modules directory in extracted deb contents
+        possible_modules_paths = [
+            os.path.join(temp_dir, "usr", "lib", "modules", build_version),
+            os.path.join(temp_dir, "lib", "modules", build_version)
+        ]
+        
+        extracted_modules_path = None
+        for path in possible_modules_paths:
+            if os.path.exists(path):
+                extracted_modules_path = path
+                break
+        
+        if extracted_modules_path and not os.path.exists(system_modules_path):
+            # Create temporary symlink for dracut
+            try:
+                os.makedirs(modules_dir, exist_ok=True)
+                os.symlink(extracted_modules_path, system_modules_path)
+                temp_symlink_created = True
+                print(f"I: {_('Created temporary symlink: {} -> {}').format(system_modules_path, extracted_modules_path)}", flush=True)
+                
+                # Generate modules.dep
+                try:
+                    print(f"I: {_('Generating modules.dep for {}').format(build_version)}", flush=True)
+                    depmod_result = subprocess.run(['depmod', '-b', temp_dir, build_version], 
+                                                 capture_output=True, text=True, timeout=30)
+                    if depmod_result.returncode == 0:
+                        print(f"I: {_('Successfully generated modules.dep')}", flush=True)
+                    else:
+                        print(f"W: {_('depmod warning: {}').format(depmod_result.stderr)}", flush=True)
+                except Exception as e:
+                    print(f"W: {_('Failed to run depmod: {}').format(e)}", flush=True)
+            except OSError as e:
+                print(f"W: {_('Failed to create symlink {}: {}').format(system_modules_path, e)}", flush=True)
+    
+    # Store symlink info for cleanup
+    cleanup_symlink = system_modules_path if temp_symlink_created else None
+    
+    # Execute mkdracut with parameters: -k KERNEL -n -c
+    cmd = [mkdracut_path, "-k", build_version, "-n", "-c", "-o", output_image]
+    
+    # Prepare environment with custom temp directory if provided
+    env = os.environ.copy()
+    if custom_temp_dir:
+        env['TMPDIR'] = custom_temp_dir
+        print(f"I: {_('Using custom temporary directory for initramfs: {}').format(custom_temp_dir)}", flush=True)
+    
+    # Run mkdracut with real-time output
+    print(f"I: {_('Starting dracut initramfs generation...')}", flush=True)
+    try:
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, 
+                                 text=True, bufsize=1, universal_newlines=True, env=env)
+        
+        output_lines = []
+        while True:
+            line = process.stdout.readline()
+            if not line:
+                break
+            output_lines.append(line)
+            
+            # Show output from mkdracut
+            line_stripped = line.strip()
+            if line_stripped:
+                if not (line_stripped.startswith('+') or line_stripped.startswith('++')):
+                    if any(line_stripped.startswith(prefix) for prefix in ['I: ', 'E: ', 'W: ', 'D: ']):
+                        print(line_stripped, flush=True)
+                    else:
+                        print(f"I: {line_stripped}", flush=True)
+        
+        process.wait()
+        if process.returncode != 0:
+            raise RuntimeError(_("mkdracut failed with return code {code}").format(code=process.returncode))
+        
+    except Exception as e:
+        if cleanup_symlink and os.path.islink(cleanup_symlink):
+            os.unlink(cleanup_symlink)
+        raise RuntimeError(_("Failed to generate initramfs with dracut: {}").format(str(e)))
+    finally:
+        # Cleanup temporary symlink
+        if cleanup_symlink and os.path.islink(cleanup_symlink):
+            try:
+                os.unlink(cleanup_symlink)
+                print(f"I: {_('Removed temporary symlink: {}').format(cleanup_symlink)}", flush=True)
+            except OSError:
+                pass
+    
+    if not os.path.exists(output_image):
+        raise RuntimeError(_("Dracut succeeded but output file not found: {}").format(output_image))
+    
+    print(f"I: {_('Successfully generated initramfs: {}').format(output_image)}", flush=True)
+    return output_image
+
+
+def _generate_initramfs_livekit(kernel_version: str, build_version: str, output_image: str,
+                                 modules_dir: str, temp_dir: str = None, custom_temp_dir: str = None) -> str:
+    """Generate initramfs using livekit/mkinitrfs"""
     # Check if mkinitrfs exists
     mkinitrfs_path = "/run/initramfs/mkinitrfs"
     if not os.path.exists(mkinitrfs_path):
@@ -477,10 +612,11 @@ def generate_initramfs(kernel_version: str, output_dir: str, logger: Optional[Ca
             print(f"Warning: Failed to remove temporary symlink {cleanup_symlink}: {e}")
     
     # Copy log if available
-    log_source = os.path.join(os.path.dirname(temp_initramfs_path), 
-                             "..", "livekit", "initramfs.log")
-    if os.path.exists(log_source):
-        log_dest = os.path.join(output_dir, f"initramfs-{kernel_version}.log")
-        shutil.copy2(log_source, log_dest)
+    temp_dir_parent = os.path.dirname(os.path.dirname(temp_initramfs_path)) if temp_initramfs_path else None
+    if temp_dir_parent:
+        log_source = os.path.join(temp_dir_parent, "livekit", "initramfs.log")
+        if os.path.exists(log_source):
+            log_dest = os.path.join(os.path.dirname(output_image), f"initramfs-{kernel_version}.log")
+            shutil.copy2(log_source, log_dest)
     
     return output_image
