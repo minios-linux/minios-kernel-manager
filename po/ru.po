@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: minios-kernel-manager 1.0.0\n"
 "Report-Msgid-Bugs-To: support@minios.dev\n"
-"POT-Creation-Date: 2025-10-06 23:17+0300\n"
+"POT-Creation-Date: 2025-10-07 01:47+0300\n"
 "PO-Revision-Date: 2025-08-30 23:50+0300\n"
 "Last-Translator: crims0n <crims0n@minios.dev>\n"
 "Language-Team: none\n"
@@ -400,55 +400,82 @@ msgstr "Удалить упакованное ядро"
 msgid "Kernel version to delete"
 msgstr "Версия ядра для удаления"
 
-#: lib/build_utils.py:85
+#: lib/build_utils.py:46
+msgid ""
+"No initramfs builder found. Please install minios-dracut package or ensure "
+"mkinitrfs is available."
+msgstr "Не найден сборщик initramfs. Пожалуйста, установите пакет minios-dracut или убедитесь, что mkinitrfs доступен."
+
+#: lib/build_utils.py:99
 #, python-brace-format
 msgid "vmlinuz for kernel {kernel_version} not found"
 msgstr "vmlinuz для ядра {kernel_version} не найден"
 
-#: lib/build_utils.py:103
+#: lib/build_utils.py:117
 msgid "temp_dir is required and must exist for SquashFS creation"
 msgstr "temp_dir требуется и должен существовать для создания SquashFS"
 
-#: lib/build_utils.py:129
+#: lib/build_utils.py:143
 #, python-brace-format
 msgid ""
 "Kernel modules not found in extracted deb package for kernel {kernel_version}"
 msgstr ""
 "Модули ядра не найдены в извлеченном deb-пакете для ядра {kernel_version}"
 
-#: lib/build_utils.py:166 lib/build_utils.py:369
+#: lib/build_utils.py:180 lib/build_utils.py:504
 msgid "Critical depmod error: {}"
 msgstr "Критическая ошибка depmod: {}"
 
-#: lib/build_utils.py:207
+#: lib/build_utils.py:221
 msgid "mksquashfs command not found. Please install squashfs-tools package."
 msgstr ""
 "Команда mksquashfs не найдена. Пожалуйста, установите пакет squashfs-tools."
 
-#: lib/build_utils.py:288
+#: lib/build_utils.py:302
 msgid "Failed to create SquashFS image"
 msgstr "Не удалось создать образ SquashFS"
 
-#: lib/build_utils.py:317
+#: lib/build_utils.py:329
+msgid "Failed to detect initramfs builder: {}"
+msgstr "Не удалось обнаружить сборщик initramfs: {}"
+
+#: lib/build_utils.py:347
+msgid "mkdracut not found - please install minios-dracut package"
+msgstr "mkdracut не найден — пожалуйста, установите пакет minios-dracut."
+
+#: lib/build_utils.py:424
+#, python-brace-format
+msgid "mkdracut failed with return code {code}"
+msgstr "mkdracut завершился с ошибкой: код возврата {code}"
+
+#: lib/build_utils.py:429
+msgid "Failed to generate initramfs with dracut: {}"
+msgstr "Не удалось сгенерировать initramfs с помощью dracut: {}"
+
+#: lib/build_utils.py:440
+msgid "Dracut succeeded but output file not found: {}"
+msgstr "Dracut успешно завершил работу, но выходной файл не найден: {}"
+
+#: lib/build_utils.py:452
 msgid "mkinitrfs not found - this tool requires MiniOS live environment"
 msgstr "mkinitrfs не найден - этот инструмент требует живой среды MiniOS"
 
-#: lib/build_utils.py:425
+#: lib/build_utils.py:560
 #, python-brace-format
 msgid "mkinitrfs failed with return code {code}"
 msgstr "mkinitrfs завершился с ошибкой: код возврата {code}"
 
-#: lib/build_utils.py:431
+#: lib/build_utils.py:566
 #, python-brace-format
 msgid "mkinitrfs failed: {error}"
 msgstr "mkinitrfs завершился с ошибкой: {error}"
 
-#: lib/build_utils.py:433
+#: lib/build_utils.py:568
 #, python-brace-format
 msgid "mkinitrfs error: {error}"
 msgstr "Ошибка mkinitrfs: {error}"
 
-#: lib/build_utils.py:458
+#: lib/build_utils.py:593
 msgid "mkinitrfs did not return valid initramfs path"
 msgstr "mkinitrfs не вернул действительный путь к initramfs"
 
@@ -715,9 +742,6 @@ msgstr "Новое ядро теперь доступно на вкладке '�
 
 #~ msgid "Module dependencies generated successfully"
 #~ msgstr "Зависимости модулей успешно сгенерированы"
-
-#~ msgid "Failed to generate module dependencies: {}"
-#~ msgstr "Не удалось сгенерировать зависимости модулей: {}"
 
 #, python-brace-format
 #~ msgid "Using extracted deb modules with structure: {path}"

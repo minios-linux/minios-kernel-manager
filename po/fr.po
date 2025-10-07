@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: minios-kernel-manager 1.0.0\n"
 "Report-Msgid-Bugs-To: support@minios.dev\n"
-"POT-Creation-Date: 2025-10-06 23:17+0300\n"
+"POT-Creation-Date: 2025-10-07 01:47+0300\n"
 "PO-Revision-Date: 2025-08-30 23:50+0300\n"
 "Last-Translator: crims0n <crims0n@minios.dev>\n"
 "Language-Team: none\n"
@@ -68,7 +68,9 @@ msgstr ""
 
 #: lib/minios_utils.py:777
 msgid "No live system changes directory found, using /tmp anyway"
-msgstr "Aucun répertoire de modifications du système en direct trouvé, utilisation de /tmp de toute façon"
+msgstr ""
+"Aucun répertoire de modifications du système en direct trouvé, utilisation "
+"de /tmp de toute façon"
 
 #: lib/minios_utils.py:780
 msgid "Detected {} filesystem, using alternative: {}"
@@ -404,16 +406,23 @@ msgstr "Supprimer un noyau empaqueté"
 msgid "Kernel version to delete"
 msgstr "Version du noyau à supprimer"
 
-#: lib/build_utils.py:85
+#: lib/build_utils.py:46
+msgid ""
+"No initramfs builder found. Please install minios-dracut package or ensure "
+"mkinitrfs is available."
+msgstr ""
+"Aucun générateur d'initramfs trouvé. Veuillez installer le paquet minios-dracut ou vous assurer que mkinitrfs est disponible."
+
+#: lib/build_utils.py:99
 #, python-brace-format
 msgid "vmlinuz for kernel {kernel_version} not found"
 msgstr "vmlinuz pour le noyau {kernel_version} non trouvé"
 
-#: lib/build_utils.py:103
+#: lib/build_utils.py:117
 msgid "temp_dir is required and must exist for SquashFS creation"
 msgstr "temp_dir est requis et doit exister pour la création de SquashFS"
 
-#: lib/build_utils.py:129
+#: lib/build_utils.py:143
 #, python-brace-format
 msgid ""
 "Kernel modules not found in extracted deb package for kernel {kernel_version}"
@@ -421,40 +430,61 @@ msgstr ""
 "Modules du noyau non trouvés dans le paquet deb extrait pour le noyau "
 "{kernel_version}"
 
-#: lib/build_utils.py:166 lib/build_utils.py:369
+#: lib/build_utils.py:180 lib/build_utils.py:504
 msgid "Critical depmod error: {}"
 msgstr "Erreur critique de depmod : {}"
 
-#: lib/build_utils.py:207
+#: lib/build_utils.py:221
 msgid "mksquashfs command not found. Please install squashfs-tools package."
 msgstr ""
 "Commande mksquashfs introuvable. Veuillez installer le paquet squashfs-tools."
 
-#: lib/build_utils.py:288
+#: lib/build_utils.py:302
 msgid "Failed to create SquashFS image"
 msgstr "Échec de la création de l'image SquashFS"
 
-#: lib/build_utils.py:317
+#: lib/build_utils.py:329
+msgid "Failed to detect initramfs builder: {}"
+msgstr "Échec de la détection du générateur d'initramfs : {}"
+
+#: lib/build_utils.py:347
+msgid "mkdracut not found - please install minios-dracut package"
+msgstr "mkdracut introuvable - veuillez installer le paquet minios-dracut."
+
+#: lib/build_utils.py:424
+#, python-brace-format
+msgid "mkdracut failed with return code {code}"
+msgstr "mkdracut a échoué avec le code de retour {code}"
+
+#: lib/build_utils.py:429
+msgid "Failed to generate initramfs with dracut: {}"
+msgstr "Échec de la génération de l'initramfs avec dracut : {}"
+
+#: lib/build_utils.py:440
+msgid "Dracut succeeded but output file not found: {}"
+msgstr "Dracut a réussi mais le fichier de sortie est introuvable : {}"
+
+#: lib/build_utils.py:452
 msgid "mkinitrfs not found - this tool requires MiniOS live environment"
 msgstr ""
 "mkinitrfs non trouvé - cet outil nécessite un environnement live MiniOS"
 
-#: lib/build_utils.py:425
+#: lib/build_utils.py:560
 #, python-brace-format
 msgid "mkinitrfs failed with return code {code}"
 msgstr "mkinitrfs a échoué avec le code de retour {code}"
 
-#: lib/build_utils.py:431
+#: lib/build_utils.py:566
 #, python-brace-format
 msgid "mkinitrfs failed: {error}"
 msgstr "mkinitrfs a échoué : {error}"
 
-#: lib/build_utils.py:433
+#: lib/build_utils.py:568
 #, python-brace-format
 msgid "mkinitrfs error: {error}"
 msgstr "Erreur mkinitrfs : {error}"
 
-#: lib/build_utils.py:458
+#: lib/build_utils.py:593
 msgid "mkinitrfs did not return valid initramfs path"
 msgstr "mkinitrfs n'a pas renvoyé de chemin d'initramfs valide"
 
@@ -724,9 +754,6 @@ msgstr ""
 
 #~ msgid "Module dependencies generated successfully"
 #~ msgstr "Dépendances de modules générées avec succès"
-
-#~ msgid "Failed to generate module dependencies: {}"
-#~ msgstr "Échec de la génération des dépendances de modules : {}"
 
 #, python-brace-format
 #~ msgid "Using extracted deb modules with structure: {path}"

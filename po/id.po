@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: minios-kernel-manager 1.0.0\n"
 "Report-Msgid-Bugs-To: support@minios.dev\n"
-"POT-Creation-Date: 2025-10-06 23:17+0300\n"
+"POT-Creation-Date: 2025-10-07 01:47+0300\n"
 "PO-Revision-Date: 2025-08-30 23:50+0300\n"
 "Last-Translator: crims0n <crims0n@minios.dev>\n"
 "Language-Team: none\n"
@@ -65,7 +65,9 @@ msgstr ""
 
 #: lib/minios_utils.py:777
 msgid "No live system changes directory found, using /tmp anyway"
-msgstr "Tidak ada direktori perubahan sistem langsung yang ditemukan, menggunakan /tmp saja"
+msgstr ""
+"Tidak ada direktori perubahan sistem langsung yang ditemukan, menggunakan /"
+"tmp saja"
 
 #: lib/minios_utils.py:780
 msgid "Detected {} filesystem, using alternative: {}"
@@ -398,16 +400,23 @@ msgstr "Hapus kernel yang sudah dikemas"
 msgid "Kernel version to delete"
 msgstr "Versi kernel yang akan dihapus"
 
-#: lib/build_utils.py:85
+#: lib/build_utils.py:46
+msgid ""
+"No initramfs builder found. Please install minios-dracut package or ensure "
+"mkinitrfs is available."
+msgstr ""
+"Tidak ditemukan pembuat initramfs. Silakan instal paket minios-dracut atau pastikan mkinitrfs tersedia."
+
+#: lib/build_utils.py:99
 #, python-brace-format
 msgid "vmlinuz for kernel {kernel_version} not found"
 msgstr "vmlinuz untuk kernel {kernel_version} tidak ditemukan"
 
-#: lib/build_utils.py:103
+#: lib/build_utils.py:117
 msgid "temp_dir is required and must exist for SquashFS creation"
 msgstr "temp_dir diperlukan dan harus ada untuk pembuatan SquashFS"
 
-#: lib/build_utils.py:129
+#: lib/build_utils.py:143
 #, python-brace-format
 msgid ""
 "Kernel modules not found in extracted deb package for kernel {kernel_version}"
@@ -415,40 +424,61 @@ msgstr ""
 "Modul kernel tidak ditemukan dalam paket deb yang diekstrak untuk kernel "
 "{kernel_version}"
 
-#: lib/build_utils.py:166 lib/build_utils.py:369
+#: lib/build_utils.py:180 lib/build_utils.py:504
 msgid "Critical depmod error: {}"
 msgstr "Kritik depmod error: {}"
 
-#: lib/build_utils.py:207
+#: lib/build_utils.py:221
 msgid "mksquashfs command not found. Please install squashfs-tools package."
 msgstr ""
 "Perintah mksquashfs tidak ditemukan. Silakan instal paket squashfs-tools."
 
-#: lib/build_utils.py:288
+#: lib/build_utils.py:302
 msgid "Failed to create SquashFS image"
 msgstr "Gagal membuat citra SquashFS"
 
-#: lib/build_utils.py:317
+#: lib/build_utils.py:329
+msgid "Failed to detect initramfs builder: {}"
+msgstr "Gagal mendeteksi pembuat initramfs: {}"
+
+#: lib/build_utils.py:347
+msgid "mkdracut not found - please install minios-dracut package"
+msgstr "mkdracut tidak ditemukan - silakan instal paket minios-dracut"
+
+#: lib/build_utils.py:424
+#, python-brace-format
+msgid "mkdracut failed with return code {code}"
+msgstr "mkdracut gagal dengan kode keluar {code}"
+
+#: lib/build_utils.py:429
+msgid "Failed to generate initramfs with dracut: {}"
+msgstr "Gagal menghasilkan initramfs dengan dracut: {}"
+
+#: lib/build_utils.py:440
+msgid "Dracut succeeded but output file not found: {}"
+msgstr "Dracut berhasil tetapi berkas output tidak ditemukan: {}"
+
+#: lib/build_utils.py:452
 msgid "mkinitrfs not found - this tool requires MiniOS live environment"
 msgstr ""
 "mkinitrfs tidak ditemukan - alat ini membutuhkan lingkungan langsung MiniOS"
 
-#: lib/build_utils.py:425
+#: lib/build_utils.py:560
 #, python-brace-format
 msgid "mkinitrfs failed with return code {code}"
 msgstr "mkinitrfs gagal dengan kode keluar {code}"
 
-#: lib/build_utils.py:431
+#: lib/build_utils.py:566
 #, python-brace-format
 msgid "mkinitrfs failed: {error}"
 msgstr "mkinitrfs gagal: {error}"
 
-#: lib/build_utils.py:433
+#: lib/build_utils.py:568
 #, python-brace-format
 msgid "mkinitrfs error: {error}"
 msgstr "Kesalahan mkinitrfs: {error}"
 
-#: lib/build_utils.py:458
+#: lib/build_utils.py:593
 msgid "mkinitrfs did not return valid initramfs path"
 msgstr "mkinitrfs tidak mengembalikan jalur initramfs yang valid"
 
@@ -716,9 +746,6 @@ msgstr "Kernel baru kini tersedia di tab 'Kelola Kernel'."
 
 #~ msgid "Module dependencies generated successfully"
 #~ msgstr "Dependensi modul berhasil dibuat"
-
-#~ msgid "Failed to generate module dependencies: {}"
-#~ msgstr "Gagal membuat dependensi modul: {}"
 
 #, python-brace-format
 #~ msgid "Using extracted deb modules with structure: {path}"
