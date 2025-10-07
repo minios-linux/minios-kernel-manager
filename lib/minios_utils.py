@@ -22,7 +22,7 @@ def find_minios_directory() -> Optional[str]:
     """Find MiniOS directory on the system"""
     common_paths = [
         "/run/initramfs/memory/data/minios",
-        "/lib/live/mount/data/minios"
+        "/lib/live/mount/medium/minios"
     ]
 
     # Check each path

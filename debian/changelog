@@ -1,3 +1,9 @@
+minios-kernel-manager (1.0.5) unstable; urgency=medium
+
+  * Fixed paths for dracut initramfs compatibility
+
+ -- crims0n <crims0n@minios.dev>  Tue, 07 Oct 2025 13:05:20 +0300
+
 minios-kernel-manager (1.0.4) unstable; urgency=medium
 
   * Add automatic detection of initramfs builder (dracut/livekit)

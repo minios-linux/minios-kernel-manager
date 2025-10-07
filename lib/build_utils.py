@@ -85,8 +85,8 @@ def copy_vmlinuz(kernel_version: str, temp_dir: str, output_dir: str, kernel_sou
         f"/boot/vmlinuz-{kernel_version}",
         f"/run/initramfs/memory/data/minios/boot/vmlinuz-{kernel_version}",
         f"/run/initramfs/memory/data/minios/boot/vmlinuz",
-        f"/lib/live/mount/data/minios/boot/vmlinuz-{kernel_version}",
-        f"/lib/live/mount/data/minios/boot/vmlinuz"
+        f"/lib/live/mount/medium/minios/boot/vmlinuz-{kernel_version}",
+        f"/lib/live/mount/medium/minios/boot/vmlinuz"
     ]
     
     vmlinuz_path = None
