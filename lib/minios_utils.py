@@ -432,24 +432,6 @@ def activate_kernel(minios_path: str, kernel_version: str) -> bool:
         shutil.copy2(vmlinuz_file, os.path.join(minios_path, "boot", os.path.basename(vmlinuz_file)))
         shutil.copy2(initramfs_file, os.path.join(minios_path, "boot", os.path.basename(initramfs_file)))
 
-        # Create compatibility symlinks for Ventoy
-        boot_path = os.path.join(minios_path, "boot")
-        vmlinuz_link = os.path.join(boot_path, "vmlinuz")
-        initrfs_link = os.path.join(boot_path, "initrfs.img")
-
-        # Remove old compatibility links if they exist
-        for link_path in [vmlinuz_link, initrfs_link]:
-            if os.path.islink(link_path):
-                os.unlink(link_path)
-                print(f"Removed old symlink: {link_path}")
-
-        # Create new compatibility symlinks for Ventoy
-        os.symlink(f"vmlinuz-{kernel_version}", vmlinuz_link)
-        os.symlink(f"initrfs-{kernel_version}.img", initrfs_link)
-        print(f"Created Ventoy compatibility symlinks:")
-        print(f"  vmlinuz -> vmlinuz-{kernel_version}")
-        print(f"  initrfs.img -> initrfs-{kernel_version}.img")
-
         # Update bootloader configurations
         _update_bootloader_configs(minios_path, kernel_version)
 

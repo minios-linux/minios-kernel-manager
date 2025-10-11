@@ -1,3 +1,9 @@
+minios-kernel-manager (1.0.6) unstable; urgency=medium
+
+  * Remove Ventoy compatibility symlink creation from kernel activation
+
+ -- crims0n <crims0n@minios.dev>  Sun, 12 Oct 2025 02:51:16 +0300
+
 minios-kernel-manager (1.0.5) unstable; urgency=medium
 
   * Fixed paths for dracut initramfs compatibility
