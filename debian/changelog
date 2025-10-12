@@ -1,3 +1,10 @@
+minios-kernel-manager (1.0.7) unstable; urgency=medium
+
+  * Refactor initramfs builder detection to prioritize existence of mkdracut in
+    runtime environment
+
+ -- crims0n <crims0n@minios.dev>  Sun, 12 Oct 2025 17:54:35 +0300
+
 minios-kernel-manager (1.0.6) unstable; urgency=medium
 
   * Remove Ventoy compatibility symlink creation from kernel activation

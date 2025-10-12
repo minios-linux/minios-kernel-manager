@@ -34,14 +34,14 @@ _ = gettext.gettext
 
 def detect_initramfs_builder() -> str:
     """Detect which initramfs builder is available: 'dracut' or 'livekit'"""
-    # Check for dracut first (preferred if installed)
-    if shutil.which('mkdracut') and os.path.exists('/usr/lib/dracut/modules.d/90minios'):
+    # Check for dracut first
+    if os.path.exists('/run/initramfs/mkdracut'):
         return 'dracut'
-    
+
     # Check for livekit
     if os.path.exists('/run/initramfs/mkinitrfs'):
         return 'livekit'
-    
+
     # Neither found
     raise RuntimeError(_("No initramfs builder found. Please install minios-dracut package or ensure mkinitrfs is available."))
 
