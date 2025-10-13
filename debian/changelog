@@ -1,3 +1,9 @@
+minios-kernel-manager (1.0.8) unstable; urgency=medium
+
+  * Change path of mkdracut detection to /run/initramfs/dracut-minios
+
+ -- crims0n <crims0n@minios.dev>  Mon, 13 Oct 2025 12:40:46 +0300
+
 minios-kernel-manager (1.0.7) unstable; urgency=medium
 
   * Refactor initramfs builder detection to prioritize existence of mkdracut in

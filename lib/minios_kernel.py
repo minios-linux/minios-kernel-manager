@@ -45,12 +45,12 @@ def signal_handler(signum, frame):
     """Handle interruption signals"""
     signal_names = {2: 'SIGINT', 15: 'SIGTERM', 9: 'SIGKILL'}
     signal_name = signal_names.get(signum, f'Signal {signum}')
-    
+
     if not getattr(signal_handler, '_already_handling', False):
         signal_handler._already_handling = True
         print("I: {}".format(_('Received {} - cleaning up...')).format(signal_name), flush=True)
         cleanup_temp_dir()
-        
+
         # Exit with appropriate code
         sys.exit(128 + signum)
 
@@ -116,16 +116,16 @@ def package_kernel(args):
                 print("I: {}".format(_('Created output directory: {}')).format(args.output), flush=True)
             except Exception as e:
                 raise RuntimeError(_("Failed to create output directory '{}': {}").format(args.output, str(e)))
-        
+
         # Check if output directory is writable
         if not os.access(args.output, os.W_OK):
             raise RuntimeError(_("Output directory '{}' is not writable").format(args.output))
-        
+
         # Check available space and choose appropriate temporary directory
         # Use 1024MB estimate for full kernel packaging
         temp_dir = get_temp_dir_with_space_check(1024, "minios-kernel-", "kernel_packaging", args.temp_dir)
         _temp_dir = temp_dir  # Set global for signal handler
-        
+
         # Create temporary directory message (always log for cleanup purposes)
         print("I: {}".format(_('Created temporary directory: {}')).format(temp_dir), flush=True)
 
@@ -152,20 +152,20 @@ def package_kernel(args):
         # This will require running as root if it calls a privileged helper
         # Pass the same custom temp dir that was used for the main packaging
         custom_initramfs_temp = args.temp_dir if args.temp_dir else None
-        
+
         # Get the actual kernel version for system operations (modules, initramfs)
         # This was determined during the download/extraction process
         original_kernel_version = None
         if hasattr(download_kernel_package, '_versions'):
             original_kernel_version = download_kernel_package._versions.get('actual_version')
-        
+
         if not original_kernel_version and temp_dir:
             # Fallback: find the actual kernel version from vmlinuz or modules directory
             boot_paths = [
                 os.path.join(temp_dir, "boot"),
                 os.path.join(temp_dir, "usr", "boot")
             ]
-            
+
             # First try to get version from vmlinuz filename
             for boot_path in boot_paths:
                 if os.path.exists(boot_path):
@@ -175,7 +175,7 @@ def package_kernel(args):
                             break
                     if original_kernel_version:
                         break
-            
+
             # Fallback to modules directory
             if not original_kernel_version:
                 modules_dir = os.path.join(temp_dir, "lib", "modules")
@@ -185,8 +185,8 @@ def package_kernel(args):
                     version_dirs = [d for d in os.listdir(modules_dir) if os.path.isdir(os.path.join(modules_dir, d))]
                     if version_dirs:
                         original_kernel_version = version_dirs[0]
-        
-        generate_initramfs(kernel_version, args.output, logger=None, temp_dir=temp_dir, 
+
+        generate_initramfs(kernel_version, args.output, logger=None, temp_dir=temp_dir,
                          custom_temp_dir=custom_initramfs_temp, original_kernel_version=original_kernel_version)
 
         # Move packaged kernel to MiniOS kernels directory if not already there
@@ -194,24 +194,24 @@ def package_kernel(args):
         if minios_path and args.output != os.path.join(minios_path, "kernels", kernel_version):
             progress_print(95, _("Installing to kernel repository"))
             from minios_utils import package_kernel_to_repository
-            
+
             # Get the packaged files
             vmlinuz_file = os.path.join(args.output, f"vmlinuz-{kernel_version}")
             initramfs_file = os.path.join(args.output, f"initrfs-{kernel_version}.img")
             squashfs_file = os.path.join(args.output, f"01-kernel-{kernel_version}.sb")
-            
+
             # Install to repository
             if all(os.path.exists(f) for f in [vmlinuz_file, initramfs_file, squashfs_file]):
-                package_kernel_to_repository(minios_path, kernel_version, 
+                package_kernel_to_repository(minios_path, kernel_version,
                                            squashfs_file, vmlinuz_file, initramfs_file)
         else:
             progress_print(95, _("Finalizing installation"))
-                                           
+
         progress_print(100, _("Kernel packaging completed successfully!"))
-        
+
         # Clean up temporary directory on successful completion
         cleanup_temp_dir()
-        
+
         # Final success message for JSON output
         if args.json:
             success_data = {
@@ -246,10 +246,10 @@ def list_kernels_cmd(args):
         else:
             print("E: {}".format(_('MiniOS directory not found')), file=sys.stderr, flush=True)
         sys.exit(1)
-    
+
     available_kernels = list_all_kernels(minios_path)
     current_kernel = get_active_kernel(minios_path)
-    
+
     if args.json:
         kernels_json = []
         for kernel in available_kernels:
@@ -260,7 +260,7 @@ def list_kernels_cmd(args):
                 "is_running": False,
                 "status": "active" if is_active else "available"
             })
-        
+
         result = {
             "kernels": kernels_json,
             "active_kernel": current_kernel,
@@ -272,7 +272,7 @@ def list_kernels_cmd(args):
         for kernel in available_kernels:
             status = " ({})".format(_("active")) if kernel == current_kernel else ""
             print("  - {}{}".format(kernel, status))
-        
+
         if current_kernel:
             print("\n{}: {}".format(_("Currently active kernel"), current_kernel))
         else:
@@ -288,24 +288,24 @@ def activate_kernel_cmd(args):
         else:
             print("E: {}".format(_('MiniOS directory not found')), file=sys.stderr, flush=True)
         sys.exit(1)
-    
+
     if not args.json:
         print("I: {}".format(_('Found MiniOS directory: {}')).format(minios_path), flush=True)
-    
+
     # List available kernels
     available_kernels = list_all_kernels(minios_path)
-    
+
     # Check current active kernel
     current_kernel = get_active_kernel(minios_path)
     if current_kernel and not args.json:
         print("I: {}".format(_('Currently active kernel: {}')).format(current_kernel), flush=True)
-    
+
     # Check if requested kernel is available
     if args.kernel_version not in available_kernels:
         error_msg = f"Kernel {args.kernel_version} not found in repository"
         if args.json:
             print(json.dumps({
-                "success": False, 
+                "success": False,
                 "error": error_msg,
                 "available_kernels": available_kernels
             }))
@@ -313,7 +313,7 @@ def activate_kernel_cmd(args):
             print("E: {}".format(error_msg), file=sys.stderr, flush=True)
             print("{}: {}".format(_('Available kernels'), ', '.join(available_kernels)), file=sys.stderr, flush=True)
         sys.exit(1)
-    
+
     # Check if kernel is already active
     if args.kernel_version == current_kernel:
         if args.json:
@@ -326,13 +326,13 @@ def activate_kernel_cmd(args):
         else:
             print("I: {}".format(_('Kernel {} is already active')).format(args.kernel_version), flush=True)
         return
-    
+
     # Activate the kernel
     if not args.json:
         print("I: {}".format(_('Activating kernel {}...')).format(args.kernel_version), flush=True)
-    
+
     success = activate_kernel(minios_path, args.kernel_version)
-    
+
     if args.json:
         print(json.dumps({
             "success": success,
@@ -357,10 +357,10 @@ def info_kernel_cmd(args):
         else:
             print("E: {}".format(_('MiniOS directory not found')), file=sys.stderr, flush=True)
         sys.exit(1)
-    
+
     current_kernel = get_active_kernel(minios_path)
     available_kernels = list_all_kernels(minios_path)
-    
+
     if args.kernel_version:
         target_kernel = args.kernel_version
         if target_kernel not in available_kernels:
@@ -379,7 +379,7 @@ def info_kernel_cmd(args):
             else:
                 print("E: {}".format(error_msg), file=sys.stderr, flush=True)
             sys.exit(1)
-    
+
     if args.json:
         info = {
             "kernel_version": target_kernel,
@@ -410,17 +410,17 @@ def status_cmd(args):
         else:
             print("E: {}".format(error_msg), file=sys.stderr, flush=True)
         sys.exit(1)
-    
+
     # Check if directory is writable
     writable = False
     fs_type = "unknown"
     error_msg = None
-    
+
     try:
         # Get filesystem type
         import subprocess
         try:
-            result = subprocess.run(['stat', '-f', '-c', '%T', minios_path], 
+            result = subprocess.run(['stat', '-f', '-c', '%T', minios_path],
                                   capture_output=True, text=True, check=True)
             fs_type = result.stdout.strip()
         except (subprocess.CalledProcessError, FileNotFoundError):
@@ -436,7 +436,7 @@ def status_cmd(args):
                                 break
             except:
                 pass
-        
+
         # SquashFS is always read-only
         if fs_type == 'squashfs':
             writable = False
@@ -451,11 +451,11 @@ def status_cmd(args):
             except (OSError, PermissionError) as e:
                 writable = False
                 error_msg = _("Permission denied: {}").format(str(e))
-    
+
     except Exception as e:
         writable = False
         error_msg = _("Error checking directory: {}").format(str(e))
-    
+
     if args.json:
         result = {
             "success": True,
@@ -480,7 +480,7 @@ def status_cmd(args):
 def delete_kernel_cmd(args):
     """Delete a packaged kernel"""
     from minios_utils import find_minios_directory, delete_packaged_kernel
-    
+
     minios_path = find_minios_directory()
     if not minios_path:
         error_msg = _("MiniOS directory not found")
@@ -489,10 +489,10 @@ def delete_kernel_cmd(args):
         else:
             print(error_msg, file=sys.stderr)
         sys.exit(1)
-    
+
     kernel_version = args.kernel_version
     success = delete_packaged_kernel(minios_path, kernel_version)
-    
+
     if args.json:
         result = {"success": success}
         if success:
@@ -514,20 +514,20 @@ def main():
         error_msg = _("This tool requires root privileges. Please run with sudo or through pkexec.")
         print(json.dumps({"success": False, "error": error_msg}), file=sys.stderr)
         sys.exit(1)
-    
+
     # Ensure unbuffered output for real-time GUI updates
     sys.stdout.reconfigure(line_buffering=True)
     sys.stderr.reconfigure(line_buffering=True)
-    
+
     parser = argparse.ArgumentParser(description=_("MiniOS Kernel Manager CLI"))
     parser.add_argument('--json', action='store_true', help=_('Output in JSON format'))
-    
+
     # Global options
     parent_parser = argparse.ArgumentParser(add_help=False)
     parent_parser.add_argument('--json', action='store_true', help=_('Output in JSON format'))
-    
+
     subparsers = parser.add_subparsers(dest='command', help=_('Available commands'))
-    
+
     # Package command
     package_parser = subparsers.add_parser('package', help=_('Package a kernel'), parents=[parent_parser])
     source_group = package_parser.add_mutually_exclusive_group(required=True)
@@ -537,14 +537,14 @@ def main():
     package_parser.add_argument("--sqfs-comp", default="zstd", help=_("Compression method for SquashFS"))
     package_parser.add_argument("--temp-dir", help=_("Custom temporary directory (must have at least 1024MB free space)"))
     package_parser.add_argument("--force-update", action="store_true", help=_("Force package lists update if outdated"))
-    
+
     # List command
     list_parser = subparsers.add_parser('list', help=_('List available kernels'), parents=[parent_parser])
-    
+
     # Activate command
     activate_parser = subparsers.add_parser('activate', help=_('Activate a kernel'), parents=[parent_parser])
     activate_parser.add_argument("kernel_version", help=_("Kernel version to activate"))
-    
+
     # Info command
     info_parser = subparsers.add_parser('info', help=_('Show kernel information'), parents=[parent_parser])
     info_parser.add_argument("kernel_version", nargs='?', help=_("Kernel version to get info about (current if not specified)"))
@@ -559,13 +559,13 @@ def main():
     # Parse arguments - handle global flags that can appear anywhere
     # Extract global flags from any position
     global_json = '--json' in sys.argv
-    
+
     args = parser.parse_args()
-    
+
     # Apply global flags
     if global_json:
         args.json = True
-    
+
     # Handle missing subcommand
     if not args.command:
         parser.print_help()
