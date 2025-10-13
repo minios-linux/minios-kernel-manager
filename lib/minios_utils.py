@@ -251,9 +251,25 @@ def _update_syslinux_config(config_file: str, kernel_version: str) -> bool:
         except (OSError, NotImplementedError):
             pass  # Filesystem doesn't support chmod
 
-        # Read current configuration
-        with open(config_file, 'r') as f:
-            content = f.read()
+        # Read the file as binary to detect encoding
+        with open(config_file, 'rb') as f:
+            raw_data = f.read()
+
+        # Try to detect encoding
+        content = None
+        detected_encoding = None
+        for encoding in ['utf-8', 'cp866', 'iso-8859-1']:
+            try:
+                content = raw_data.decode(encoding)
+                detected_encoding = encoding
+                break
+            except UnicodeDecodeError:
+                continue
+
+        if content is None:
+            # Fallback to latin-1 if all else fails
+            detected_encoding = 'latin-1'
+            content = raw_data.decode(detected_encoding)
 
         # Replace kernel and initrd paths in all KERNEL and APPEND lines
         import re
@@ -268,9 +284,9 @@ def _update_syslinux_config(config_file: str, kernel_version: str) -> bool:
 
         # Write back if changed
         if new_content != content:
-            with open(config_file, 'w') as f:
+            with open(config_file, 'w', encoding=detected_encoding) as f:
                 f.write(new_content)
-            print(f"Updated Syslinux configuration: {config_file}")
+            print(f"Updated Syslinux configuration: {config_file} (encoding: {detected_encoding})")
 
         return True
 

@@ -1,3 +1,12 @@
+minios-kernel-manager (1.0.9) unstable; urgency=medium
+
+  * Fixed: Proper handling of non-UTF-8 encodings in bootloader config files to
+    prevent file corruption.
+  * Fixed: When run without root, show a clear text error instead of JSON
+    output.
+
+ -- crims0n <crims0n@minios.dev>  Mon, 13 Oct 2025 14:26:51 +0300
+
 minios-kernel-manager (1.0.8) unstable; urgency=medium
 
   * Change path of mkdracut detection to /run/initramfs/dracut-minios
