@@ -1,3 +1,9 @@
+minios-kernel-manager (1.0.10) unstable; urgency=medium
+
+  * Fixed: logger parameter not passed to initramfs helper functions
+
+ -- crims0n <crims0n@minios.dev>  Sat, 29 Nov 2025 02:37:38 +0300
+
 minios-kernel-manager (1.0.9) unstable; urgency=medium
 
   * Fixed: Proper handling of non-UTF-8 encodings in bootloader config files to
