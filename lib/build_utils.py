@@ -334,13 +334,13 @@ def generate_initramfs(kernel_version: str, output_dir: str, logger: Optional[Ca
     modules_dir = get_non_symlink_modules_dir()
 
     if builder == 'dracut':
-        return _generate_initramfs_dracut(kernel_version, build_version, output_image, modules_dir, temp_dir, custom_temp_dir)
+        return _generate_initramfs_dracut(kernel_version, build_version, output_image, modules_dir, temp_dir, custom_temp_dir, logger)
     else:  # livekit
-        return _generate_initramfs_livekit(kernel_version, build_version, output_image, modules_dir, temp_dir, custom_temp_dir)
+        return _generate_initramfs_livekit(kernel_version, build_version, output_image, modules_dir, temp_dir, custom_temp_dir, logger)
 
 
 def _generate_initramfs_dracut(kernel_version: str, build_version: str, output_image: str,
-                                modules_dir: str, temp_dir: str = None, custom_temp_dir: str = None) -> str:
+                                modules_dir: str, temp_dir: str = None, custom_temp_dir: str = None, logger: Optional[Callable] = None) -> str:
     """Generate initramfs using dracut/mkdracut"""
     mkdracut_path = "/run/initramfs/dracut-mos/mkdracut"
     if not os.path.exists(mkdracut_path):
@@ -444,7 +444,7 @@ def _generate_initramfs_dracut(kernel_version: str, build_version: str, output_i
 
 
 def _generate_initramfs_livekit(kernel_version: str, build_version: str, output_image: str,
-                                 modules_dir: str, temp_dir: str = None, custom_temp_dir: str = None) -> str:
+                                 modules_dir: str, temp_dir: str = None, custom_temp_dir: str = None, logger: Optional[Callable] = None) -> str:
     """Generate initramfs using livekit/mkinitrfs"""
     # Check if mkinitrfs exists
     mkinitrfs_path = "/run/initramfs/mkinitrfs"
