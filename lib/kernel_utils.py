@@ -47,7 +47,7 @@ def get_repository_kernels() -> List[dict]:
     try:
         # Search for kernel packages
         result = subprocess.run(['apt-cache', 'search', '^linux-image-[0-9]'],
-                              capture_output=True, text=True, check=True)
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, check=True)
 
         for line in result.stdout.strip().split('\n'):
             if line and ' - ' in line:
@@ -59,7 +59,7 @@ def get_repository_kernels() -> List[dict]:
                 if 'dbg' not in pkg:
                     try:
                         show_result = subprocess.run(['apt-cache', 'show', pkg],
-                                                   capture_output=True, text=True, check=True)
+                                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, check=True)
 
                         pkg_info = _parse_package_info(show_result.stdout, pkg, description)
                         if pkg_info and pkg_info['size'] > 1 * 1024 * 1024:  # 1MB threshold
@@ -166,7 +166,7 @@ def check_package_cache(force_update: bool = False) -> Tuple[bool, str]:
         if force_update:
             try:
                 print("I: {}".format(_('Updating package lists...')), flush=True)
-                result = subprocess.run(['apt', 'update'], check=True, capture_output=True, text=True)
+                result = subprocess.run(['apt', 'update'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
                 print("I: {}".format(_('Package lists updated')), flush=True)
                 return True, ""
             except subprocess.CalledProcessError as e:
@@ -267,7 +267,7 @@ def download_kernel_package(package_name: str, temp_dir: str, force_update: bool
         # Step 3: Extract package contents
         print(f"I: {_('Extracting package contents...')}", flush=True)
         extract_result = subprocess.run(['dpkg-deb', '-x', deb_file, temp_dir],
-                                      check=True, capture_output=True, text=True)
+                                      check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         print(f"I: {_('Package extracted successfully')}", flush=True)
 
         # Determine actual kernel version from extracted package contents
@@ -404,7 +404,7 @@ def prepare_temp_modules(kernel_version: str, temp_dir: str, force_reinstall: bo
     modules_dep = os.path.join(target_path, "modules.dep")
     if not os.path.exists(modules_dep):
         print(f"I: {_('Building module dependencies')}", flush=True)
-        subprocess.run(['depmod', kernel_version], check=True, capture_output=True)
+        subprocess.run(['depmod', kernel_version], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 
 def cleanup_temp_modules(kernel_version: str) -> None:

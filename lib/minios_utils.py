@@ -40,7 +40,7 @@ def find_minios_directory() -> Optional[str]:
     # Try to find mounted filesystems with minios folder
     try:
         result = subprocess.run(['findmnt', '-t', 'vfat,ext4,ext2,btrfs,ntfs,ntfs3,exfat'],
-                              capture_output=True, text=True)
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         for line in result.stdout.split('\n')[1:]:  # Skip header
             if line.strip():
                 parts = line.split()
@@ -49,7 +49,7 @@ def find_minios_directory() -> Optional[str]:
                     minios_path = os.path.join(mount_point, 'minios')
                     if _is_valid_minios_directory(minios_path):
                         return minios_path
-    except:
+    except Exception:
         pass
 
     return None
@@ -175,7 +175,7 @@ def _get_filesystem_type(path: str) -> str:
     """Get filesystem type for a given path."""
     try:
         result = subprocess.run(['stat', '-f', '-c', '%T', path],
-                              capture_output=True, text=True, check=True)
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, check=True)
         return result.stdout.strip()
     except (subprocess.CalledProcessError, FileNotFoundError):
         # Fallback method using /proc/mounts
@@ -187,7 +187,7 @@ def _get_filesystem_type(path: str) -> str:
                         mount_point, fs_type = parts[1], parts[2]
                         if path.startswith(mount_point):
                             return fs_type
-        except:
+        except Exception:
             pass
     return "unknown"
 
@@ -578,7 +578,7 @@ def get_kernel_info(minios_path: str, kernel_id: str) -> dict:
                 if sb_files:
                     sb_size = os.path.getsize(sb_files[0])
                     size_info = f" • {_format_size(sb_size)}"
-        except:
+        except Exception:
             pass
 
     info = {
@@ -626,7 +626,7 @@ def get_kernel_file_info(file_path: str) -> dict:
             # Format date
             import time
             file_info['date'] = time.strftime('%Y-%m-%d %H:%M', time.localtime(stat.st_mtime))
-    except:
+    except Exception:
         pass
 
     return file_info
@@ -637,7 +637,7 @@ def get_currently_running_kernel() -> str:
 
     # Method 1: Check mounted .sb modules to see which kernel module is active
     try:
-        result = subprocess.run(['mount'], capture_output=True, text=True, check=True)
+        result = subprocess.run(['mount'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, check=True)
         mount_output = result.stdout
 
         # Look for mounted kernel .sb files
@@ -653,7 +653,7 @@ def get_currently_running_kernel() -> str:
 
     # Method 2: Fallback to uname -r
     try:
-        result = subprocess.run(['uname', '-r'], capture_output=True, text=True, check=True)
+        result = subprocess.run(['uname', '-r'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, check=True)
         kernel_version = result.stdout.strip()
         return kernel_version
     except subprocess.CalledProcessError:
@@ -678,7 +678,7 @@ def get_union_filesystem_type() -> str:
     """Get the type of union filesystem used by MiniOS (aufs or overlayfs)"""
     try:
         # Check mount output for root filesystem
-        result = subprocess.run(['mount'], capture_output=True, text=True)
+        result = subprocess.run(['mount'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         for line in result.stdout.split('\n'):
             if ' on / type ' in line:
                 if 'aufs' in line:

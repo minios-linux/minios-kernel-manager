@@ -168,11 +168,11 @@ def create_squashfs_image(kernel_version: str, compression: str, output_dir: str
             # For usr/lib/modules structure, point depmod to usr subdirectory
             depmod_basedir = os.path.join(temp_squashfs_dir, "usr")
             depmod_result = subprocess.run(['depmod', '-b', depmod_basedir, original_kernel_version],
-                                         capture_output=True, text=True, timeout=30)
+                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=30)
         else:
             # For lib/modules structure (traditional)
             depmod_result = subprocess.run(['depmod', '-b', temp_squashfs_dir, original_kernel_version],
-                                         capture_output=True, text=True, timeout=30)
+                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=30)
         if depmod_result.returncode != 0:
             error_msg = depmod_result.stderr.strip()
             # Stop build on any ERROR, continue on WARNING
@@ -194,7 +194,7 @@ def create_squashfs_image(kernel_version: str, compression: str, output_dir: str
     # Check mksquashfs version for -no-strip support and availability
     try:
         result = subprocess.run(['mksquashfs', '-version'],
-                              capture_output=True, text=True, check=True)
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, check=True)
         # Version info can be in stdout or stderr
         version_output = result.stdout if result.stdout else result.stderr
         version_lines = version_output.split('\n')
@@ -263,7 +263,7 @@ def create_squashfs_image(kernel_version: str, compression: str, output_dir: str
     old_cwd = os.getcwd()
     try:
         os.chdir(temp_squashfs_dir)
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
     finally:
         # Always restore working directory after starting process
         os.chdir(old_cwd)
@@ -375,7 +375,7 @@ def _generate_initramfs_dracut(kernel_version: str, build_version: str, output_i
                 try:
                     print(f"I: {_('Generating modules.dep for {}').format(build_version)}", flush=True)
                     depmod_result = subprocess.run(['depmod', '-b', temp_dir, build_version],
-                                                 capture_output=True, text=True, timeout=30)
+                                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=30)
                     if depmod_result.returncode == 0:
                         print(f"I: {_('Successfully generated modules.dep')}", flush=True)
                     else:
@@ -401,7 +401,7 @@ def _generate_initramfs_dracut(kernel_version: str, build_version: str, output_i
     print(f"I: {_('Starting dracut initramfs generation...')}", flush=True)
     try:
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                 text=True, bufsize=1, universal_newlines=True, env=env)
+                                 universal_newlines=True, bufsize=1, universal_newlines=True, env=env)
 
         output_lines = []
         while True:
@@ -496,7 +496,7 @@ def _generate_initramfs_livekit(kernel_version: str, build_version: str, output_
                     try:
                         print(f"I: {_('Generating module dependencies for initramfs')}")
                         depmod_result = subprocess.run(['depmod', build_version],
-                                                     capture_output=True, text=True, timeout=30)
+                                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=30)
                         if depmod_result.returncode != 0:
                             error_msg = depmod_result.stderr.strip()
                             # Stop build on any ERROR, continue on WARNING
@@ -532,7 +532,7 @@ def _generate_initramfs_livekit(kernel_version: str, build_version: str, output_
     print(f"I: {_('Starting initramfs generation...')}", flush=True)
     try:
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                 text=True, bufsize=1, universal_newlines=True, env=env)
+                                 universal_newlines=True, bufsize=1, universal_newlines=True, env=env)
 
         output_lines = []
         while True:

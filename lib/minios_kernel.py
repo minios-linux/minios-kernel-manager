@@ -8,6 +8,7 @@ This script handles kernel packaging operations from the command line.
 """
 
 import argparse
+import io
 import json
 import os
 import sys
@@ -421,7 +422,7 @@ def status_cmd(args):
         import subprocess
         try:
             result = subprocess.run(['stat', '-f', '-c', '%T', minios_path],
-                                  capture_output=True, text=True, check=True)
+                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, check=True)
             fs_type = result.stdout.strip()
         except (subprocess.CalledProcessError, FileNotFoundError):
             # Fallback method using /proc/mounts
@@ -434,7 +435,7 @@ def status_cmd(args):
                             if minios_path.startswith(mount_point):
                                 fs_type = fs_type_mount
                                 break
-            except:
+            except Exception:
                 pass
 
         # SquashFS is always read-only
@@ -521,9 +522,9 @@ def main():
             print(error_msg, file=sys.stderr)
         sys.exit(1)
 
-    # Ensure unbuffered output for real-time GUI updates
-    sys.stdout.reconfigure(line_buffering=True)
-    sys.stderr.reconfigure(line_buffering=True)
+    # Ensure unbuffered output for real-time GUI updates (Python 3.6 compatible)
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, line_buffering=True)
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, line_buffering=True)
 
     parser = argparse.ArgumentParser(description=_("MiniOS Kernel Manager CLI"))
     parser.add_argument('--json', action='store_true', help=_('Output in JSON format'))

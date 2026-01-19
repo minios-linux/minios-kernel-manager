@@ -69,7 +69,7 @@ def run_minios_kernel(args):
     # Always use pkexec for kernel operations to ensure proper privileges
     cmd = ['pkexec', 'minios-kernel'] + args
     
-    return subprocess.run(cmd, capture_output=True, text=True)
+    return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
 
 def activate_kernel_cli(kernel_version):
     """Activate kernel using minios-kernel CLI with JSON output"""
@@ -129,7 +129,7 @@ def list_kernels_cli():
         # Fallback to text parsing if JSON fails
         try:
             cmd = ['minios-kernel', 'list']
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, check=True)
             # Parse the output to extract kernel list
             kernels = []
             active_kernel = None
@@ -195,7 +195,7 @@ def update_package_lists_gui():
     try:
         result = subprocess.run([
             'pkexec', 'apt', 'update'
-        ], capture_output=True, text=True)
+        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         
         return result.returncode == 0, result.stderr if result.returncode != 0 else "Package lists updated"
     except Exception as e:
@@ -976,7 +976,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             try:
                 # Get package control info
                 result = subprocess.run(['dpkg-deb', '-I', package_path], 
-                                      capture_output=True, text=True, check=True)
+                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, check=True)
                 
                 # Parse control information
                 control_info = result.stdout
