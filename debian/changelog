@@ -1,3 +1,12 @@
+minios-kernel-manager (1.0.12) unstable; urgency=medium
+
+  * Fix Python 3.6 SyntaxError in build_utils by removing duplicate
+    subprocess.Popen keyword argument (universal_newlines).
+    This restores `minios-kernel status --json` on bionic and fixes
+    false read-only detection in the GUI.
+
+ -- crims0n <crims0n@minios.dev>  Sat, 28 Feb 2026 22:14:30 +0300
+
 minios-kernel-manager (1.0.11) unstable; urgency=medium
 
   * Code quality improvements:

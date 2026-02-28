@@ -400,8 +400,14 @@ def _generate_initramfs_dracut(kernel_version: str, build_version: str, output_i
     # Run mkdracut with real-time output
     print(f"I: {_('Starting dracut initramfs generation...')}", flush=True)
     try:
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                 universal_newlines=True, bufsize=1, universal_newlines=True, env=env)
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+            bufsize=1,
+            env=env,
+        )
 
         output_lines = []
         while True:
@@ -531,8 +537,14 @@ def _generate_initramfs_livekit(kernel_version: str, build_version: str, output_
     # Run mkinitrfs with real-time output
     print(f"I: {_('Starting initramfs generation...')}", flush=True)
     try:
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                 universal_newlines=True, bufsize=1, universal_newlines=True, env=env)
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+            bufsize=1,
+            env=env,
+        )
 
         output_lines = []
         while True:
