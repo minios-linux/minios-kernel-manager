@@ -13,6 +13,11 @@ import tempfile
 import gettext
 from typing import Optional, List, Tuple
 
+try:
+    from .bootloader_utils import update_bootloader_configs as _update_bootloader_configs_impl
+except ImportError:
+    from bootloader_utils import update_bootloader_configs as _update_bootloader_configs_impl
+
 # Initialize gettext
 gettext.bindtextdomain('minios-kernel-manager', '/usr/share/locale')
 gettext.textdomain('minios-kernel-manager')
@@ -193,158 +198,9 @@ def _get_filesystem_type(path: str) -> str:
 
 def _update_bootloader_configs(minios_path: str, kernel_version: str) -> bool:
     """Update GRUB and Syslinux configuration files with new kernel version."""
-    success = True
-
-    # Check filesystem type for informational purposes
     fs_type = _get_filesystem_type(minios_path)
     print(f"Updating bootloader configs on filesystem type: {fs_type}")
-
-    # Update Syslinux configurations
-    syslinux_dir = os.path.join(minios_path, "boot", "syslinux")
-    syslinux_cfg = os.path.join(syslinux_dir, "syslinux.cfg")
-
-    # Update main syslinux.cfg
-    if os.path.exists(syslinux_cfg):
-        success &= _update_syslinux_config(syslinux_cfg, kernel_version)
-
-    # Update all localized configurations in lang/ directory
-    lang_dir = os.path.join(syslinux_dir, "lang")
-    if os.path.exists(lang_dir):
-        for lang_file in os.listdir(lang_dir):
-            if lang_file.endswith('.cfg'):
-                lang_cfg_path = os.path.join(lang_dir, lang_file)
-                success &= _update_syslinux_config(lang_cfg_path, kernel_version)
-                print(f"Updated SYSLINUX language config: {lang_file}")
-
-    # Update GRUB configuration - check for all config files
-    grub_dir = os.path.join(minios_path, "boot", "grub")
-    config_files = [
-        os.path.join(grub_dir, "main.cfg"),
-        os.path.join(grub_dir, "grub.template.cfg"),
-        os.path.join(grub_dir, "grub.cfg")
-    ]
-
-    grub_updated = False
-    for config_file in config_files:
-        if os.path.exists(config_file):
-            if _update_grub_config(config_file, kernel_version):
-                grub_updated = True
-            else:
-                success = False
-
-    if not grub_updated:
-        print("W: No GRUB configuration files found or updated")
-
-    return success
-
-def _update_syslinux_config(config_file: str, kernel_version: str) -> bool:
-    """Update Syslinux configuration file with new kernel paths."""
-    try:
-        # Check if file exists
-        if not os.path.exists(config_file):
-            print(f"Syslinux config file not found: {config_file}")
-            return True  # Not an error if file doesn't exist
-
-        # Try to make file writable (may not work on non-POSIX filesystems)
-        try:
-            os.chmod(config_file, 0o644)
-        except (OSError, NotImplementedError):
-            pass  # Filesystem doesn't support chmod
-
-        # Read the file as binary to detect encoding
-        with open(config_file, 'rb') as f:
-            raw_data = f.read()
-
-        # Try to detect encoding
-        content = None
-        detected_encoding = None
-        for encoding in ['utf-8', 'cp866', 'iso-8859-1']:
-            try:
-                content = raw_data.decode(encoding)
-                detected_encoding = encoding
-                break
-            except UnicodeDecodeError:
-                continue
-
-        if content is None:
-            # Fallback to latin-1 if all else fails
-            detected_encoding = 'latin-1'
-            content = raw_data.decode(detected_encoding)
-
-        # Replace kernel and initrd paths in all KERNEL and APPEND lines
-        import re
-
-        # Pattern to match kernel paths
-        kernel_pattern = r'(KERNEL\s+/minios/boot/)vmlinuz-[^\s]+'
-        initrd_pattern = r'(initrd=/minios/boot/)initrfs-[^\s]+'
-
-        # Replace with new kernel version
-        new_content = re.sub(kernel_pattern, f'\\1vmlinuz-{kernel_version}', content)
-        new_content = re.sub(initrd_pattern, f'\\1initrfs-{kernel_version}.img', new_content)
-
-        # Write back if changed
-        if new_content != content:
-            with open(config_file, 'w', encoding=detected_encoding) as f:
-                f.write(new_content)
-            print(f"Updated Syslinux configuration: {config_file} (encoding: {detected_encoding})")
-
-        return True
-
-    except Exception as e:
-        print(f"Warning: Failed to update Syslinux config {config_file}: {e}")
-        return False
-
-def _update_grub_config(config_file: str, kernel_version: str) -> bool:
-    """Update GRUB configuration file with new kernel paths.
-
-    Supports main.cfg, grub.multilang.cfg, grub.template.cfg, and grub.cfg formats.
-    """
-    try:
-        # Check if file exists
-        if not os.path.exists(config_file):
-            print(f"GRUB config file not found: {config_file}")
-            return True  # Not an error if file doesn't exist
-
-        # Try to make file writable (may not work on non-POSIX filesystems)
-        try:
-            os.chmod(config_file, 0o644)
-        except (OSError, NotImplementedError):
-            pass  # Filesystem doesn't support chmod
-
-        # Read current configuration
-        with open(config_file, 'r') as f:
-            content = f.read()
-
-        # Replace kernel and initrd paths
-        import re
-
-        # Pattern to match kernel paths in variable definitions
-        linux_image_pattern = r'(set linux_image=")([^"]+)"'
-        initrd_img_pattern = r'(set initrd_img=")([^"]+)"'
-
-        # Pattern to match kernel paths in menuentry lines
-        vmlinuz_pattern = r'(/minios/boot/)vmlinuz-[^\s]+'
-        initrfs_pattern = r'(/minios/boot/)initrfs-[^\s]+'
-        search_pattern = r'(search --set -f /minios/boot/)vmlinuz-[^\s]+'
-
-        # Replace with new kernel version
-        new_content = re.sub(linux_image_pattern, f'\\1/minios/boot/vmlinuz-{kernel_version}"', content)
-        new_content = re.sub(initrd_img_pattern, f'\\1/minios/boot/initrfs-{kernel_version}.img"', new_content)
-        new_content = re.sub(vmlinuz_pattern, f'\\1vmlinuz-{kernel_version}', new_content)
-        new_content = re.sub(initrfs_pattern, f'\\1initrfs-{kernel_version}.img', new_content)
-        new_content = re.sub(search_pattern, f'\\1vmlinuz-{kernel_version}', new_content)
-
-        # Write back if changed
-        if new_content != content:
-            with open(config_file, 'w') as f:
-                f.write(new_content)
-            print(f"Updated GRUB configuration: {config_file}")
-
-        return True
-
-    except Exception as e:
-        print(f"Warning: Failed to update GRUB config {config_file}: {e}")
-        return False
+    return _update_bootloader_configs_impl(minios_path, kernel_version)
 
 def deactivate_current_kernel(minios_path: str) -> bool:
     """Moves or copies the currently active kernel files to the kernel repository."""

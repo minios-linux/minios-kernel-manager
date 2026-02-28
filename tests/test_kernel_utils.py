@@ -7,6 +7,7 @@ Tests for kernel_utils module.
 import sys
 import os
 import pytest
+import tempfile
 from unittest.mock import patch, MagicMock
 
 # Add lib directory to path
@@ -114,6 +115,73 @@ class TestGetRepositoryKernels:
         with patch('subprocess.run', side_effect=subprocess.CalledProcessError(1, 'apt-cache')):
             packages = get_repository_kernels()
             assert packages == []
+
+
+class TestResolveKernelDependencies:
+    """Tests for resolve_kernel_dependencies function."""
+
+    def test_ubuntu_split_kernel_dependencies(self):
+        """Extract linux-modules* dependencies from apt-cache depends output."""
+        from kernel_utils import resolve_kernel_dependencies
+
+        apt_depends_output = '''linux-image-6.8.0-60-generic
+  Depends: kmod
+  Depends: linux-base
+  Depends: linux-modules-6.8.0-60-generic
+  Depends: linux-modules-extra-6.8.0-60-generic
+  Depends: initramfs-tools | linux-initramfs-tool
+'''
+
+        with patch('subprocess.run', return_value=MagicMock(stdout=apt_depends_output, returncode=0)):
+            deps = resolve_kernel_dependencies('linux-image-6.8.0-60-generic')
+
+        assert 'linux-modules-6.8.0-60-generic' in deps
+        assert 'linux-modules-extra-6.8.0-60-generic' in deps
+        assert 'kmod' not in deps
+
+    def test_debian_monolithic_kernel_dependencies(self):
+        """Return empty list when no linux-modules* dependencies are present."""
+        from kernel_utils import resolve_kernel_dependencies
+
+        apt_depends_output = '''linux-image-6.1.0-18-amd64
+  Depends: kmod
+  Depends: linux-base
+  Depends: initramfs-tools | linux-initramfs-tool
+'''
+
+        with patch('subprocess.run', return_value=MagicMock(stdout=apt_depends_output, returncode=0)):
+            deps = resolve_kernel_dependencies('linux-image-6.1.0-18-amd64')
+
+        assert deps == []
+
+
+class TestProcessManualPackages:
+    """Tests for process_manual_packages function."""
+
+    def test_single_package_without_modules_raises_clear_error(self):
+        """Single .deb without modules should ask for linux-modules packages."""
+        from kernel_utils import process_manual_packages
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            deb_path = os.path.join(temp_dir, 'linux-image-6.8.0-60-generic_1_amd64.deb')
+            open(deb_path, 'w').close()
+            real_exists = os.path.exists
+
+            def exists_side_effect(path):
+                if path in (deb_path, temp_dir):
+                    return True
+                if path.endswith('/boot') or path.endswith('/usr/boot'):
+                    return False
+                if path.endswith('/lib/modules') or path.endswith('/usr/lib/modules'):
+                    return False
+                return real_exists(path)
+
+            with patch('subprocess.run', return_value=MagicMock(returncode=0)), \
+                 patch('os.path.exists', side_effect=exists_side_effect):
+                with pytest.raises(RuntimeError) as exc:
+                    process_manual_packages([deb_path], temp_dir)
+
+            assert 'linux-modules' in str(exc.value)
 
 
 class TestParsePackageInfo:
@@ -246,13 +314,13 @@ class TestLocateKernelModules:
         
         with patch('os.path.exists', return_value=True):
             result = locate_kernel_modules('6.1.0-18-amd64')
-            assert '6.1.0-18-amd64' in result
+            assert '/lib/modules' in result or '/usr/lib/modules' in result
 
     def test_module_not_found(self):
         """Test handling of missing modules."""
+        import pytest
         from kernel_utils import locate_kernel_modules
         
         with patch('os.path.exists', return_value=False):
-            result = locate_kernel_modules('nonexistent-kernel')
-            # Should return empty string or raise
-            assert result == '' or result is None
+            with pytest.raises(RuntimeError):
+                locate_kernel_modules('nonexistent-kernel')

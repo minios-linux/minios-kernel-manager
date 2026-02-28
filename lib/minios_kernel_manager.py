@@ -173,7 +173,11 @@ def package_kernel_cli(source_type, source_path, output_dir, squashfs_comp="zstd
         if source_type == 'repo':
             cmd_args.extend(['--repo', source_path])
         else:  # deb
-            cmd_args.extend(['--deb', source_path])
+            if isinstance(source_path, list):
+                deb_files = [str(path) for path in source_path if path]
+                cmd_args.extend(['--deb'] + deb_files)
+            else:
+                cmd_args.extend(['--deb', source_path])
         
         # Use pkexec to execute the script
         result = run_minios_kernel(cmd_args)
@@ -314,6 +318,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         self.set_icon_name(ICON_WINDOW)
 
         self.selected_kernel = None
+        self.selected_deb_files = []
         self.kernel_source = "manual"
         self.sqfs_compression = "zstd"
         self.is_building = False
@@ -640,11 +645,17 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         # Check if build button should be enabled
         if hasattr(self, 'build_button') and self.build_button is not None:
             selected_kernel = getattr(self, 'selected_kernel', None)
+            selected_deb_files = getattr(self, 'selected_deb_files', [])
             minios_path = getattr(self, 'minios_path', None)
             minios_writable = getattr(self, 'minios_writable', False)
             is_building = getattr(self, 'is_building', False)
+
+            if self.repo_radio.get_active():
+                has_selection = bool(selected_kernel)
+            else:
+                has_selection = bool(selected_deb_files)
             
-            can_build = (bool(selected_kernel) and 
+            can_build = (has_selection and
                         bool(minios_path) and 
                         bool(minios_writable) and 
                         not bool(is_building))
@@ -655,7 +666,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
                 tooltip = _("MiniOS directory not found")
             elif not minios_writable:
                 tooltip = _("MiniOS directory is read-only")
-            elif not selected_kernel:
+            elif not has_selection:
                 tooltip = _("Please select a kernel first")
             elif is_building:
                 tooltip = _("Build in progress...")
@@ -919,6 +930,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             parent=self,
             action=Gtk.FileChooserAction.OPEN
         )
+        dialog.set_select_multiple(True)
         
         cancel_button = dialog.add_button(_("Cancel"), Gtk.ResponseType.CANCEL)
         open_button = dialog.add_button(_("Open"), Gtk.ResponseType.OK)
@@ -948,28 +960,58 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         response = dialog.run()
         
         if response == Gtk.ResponseType.OK:
-            selected_file = dialog.get_filename()
-            if selected_file:
-                self.selected_kernel = selected_file
-                filename = os.path.basename(selected_file)
-                self.selected_file_label.set_text(filename)
+            selected_files = dialog.get_filenames()
+            if selected_files:
+                selected_files = sorted(selected_files)
+                self.selected_deb_files = selected_files
+                self.selected_kernel = selected_files[0]
+
+                if len(selected_files) == 1:
+                    self.selected_file_label.set_text(os.path.basename(selected_files[0]))
+                else:
+                    self.selected_file_label.set_text(_("{} files selected").format(len(selected_files)))
+
                 self._update_buttons_state()  # Use centralized button state update
-                
+
                 # Show package information
-                self._show_package_info(selected_file)
+                self._show_package_info(selected_files)
         
         dialog.destroy()
 
-    def _show_package_info(self, package_path):
-        """Show information about selected package"""
+    def _show_package_info(self, package_paths):
+        """Show information about selected package(s)"""
         try:
+            if isinstance(package_paths, str):
+                package_paths = [package_paths]
+
+            if not package_paths:
+                self.package_info_box.hide()
+                return
+
+            total_size = 0
+            for path in package_paths:
+                total_size += os.stat(path).st_size
+
+            info_lines = [
+                f"<b>{_('Files')}:</b> {len(package_paths)}",
+                f"<b>{_('Total size')}:</b> {self._format_file_size(total_size)}",
+            ]
+
+            if len(package_paths) > 1:
+                info_lines.append(f"<b>{_('Selected files')}:</b>")
+                for package_path in package_paths:
+                    info_lines.append(f"• {os.path.basename(package_path)}")
+                self.package_info_label.set_markup('\n'.join(info_lines))
+                self.package_info_box.show_all()
+                return
+
+            package_path = package_paths[0]
             # Get basic file info
             file_stat = os.stat(package_path)
             file_size = file_stat.st_size
             file_size_text = self._format_file_size(file_size)
             
             # Try to get package info using dpkg-deb
-            info_lines = []
             info_lines.append(f"<b>File:</b> {os.path.basename(package_path)}")
             info_lines.append(f"<b>Size:</b> {file_size_text}")
             
@@ -1365,6 +1407,8 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             # Show repository kernel list, hide manual selection
             self.repo_selection_box.show()
             self.manual_selection_box.hide()
+            self.selected_kernel = None
+            self.selected_deb_files = []
             self._show_kernel_loading()
             thread = threading.Thread(target=self._fetch_repository_kernels_threaded)
             thread.daemon = True
@@ -1376,6 +1420,8 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             # Reset file selection
             self.selected_file_label.set_text(_("No file selected"))
             self.selected_kernel = None
+            self.selected_deb_files = []
+            self.package_info_box.hide()
             self._update_buttons_state()  # Use centralized button state update
 
     def _on_kernel_selected(self, listbox, row):
@@ -1396,7 +1442,11 @@ class KernelPackWindow(Gtk.ApplicationWindow):
     def _on_build_clicked(self, button):
         """Start build process"""
         # button parameter is not used
-        if not self.selected_kernel:
+        if self.repo_radio.get_active() and not self.selected_kernel:
+            self._show_error(_("Please select a kernel first"))
+            return
+
+        if self.local_radio.get_active() and not self.selected_deb_files:
             self._show_error(_("Please select a kernel first"))
             return
 
@@ -1430,7 +1480,8 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             if self.kernel_source == 'repository':
                 cmd_args.extend(['--repo', self.selected_kernel])
             else:
-                cmd_args.extend(['--deb', self.selected_kernel])
+                deb_files = [str(path) for path in self.selected_deb_files if path]
+                cmd_args.extend(['--deb'] + deb_files)
             
             # The kernel version is not known before packaging, so we pass a placeholder
             # The CLI tool will determine the actual version
@@ -1732,6 +1783,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         """Save current UI state before build"""
         self.saved_state = {
             'selected_kernel': self.selected_kernel,
+            'selected_deb_files': list(getattr(self, 'selected_deb_files', [])),
             'kernel_source': self.kernel_source,
             'sqfs_compression': self.sqfs_compression,
             'selected_file_path': getattr(self, 'selected_file_path', None)
@@ -1742,6 +1794,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         if hasattr(self, 'saved_state') and self.saved_state:
             # Restore data
             self.selected_kernel = self.saved_state['selected_kernel']
+            self.selected_deb_files = self.saved_state.get('selected_deb_files', [])
             self.kernel_source = self.saved_state['kernel_source']
             self.sqfs_compression = self.saved_state['sqfs_compression']
             if self.saved_state['selected_file_path']:
@@ -1762,10 +1815,15 @@ class KernelPackWindow(Gtk.ApplicationWindow):
                     self.repo_radio.set_active(True)
                     
             # Restore selected file label
-            if hasattr(self, 'selected_file_label') and self.saved_state['selected_file_path']:
-                import os
-                filename = os.path.basename(self.saved_state['selected_file_path'])
-                self.selected_file_label.set_text(filename)
+            if hasattr(self, 'selected_file_label'):
+                if self.selected_deb_files:
+                    if len(self.selected_deb_files) == 1:
+                        self.selected_file_label.set_text(os.path.basename(self.selected_deb_files[0]))
+                    else:
+                        self.selected_file_label.set_text(_("{} files selected").format(len(self.selected_deb_files)))
+                elif self.saved_state['selected_file_path']:
+                    filename = os.path.basename(self.saved_state['selected_file_path'])
+                    self.selected_file_label.set_text(filename)
 
     def _show_back_button(self):
         """Replace cancel button with back button after cancellation"""
@@ -1936,8 +1994,6 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             buttons=Gtk.ButtonsType.OK,
             text=_("Packaging Complete")
         )
-        
-        kernel_version = self.selected_kernel or "unknown"
         
         instructions = (
             _("Kernel packaging completed successfully!") + "\n\n" +

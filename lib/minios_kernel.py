@@ -64,22 +64,24 @@ atexit.register(cleanup_temp_dir)  # Normal exit cleanup
 try:
     # Try relative imports first (when imported as module)
     from .kernel_utils import (
-        download_kernel_package, process_manual_package, prepare_temp_modules, cleanup_temp_modules
+        download_kernel_package, process_manual_packages, prepare_temp_modules,
+        cleanup_temp_modules, get_last_kernel_versions
     )
     from .build_utils import create_squashfs_image, generate_initramfs, copy_vmlinuz
     from .minios_utils import (
         find_minios_directory, activate_kernel, list_all_kernels, get_active_kernel,
-        get_temp_dir_with_space_check
+        get_temp_dir_with_space_check, is_kernel_currently_running
     )
 except ImportError:
     # Fall back to absolute imports (when run as main script)
     from kernel_utils import (
-        download_kernel_package, process_manual_package, prepare_temp_modules, cleanup_temp_modules
+        download_kernel_package, process_manual_packages, prepare_temp_modules,
+        cleanup_temp_modules, get_last_kernel_versions
     )
     from build_utils import create_squashfs_image, generate_initramfs, copy_vmlinuz
     from minios_utils import (
         find_minios_directory, activate_kernel, list_all_kernels, get_active_kernel,
-        get_temp_dir_with_space_check
+        get_temp_dir_with_space_check, is_kernel_currently_running
     )
 
 def activity_indicator(stop_event, message):
@@ -134,8 +136,8 @@ def package_kernel(args):
             progress_print(10, _("Downloading kernel package {}").format(args.repo))
             kernel_version = download_kernel_package(args.repo, temp_dir, args.force_update)
         else: # args.deb
-            progress_print(10, _("Processing manual package {}").format(args.deb))
-            kernel_version = process_manual_package(args.deb, temp_dir)
+            progress_print(10, _("Processing manual package(s)"))
+            kernel_version = process_manual_packages(args.deb, temp_dir)
 
         progress_print(30, _("Download completed"))
         progress_print(35, _("Extracting package"))
@@ -156,9 +158,7 @@ def package_kernel(args):
 
         # Get the actual kernel version for system operations (modules, initramfs)
         # This was determined during the download/extraction process
-        original_kernel_version = None
-        if hasattr(download_kernel_package, '_versions'):
-            original_kernel_version = download_kernel_package._versions.get('actual_version')
+        original_kernel_version = get_last_kernel_versions().get('actual_version')
 
         if not original_kernel_version and temp_dir:
             # Fallback: find the actual kernel version from vmlinuz or modules directory
@@ -258,7 +258,7 @@ def list_kernels_cmd(args):
             kernels_json.append({
                 "version": kernel,
                 "is_active": is_active,
-                "is_running": False,
+                "is_running": is_kernel_currently_running(kernel),
                 "status": "active" if is_active else "available"
             })
 
@@ -385,7 +385,7 @@ def info_kernel_cmd(args):
         info = {
             "kernel_version": target_kernel,
             "is_active": target_kernel == current_kernel,
-            "is_running": False,
+            "is_running": is_kernel_currently_running(target_kernel),
             "minios_path": minios_path,
             "available_kernels": available_kernels,
             "active_kernel": current_kernel
@@ -539,7 +539,7 @@ def main():
     package_parser = subparsers.add_parser('package', help=_('Package a kernel'), parents=[parent_parser])
     source_group = package_parser.add_mutually_exclusive_group(required=True)
     source_group.add_argument("--repo", help=_("Name of the kernel package in the repository"))
-    source_group.add_argument("--deb", help=_("Path to the kernel .deb package"))
+    source_group.add_argument("--deb", nargs='+', help=_("Path(s) to kernel .deb package(s)"))
     package_parser.add_argument("-o", "--output", required=True, help=_("Directory to save the packaged kernel files"))
     package_parser.add_argument("--sqfs-comp", default="zstd", help=_("Compression method for SquashFS"))
     package_parser.add_argument("--temp-dir", help=_("Custom temporary directory (must have at least 1024MB free space)"))

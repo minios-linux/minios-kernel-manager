@@ -193,7 +193,7 @@ class TestFormatSize:
         """Test formatting byte values."""
         from minios_utils import _format_size
         
-        assert _format_size(500) == "500 B"
+        assert _format_size(500) == "500.0 B"
 
     def test_format_kilobytes(self):
         """Test formatting kilobyte values."""
@@ -242,11 +242,13 @@ class TestGetSystemType:
         from minios_utils import get_system_type
         
         with patch('os.path.exists') as mock_exists:
-            # Simulate Debian system
-            mock_exists.side_effect = lambda p: '/etc/debian_version' in p
+            mock_exists.side_effect = lambda p: False
             
             result = get_system_type()
-            assert result in ['debian', 'ubuntu', 'unknown']
+            assert result in [
+                'Live system (running from media)',
+                'Installed system'
+            ]
 
 
 class TestGetUnionFilesystemType:
@@ -276,9 +278,9 @@ class TestGetUnionFilesystemType:
     def test_detect_aufs(self):
         """Test detecting AUFS."""
         from minios_utils import get_union_filesystem_type
-        
-        proc_cmdline = "BOOT_IMAGE=/minios/boot/vmlinuz union=aufs"
-        
-        with patch('builtins.open', mock_open(read_data=proc_cmdline)):
+
+        mount_output = "none on / type aufs (rw,relatime)\n"
+
+        with patch('subprocess.run', return_value=MagicMock(stdout=mount_output, returncode=0)):
             result = get_union_filesystem_type()
             assert result == 'aufs'

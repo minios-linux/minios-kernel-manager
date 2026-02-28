@@ -1,3 +1,18 @@
+minios-kernel-manager (1.1.0) unstable; urgency=medium
+
+  * Fix CLI JSON output to report real running kernel state in `list` and
+    `info` commands.
+  * Add repository dependency resolution for split kernel packages using
+    `apt-cache depends` and automatically include `linux-modules*` packages.
+  * Add manual packaging support for multiple .deb files and return a clear
+    error when a single selected package does not contain kernel modules.
+  * Update GUI manual package picker to support selecting multiple .deb files.
+  * Consolidate bootloader update flow by using bootloader_utils from
+    minios_utils and preserve SYSLINUX lang/encoding handling.
+  * Extend tests for dependency resolution and multi-package manual mode.
+
+ -- crims0n <crims0n@minios.dev>  Sat, 28 Feb 2026 23:55:00 +0300
+
 minios-kernel-manager (1.0.12) unstable; urgency=medium
 
   * Fix Python 3.6 SyntaxError in build_utils by removing duplicate

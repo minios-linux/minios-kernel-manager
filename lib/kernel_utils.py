@@ -10,13 +10,25 @@ import glob
 import subprocess
 import tempfile
 import shutil
+import re
 import gettext
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 # Initialize gettext
 gettext.bindtextdomain('minios-kernel-manager', '/usr/share/locale')
 gettext.textdomain('minios-kernel-manager')
 _ = gettext.gettext
+
+
+LAST_KERNEL_VERSIONS: Dict[str, Optional[str]] = {
+    'display_version': None,
+    'actual_version': None,
+}
+
+
+def get_last_kernel_versions() -> Dict[str, Optional[str]]:
+    """Return versions detected during the latest package processing."""
+    return dict(LAST_KERNEL_VERSIONS)
 
 
 def get_available_kernels() -> List[str]:
@@ -120,11 +132,12 @@ def _parse_package_info(apt_show_output: str, package_name: str, description: st
 
 def _format_size(size_bytes: int) -> str:
     """Format file size in human readable format"""
+    size_value = float(size_bytes)
     for unit in ['B', 'KB', 'MB', 'GB']:
-        if size_bytes < 1024.0:
-            return f"{size_bytes:.1f} {unit}"
-        size_bytes /= 1024.0
-    return f"{size_bytes:.1f} TB"
+        if size_value < 1024.0:
+            return f"{size_value:.1f} {unit}"
+        size_value /= 1024.0
+    return f"{size_value:.1f} TB"
 
 
 def check_package_cache(force_update: bool = False) -> Tuple[bool, str]:
@@ -184,55 +197,186 @@ def check_package_cache(force_update: bool = False) -> Tuple[bool, str]:
     return True, ""
 
 
-def process_manual_package(package_path: str, temp_dir: str) -> str:
-    """Process manually selected .deb package, return kernel version"""
+def _extract_dep_package(dep_line: str) -> Optional[str]:
+    """Extract package name from apt-cache depends output line."""
+    match = re.search(r'^\s*Depends:\s*(\S+)', dep_line)
+    if not match:
+        return None
+    pkg = match.group(1).strip()
+    if pkg.startswith('<') and pkg.endswith('>'):
+        return None
+    return pkg
+
+
+def resolve_kernel_dependencies(package_name: str) -> List[str]:
+    """Resolve additional kernel module packages needed for packaging.
+
+    Returns linux-modules* dependencies from apt metadata. On Debian this is
+    usually an empty list; on Ubuntu this includes linux-modules and sometimes
+    linux-modules-extra packages.
+    """
+    dependencies: List[str] = []
+
     try:
-        import re
+        env = os.environ.copy()
+        env['LC_ALL'] = 'C'
+        env['LANG'] = 'C'
+        env['LANGUAGE'] = 'C'
+        result = subprocess.run(
+            ['apt-cache', 'depends', package_name],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            check=True,
+            env=env,
+        )
+    except subprocess.CalledProcessError:
+        return dependencies
 
-        # Extract package using dpkg-deb
-        subprocess.run(['dpkg-deb', '-x', package_path, temp_dir], check=True)
+    for line in result.stdout.splitlines():
+        dep_pkg = _extract_dep_package(line)
+        if not dep_pkg:
+            continue
+        if dep_pkg.startswith('linux-modules-'):
+            if dep_pkg not in dependencies:
+                dependencies.append(dep_pkg)
 
-        # Extract kernel version from filename
-        filename = os.path.basename(package_path)
+    return dependencies
 
-        # Try to extract version from filename like linux-image-6.1.0-13-amd64_6.1.55-1_amd64.deb
-        match = re.search(r'linux-image-(.+?)_', filename)
-        if match:
-            return match.group(1)
 
-        # Fallback: look for kernel in extracted files
-        boot_dir = os.path.join(temp_dir, "boot")
-        if os.path.exists(boot_dir):
-            vmlinuz_files = glob.glob(os.path.join(boot_dir, "vmlinuz-*"))
-            if vmlinuz_files:
-                vmlinuz_file = vmlinuz_files[0]
-                basename = os.path.basename(vmlinuz_file)
-                if basename.startswith("vmlinuz-"):
-                    return basename[8:]  # Remove "vmlinuz-"
+def _detect_kernel_version_from_extracted(temp_dir: str) -> Optional[str]:
+    """Detect actual kernel version from extracted package contents."""
+    boot_paths = [
+        os.path.join(temp_dir, 'boot'),
+        os.path.join(temp_dir, 'usr', 'boot'),
+    ]
+    for boot_path in boot_paths:
+        if not os.path.exists(boot_path):
+            continue
+        for item in os.listdir(boot_path):
+            if item.startswith('vmlinuz-'):
+                return item.replace('vmlinuz-', '')
 
-        # Last resort: try to parse package control info
-        subprocess.run(['dpkg-deb', '-e', package_path, os.path.join(temp_dir, 'DEBIAN')], check=True)
-        control_file = os.path.join(temp_dir, 'DEBIAN', 'control')
-        if os.path.exists(control_file):
-            with open(control_file, 'r') as f:
-                control_content = f.read()
-                # Look for Package: linux-image-VERSION
+    modules_base_paths = [
+        os.path.join(temp_dir, 'lib', 'modules'),
+        os.path.join(temp_dir, 'usr', 'lib', 'modules'),
+    ]
+    for modules_base in modules_base_paths:
+        if not os.path.exists(modules_base):
+            continue
+        version_dirs = [
+            d for d in os.listdir(modules_base)
+            if os.path.isdir(os.path.join(modules_base, d))
+        ]
+        if version_dirs:
+            return version_dirs[0]
+
+    return None
+
+
+def _extracted_modules_versions(temp_dir: str) -> List[str]:
+    """Return list of kernel versions found under extracted lib/modules paths."""
+    versions: List[str] = []
+    modules_base_paths = [
+        os.path.join(temp_dir, 'lib', 'modules'),
+        os.path.join(temp_dir, 'usr', 'lib', 'modules'),
+    ]
+
+    for modules_base in modules_base_paths:
+        if not os.path.exists(modules_base):
+            continue
+        for item in os.listdir(modules_base):
+            item_path = os.path.join(modules_base, item)
+            if os.path.isdir(item_path) and item not in versions:
+                versions.append(item)
+
+    return versions
+
+
+def process_manual_packages(package_paths: List[str], temp_dir: str) -> str:
+    """Process manually selected .deb package(s), return display kernel version."""
+    try:
+        if not package_paths:
+            raise RuntimeError('No package files provided')
+
+        for package_path in package_paths:
+            if not os.path.exists(package_path):
+                raise RuntimeError(f'Package not found: {package_path}')
+
+        # Extract all provided packages into a single temp directory
+        for package_path in package_paths:
+            subprocess.run(['dpkg-deb', '-x', package_path, temp_dir], check=True)
+
+        # Determine display version from linux-image package filename when present
+        display_kernel_version = None
+        for package_path in package_paths:
+            filename = os.path.basename(package_path)
+            match = re.search(r'linux-image-(.+?)_', filename)
+            if match:
+                display_kernel_version = match.group(1)
+                break
+
+        actual_kernel_version = _detect_kernel_version_from_extracted(temp_dir)
+        modules_versions = _extracted_modules_versions(temp_dir)
+
+        # If user provided a single package and no modules were extracted,
+        # explain split-package requirement clearly (Ubuntu-style kernels).
+        if len(package_paths) == 1 and not modules_versions:
+            raise RuntimeError(
+                _(
+                    'Kernel modules were not found in the selected package. '
+                    'Please provide all required kernel .deb files, including '
+                    'linux-modules and linux-modules-extra packages.'
+                )
+            )
+
+        if not actual_kernel_version:
+            # Last resort: parse package control info for linux-image package name
+            for package_path in package_paths:
+                subprocess.run(['dpkg-deb', '-e', package_path, os.path.join(temp_dir, 'DEBIAN')], check=True)
+                control_file = os.path.join(temp_dir, 'DEBIAN', 'control')
+                if not os.path.exists(control_file):
+                    continue
+                with open(control_file, 'r') as f:
+                    control_content = f.read()
                 match = re.search(r'Package:\s*linux-image-(.+)', control_content)
                 if match:
-                    return match.group(1)
+                    actual_kernel_version = match.group(1)
+                    if not display_kernel_version:
+                        display_kernel_version = actual_kernel_version
+                    break
 
-        raise RuntimeError("Could not determine kernel version from package")
+        if not actual_kernel_version and not display_kernel_version:
+            raise RuntimeError('Could not determine kernel version from package(s)')
+
+        if not display_kernel_version:
+            display_kernel_version = actual_kernel_version
+
+        if not display_kernel_version:
+            raise RuntimeError('Could not determine kernel display version from package(s)')
+
+        # Store both versions for package_kernel() initramfs generation logic.
+        LAST_KERNEL_VERSIONS['display_version'] = display_kernel_version
+        LAST_KERNEL_VERSIONS['actual_version'] = actual_kernel_version if actual_kernel_version else None
+
+        return str(display_kernel_version)
 
     except subprocess.CalledProcessError as e:
-        raise RuntimeError(f"Failed to process package: {e}")
+        raise RuntimeError(f"Failed to process package(s): {e}")
     except Exception as e:
-        raise RuntimeError(f"Error processing manual package: {e}")
+        raise RuntimeError(f"Error processing manual package(s): {e}")
+
+
+def process_manual_package(package_path: str, temp_dir: str) -> str:
+    """Backward-compatible wrapper for single-file manual package processing."""
+    return process_manual_packages([package_path], temp_dir)
 
 
 def download_kernel_package(package_name: str, temp_dir: str, force_update: bool = False) -> str:
     """Download and extract kernel package, return kernel version"""
-    import time
-    deb_file = None
+    deb_files: List[str] = []
+    dependency_packages: List[str] = []
+    packages_to_download: List[str] = [package_name]
 
     # Check package cache before attempting download
     cache_ok, cache_message = check_package_cache(force_update)
@@ -240,23 +384,34 @@ def download_kernel_package(package_name: str, temp_dir: str, force_update: bool
         raise RuntimeError(cache_message)
 
     try:
-        # Step 1: Download package
-        print(f"I: {_('Downloading {package_name} from repository...').format(package_name=package_name)}", flush=True)
-        result = subprocess.run(['apt-get', 'download', package_name],
-                              cwd=temp_dir, check=True)
+        # Step 1: Resolve split module packages when needed (Ubuntu-style)
+        dependency_packages = resolve_kernel_dependencies(package_name)
+        packages_to_download = [package_name] + dependency_packages
+
+        print(
+            f"I: {_('Downloading packages from repository: {packages}').format(packages=', '.join(packages_to_download))}",
+            flush=True,
+        )
+        subprocess.run(['apt-get', 'download'] + packages_to_download, cwd=temp_dir, check=True)
         print(f"I: {_('Download completed successfully')}", flush=True)
 
     except subprocess.CalledProcessError as e:
         raise RuntimeError(f"Failed to download package '{package_name}' from repository: {e}")
 
     try:
-        # Step 2: Find downloaded .deb file
-        deb_files = glob.glob(os.path.join(temp_dir, f"{package_name}_*.deb"))
-        if not deb_files:
-            raise RuntimeError(f"Downloaded .deb file for '{package_name}' not found in {temp_dir}")
+        # Step 2: Find downloaded .deb files for all resolved packages
+        for pkg in packages_to_download:
+            pkg_debs = glob.glob(os.path.join(temp_dir, f"{pkg}_*.deb"))
+            if not pkg_debs:
+                raise RuntimeError(f"Downloaded .deb file for '{pkg}' not found in {temp_dir}")
+            for deb in pkg_debs:
+                if deb not in deb_files:
+                    deb_files.append(deb)
 
-        deb_file = deb_files[0]
-        print(f"I: {_('Found package file: {filename}').format(filename=os.path.basename(deb_file))}", flush=True)
+        print(
+            f"I: {_('Found package files: {count}').format(count=len(deb_files))}",
+            flush=True,
+        )
 
     except RuntimeError:
         raise
@@ -266,43 +421,19 @@ def download_kernel_package(package_name: str, temp_dir: str, force_update: bool
     try:
         # Step 3: Extract package contents
         print(f"I: {_('Extracting package contents...')}", flush=True)
-        extract_result = subprocess.run(['dpkg-deb', '-x', deb_file, temp_dir],
-                                      check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        for deb_file in deb_files:
+            subprocess.run(
+                ['dpkg-deb', '-x', deb_file, temp_dir],
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+            )
         print(f"I: {_('Package extracted successfully')}", flush=True)
 
-        # Determine actual kernel version from extracted package contents
-        # Priority: vmlinuz filename > modules directory name > package name
-        actual_kernel_version = None
-
-        # Look for vmlinuz file to get the real kernel version
-        boot_paths = [
-            os.path.join(temp_dir, "boot"),
-            os.path.join(temp_dir, "usr", "boot")
-        ]
-
-        for boot_path in boot_paths:
-            if os.path.exists(boot_path):
-                for item in os.listdir(boot_path):
-                    if item.startswith("vmlinuz-"):
-                        actual_kernel_version = item.replace("vmlinuz-", "")
-                        break
-                if actual_kernel_version:
-                    break
-
-        # Fallback: check modules directory
-        if not actual_kernel_version:
-            modules_base_paths = [
-                os.path.join(temp_dir, "lib", "modules"),
-                os.path.join(temp_dir, "usr", "lib", "modules")
-            ]
-
-            for modules_base in modules_base_paths:
-                if os.path.exists(modules_base):
-                    version_dirs = [d for d in os.listdir(modules_base)
-                                  if os.path.isdir(os.path.join(modules_base, d))]
-                    if version_dirs:
-                        actual_kernel_version = version_dirs[0]
-                        break
+        # Determine actual kernel version from extracted package contents.
+        # Priority: vmlinuz filename > modules directory name > package name.
+        actual_kernel_version = _detect_kernel_version_from_extracted(temp_dir)
 
         # Final fallback: use package name
         if not actual_kernel_version:
@@ -312,17 +443,14 @@ def download_kernel_package(package_name: str, temp_dir: str, force_update: bool
         display_kernel_version = package_name.replace('linux-image-', '')
 
         # Store both versions for later use
-        if not hasattr(download_kernel_package, '_versions'):
-            download_kernel_package._versions = {}
-        download_kernel_package._versions = {
-            'display_version': display_kernel_version,
-            'actual_version': actual_kernel_version
-        }
+        LAST_KERNEL_VERSIONS['display_version'] = display_kernel_version
+        LAST_KERNEL_VERSIONS['actual_version'] = actual_kernel_version
 
-        return display_kernel_version
+        return str(display_kernel_version)
 
     except subprocess.CalledProcessError as e:
-        error_msg = f"Failed to extract package '{os.path.basename(deb_file)}'"
+        failed_deb = os.path.basename(deb_files[0]) if deb_files else package_name
+        error_msg = f"Failed to extract package '{failed_deb}'"
         if e.stderr:
             error_msg += f": {e.stderr.strip()}"
         else:
