@@ -510,11 +510,12 @@ def delete_kernel_cmd(args):
 
 def main():
     """Main entry point for the CLI utility."""
-    # Pre-check for --json flag before parsing
+    # Pre-check for flags before parsing
     json_output = '--json' in sys.argv
+    help_requested = any(arg in ('-h', '--help') for arg in sys.argv[1:])
 
     # Check for root privileges
-    if os.geteuid() != 0:
+    if os.geteuid() != 0 and not help_requested:
         error_msg = _("This tool requires root privileges. Please run with sudo or through pkexec.")
         if json_output:
             print(json.dumps({"success": False, "error": error_msg}, ensure_ascii=False), file=sys.stderr)

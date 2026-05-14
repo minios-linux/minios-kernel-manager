@@ -1,3 +1,10 @@
+minios-kernel-manager (1.1.1) unstable; urgency=medium
+
+  * Add help option to CLI and GUI launcher
+  * Update documentation
+
+ -- crims0n <crims0n@minios.dev>  Thu, 14 May 2026 15:36:19 +0300
+
 minios-kernel-manager (1.1.0) unstable; urgency=medium
 
   * Fix CLI JSON output to report real running kernel state in `list` and

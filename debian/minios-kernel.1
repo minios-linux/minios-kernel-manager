@@ -3,6 +3,9 @@
 minios-kernel \- Command-line tool for managing MiniOS kernels
 .SH SYNOPSIS
 .B minios-kernel
+.RI [ --help ]
+.br
+.B minios-kernel
 .RB [ --json ]
 .B list
 .br
@@ -30,6 +33,11 @@ minios-kernel \- Command-line tool for managing MiniOS kernels
 .B minios-kernel
 .RB [ --json ]
 .B status
+.br
+.B minios-kernel
+.RB [ --json ]
+.B delete
+.I kernel-version
 .SH DESCRIPTION
 .B minios-kernel
 is a command-line utility for managing Linux kernels in the MiniOS distribution. Requires root privileges.
@@ -38,6 +46,9 @@ This tool serves as both a standalone CLI utility and the backend for the graphi
 .BR minios-kernel-manager .
 It handles kernel packaging, activation, and provides detailed kernel information.
 .SH OPTIONS
+.TP
+.B -h, --help
+Show the built-in help message and exit.
 .TP
 .B --json
 Output results in JSON format. Can be used with any command.
@@ -57,6 +68,9 @@ Package a kernel from repository or local .deb file.
 .TP
 .B status
 Check MiniOS directory status and write permissions.
+.TP
+.BI delete " kernel-version"
+Delete the specified packaged kernel from the repository.
 .SH PACKAGE OPTIONS
 .TP
 .BI --repo " package-name"
@@ -72,7 +86,10 @@ Directory to save packaged kernel files. Required.
 Compression method for SquashFS image. Default: \fBzstd\fR.
 .TP
 .BI --temp-dir " directory"
-Custom temporary directory (must have at least 600MB free space).
+Custom temporary directory (must have at least 1024MB free space).
+.TP
+.B --force-update
+Force APT package list update before packaging from repository.
 .SH EXAMPLES
 List available kernels:
 .RS
@@ -93,6 +110,11 @@ Package kernel from local .deb file:
 .RS
 .B sudo minios-kernel package --deb kernel.deb -o /tmp/output
 .RE
+.PP
+Delete a packaged kernel:
+.RS
+.B sudo minios-kernel delete 6.12.38+deb13-amd64
+.RE
 .SH JSON OUTPUT
 When using the \fB--json\fR option, commands return structured data:
 .TP
@@ -110,6 +132,9 @@ Returns progress updates during packaging and final success status.
 .TP
 .B status
 Returns MiniOS directory status and filesystem information.
+.TP
+.B delete
+Returns success status and deletion details.
 .SH FILES
 .TP
 .I /run/initramfs/memory/data/minios/

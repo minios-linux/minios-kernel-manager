@@ -6,6 +6,7 @@ Tests for minios_utils module.
 
 import sys
 import os
+import subprocess
 import pytest
 from unittest.mock import patch, MagicMock, mock_open
 
@@ -284,3 +285,40 @@ class TestGetUnionFilesystemType:
         with patch('subprocess.run', return_value=MagicMock(stdout=mount_output, returncode=0)):
             result = get_union_filesystem_type()
             assert result == 'aufs'
+
+
+class TestCliHelp:
+    """Tests for help output."""
+
+    def test_main_help_does_not_require_root(self, capsys):
+        """Test that CLI help is available without root privileges."""
+        from minios_kernel import main
+
+        with patch.object(sys, 'argv', ['minios-kernel', '--help']), \
+             patch('os.geteuid', return_value=1000), \
+             pytest.raises(SystemExit) as exc:
+            main()
+
+        captured = capsys.readouterr()
+
+        assert exc.value.code == 0
+        assert 'usage:' in captured.out
+        assert 'delete' in captured.out
+        assert 'requires root privileges' not in captured.err
+
+    def test_gui_launcher_help(self):
+        """Test that GUI launcher prints a usage message."""
+        launcher = os.path.join(os.path.dirname(__file__), '..', 'bin', 'minios-kernel-manager')
+
+        result = subprocess.run(
+            [launcher, '--help'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=False,
+        )
+
+        assert result.returncode == 0
+        assert 'Usage: minios-kernel-manager' in result.stdout
+        assert 'minios-kernel --help' in result.stdout
+        assert result.stderr == ''
