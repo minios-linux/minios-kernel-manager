@@ -1,3 +1,9 @@
+minios-kernel-manager (1.1.2) unstable; urgency=medium
+
+  * Improve translation coverage and update translations for all languages
+
+ -- crims0n <crims0n@minios.dev>  Thu, 18 Jun 2026 01:58:26 +0300
+
 minios-kernel-manager (1.1.1) unstable; urgency=medium
 
   * Add help option to CLI and GUI launcher
