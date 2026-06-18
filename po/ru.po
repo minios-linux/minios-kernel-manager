@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: minios-kernel-manager 1.0.0\n"
 "Report-Msgid-Bugs-To: support@minios.dev\n"
-"POT-Creation-Date: 2026-06-18 01:55+0300\n"
-"PO-Revision-Date: 2026-06-17 22:56+0000\n"
+"POT-Creation-Date: 2026-06-18 13:28+0300\n"
+"PO-Revision-Date: 2026-06-18 10:28+0000\n"
 "Last-Translator: crims0n <crims0n@minios.dev>\n"
 "Language-Team: none\n"
 "Language: ru\n"
@@ -933,12 +933,12 @@ msgstr "Не удалось проверить место на диске: {}. �
 
 #: share/applications/minios-kernel-manager.desktop:2
 msgid "MiniOS Kernel Manager"
-msgstr "Менеджер ядра MiniOS"
+msgstr "Менеджер ядер MiniOS"
 
 #: share/applications/minios-kernel-manager.desktop:11
 msgid "Manage kernel modules for MiniOS"
-msgstr "Управление модулями ядра для MiniOS"
+msgstr "Управление модулями ядер для MiniOS"
 
 #: share/applications/minios-kernel-manager.desktop:25
 msgid "kernel;modules;squashfs;initramfs;minios;"
-msgstr "kernel;modules;squashfs;initramfs;minios;"
+msgstr "ядро;модули;squashfs;initramfs;minios;"

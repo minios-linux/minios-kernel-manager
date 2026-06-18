@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: minios-kernel-manager 1.0.0\n"
 "Report-Msgid-Bugs-To: support@minios.dev\n"
-"POT-Creation-Date: 2026-06-18 01:55+0300\n"
-"PO-Revision-Date: 2026-06-17 22:56+0000\n"
+"POT-Creation-Date: 2026-06-18 13:28+0300\n"
+"PO-Revision-Date: 2026-06-18 10:28+0000\n"
 "Last-Translator: crims0n <crims0n@minios.dev>\n"
 "Language-Team: none\n"
 "Language: id\n"
@@ -932,12 +932,12 @@ msgstr "Tidak dapat memeriksa ruang disk: {}. Menggunakan direktori sementara de
 
 #: share/applications/minios-kernel-manager.desktop:2
 msgid "MiniOS Kernel Manager"
-msgstr "MiniOS Kernel Manager"
+msgstr "Manajer Kernel MiniOS"
 
 #: share/applications/minios-kernel-manager.desktop:11
 msgid "Manage kernel modules for MiniOS"
-msgstr "Mengelola modul kernel untuk MiniOS"
+msgstr "Kelola modul kernel untuk MiniOS"
 
 #: share/applications/minios-kernel-manager.desktop:25
 msgid "kernel;modules;squashfs;initramfs;minios;"
-msgstr "kernel;modules;squashfs;initramfs;minios;"
+msgstr "kernel;modul;squashfs;initramfs;minios;"

@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: minios-kernel-manager 1.0.0\n"
 "Report-Msgid-Bugs-To: support@minios.dev\n"
-"POT-Creation-Date: 2026-06-18 01:55+0300\n"
-"PO-Revision-Date: 2026-06-17 22:56+0000\n"
+"POT-Creation-Date: 2026-06-18 13:28+0300\n"
+"PO-Revision-Date: 2026-06-18 10:28+0000\n"
 "Last-Translator: crims0n <crims0n@minios.dev>\n"
 "Language-Team: none\n"
 "Language: pt\n"
@@ -933,11 +933,11 @@ msgstr "Não foi possível verificar o espaço em disco: {}. A utilizar a pasta 
 
 #: share/applications/minios-kernel-manager.desktop:2
 msgid "MiniOS Kernel Manager"
-msgstr "Gerenciador de Kernel do MiniOS"
+msgstr "Gerenciador de Kernels MiniOS"
 
 #: share/applications/minios-kernel-manager.desktop:11
 msgid "Manage kernel modules for MiniOS"
-msgstr "Gerencie os módulos do kernel para o MiniOS"
+msgstr "Gerenciar módulos do kernel para MiniOS"
 
 #: share/applications/minios-kernel-manager.desktop:25
 msgid "kernel;modules;squashfs;initramfs;minios;"
