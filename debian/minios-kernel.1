@@ -1,4 +1,4 @@
-.TH MINIOS-KERNEL 1 "August 2025" "MiniOS" "User Commands"
+.TH MINIOS-KERNEL 1 "July 2026" "MiniOS Kernel Manager 1.2.0" "User Commands"
 .SH NAME
 minios-kernel \- Command-line tool for managing MiniOS kernels
 .SH SYNOPSIS
@@ -25,7 +25,7 @@ minios-kernel \- Command-line tool for managing MiniOS kernels
 .RB { --repo
 .I package
 .RB | --deb
-.IR file }
+.IR file... }
 .B -o
 .I output-dir
 .RI [ options ]
@@ -64,7 +64,7 @@ Activate the specified kernel version for the next boot.
 Show information about a kernel. If no version specified, shows current active kernel.
 .TP
 .B package
-Package a kernel from repository or local .deb file.
+Package a kernel from a repository or one or more local .deb files.
 .TP
 .B status
 Check MiniOS directory status and write permissions.
@@ -76,8 +76,9 @@ Delete the specified packaged kernel from the repository.
 .BI --repo " package-name"
 Download and package kernel from APT repository.
 .TP
-.BI --deb " deb-file"
-Package kernel from local .deb file.
+.BI --deb " deb-file..."
+Package a kernel from one or more local .deb files. Split kernels require the
+matching image and modules packages.
 .TP
 .BI "-o, --output " output-dir
 Directory to save packaged kernel files. Required.
@@ -89,7 +90,33 @@ Compression method for SquashFS image. Default: \fBzstd\fR.
 Custom temporary directory (must have at least 1024MB free space).
 .TP
 .B --force-update
-Force APT package list update before packaging from repository.
+Refresh APT lists before repository packaging. Without this option, lists older
+than 24 hours are rejected.
+.SH PACKAGING
+Repository mode resolves matching linux-modules packages automatically. Local
+mode accepts multiple packages for split kernels. The output includes the
+kernel image, initramfs, and SquashFS module; selected dpkg metadata is retained
+inside the SquashFS at
+.IR /usr/share/minios/kernel-dpkg/ .
+.PP
+When a writable MiniOS root is detected and the output is not already the
+repository directory, the completed package is staged atomically into
+.IR <MiniOS-root>/kernels/<version> .
+.PP
+Packaging requires a MiniOS live runtime with mkdracut or mkinitrfs under
+.IR /run/initramfs ,
+plus mksquashfs, depmod, and dpkg-deb. Repository mode also requires APT.
+.SH ENCRYPTED PERSISTENCE
+When the running initrd advertises encrypted persistence, the replacement
+kernel must provide dm-crypt support. The generated initramfs is checked for
+cryptsetup, dm-crypt.ko, and etc/minios-initramfs-crypt. Packaging fails when
+those safeguards cannot be preserved.
+.SH ACTIVATION
+Activation requires a complete repository entry containing the SquashFS,
+kernel image, and initramfs. Boot files and bootloader configuration are updated
+atomically and restored if activation fails. GRUB configuration is required;
+SYSLINUX configuration is updated when present. Activation affects the next
+boot and does not reboot the machine.
 .SH EXAMPLES
 List available kernels:
 .RS
@@ -138,19 +165,25 @@ Returns success status and deletion details.
 .SH FILES
 .TP
 .I /run/initramfs/memory/data/minios/
-Default MiniOS directory containing kernel files and configuration.
+Preferred MiniOS root in the standard runtime.
 .TP
-.I /minios/kernels/{version}/
+.I /lib/live/mount/medium/minios/
+Fallback MiniOS root on a mounted live medium.
+.TP
+.I <MiniOS-root>/kernels/<version>/
 Repository for inactive packaged kernels.
 .TP
-.I /minios/boot/vmlinuz-*
+.I <MiniOS-root>/boot/vmlinuz-*
 Active kernel image.
 .TP
-.I /minios/boot/initrfs-*.img
+.I <MiniOS-root>/boot/initrfs-*.img
 Active initramfs image.
 .TP
-.I /minios/01-kernel-*.sb
+.I <MiniOS-root>/01-kernel-*.sb
 Active SquashFS kernel modules.
+.TP
+.I <MiniOS-root>/boot/active-kernel
+Active version marker.
 .SH AUTHOR
 crims0n <crims0n@minios.dev>
 .SH "SEE ALSO"

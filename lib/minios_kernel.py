@@ -203,8 +203,9 @@ def package_kernel(args):
 
             # Install to repository
             if all(os.path.exists(f) for f in [vmlinuz_file, initramfs_file, squashfs_file]):
-                package_kernel_to_repository(minios_path, kernel_version,
-                                           squashfs_file, vmlinuz_file, initramfs_file)
+                if not package_kernel_to_repository(minios_path, kernel_version,
+                                                    squashfs_file, vmlinuz_file, initramfs_file):
+                    raise RuntimeError("Failed to install packaged kernel to repository")
         else:
             progress_print(95, _("Finalizing installation"))
 
@@ -232,9 +233,11 @@ def package_kernel(args):
             print(json.dumps(error_data), file=sys.stderr, flush=True)
         else:
             print("E: {}".format(e), file=sys.stderr, flush=True)
+        cleanup_temp_dir()
         sys.exit(1)
     finally:
-        # Clear global reference (but don't cleanup - only signal handlers should cleanup)
+        # cleanup_temp_dir is idempotent and also covers ordinary failures.
+        cleanup_temp_dir()
         _temp_dir = None
 
 def list_kernels_cmd(args):

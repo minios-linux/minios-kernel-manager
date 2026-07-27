@@ -11,6 +11,7 @@ import subprocess
 import glob
 import tempfile
 import gettext
+import stat
 from typing import Optional, List, Tuple
 
 try:
@@ -44,13 +45,13 @@ def find_minios_directory() -> Optional[str]:
 
     # Try to find mounted filesystems with minios folder
     try:
-        result = subprocess.run(['findmnt', '-t', 'vfat,ext4,ext2,btrfs,ntfs,ntfs3,exfat'],
-                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-        for line in result.stdout.split('\n')[1:]:  # Skip header
-            if line.strip():
-                parts = line.split()
-                if len(parts) >= 2:
-                    mount_point = parts[1]
+        result = subprocess.run(['findmnt', '--noheadings', '--output', 'TARGET', '--raw',
+                                 '-t', 'vfat,ext4,ext2,btrfs,ntfs,ntfs3,exfat'],
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        if result.returncode == 0:
+            for mount_point in result.stdout.splitlines():
+                mount_point = mount_point.strip()
+                if mount_point:
                     minios_path = os.path.join(mount_point, 'minios')
                     if _is_valid_minios_directory(minios_path):
                         return minios_path
@@ -86,29 +87,118 @@ def get_kernel_repository_path(minios_path: str) -> str:
     """Get the path to the kernel repository."""
     return os.path.join(minios_path, "kernels")
 
+
+def _trusted_directory(path: str) -> bool:
+    """Return whether a directory and each existing parent are non-symlinks."""
+    path = os.path.abspath(path)
+    current = os.path.sep
+    for component in path.strip(os.path.sep).split(os.path.sep):
+        if not component:
+            continue
+        current = os.path.join(current, component)
+        try:
+            mode = os.lstat(current).st_mode
+        except OSError:
+            return False
+        if stat.S_ISLNK(mode) or not stat.S_ISDIR(mode):
+            return False
+    return True
+
+
+def _require_trusted_minios_root(minios_path: str) -> None:
+    if not _trusted_directory(minios_path):
+        raise ValueError('MiniOS root or one of its parents is symlinked or untrusted')
+    boot = os.path.join(minios_path, 'boot')
+    if not _trusted_directory(boot):
+        raise ValueError('MiniOS boot root is symlinked or untrusted')
+
+
+def _regular_file(path: str) -> bool:
+    try:
+        return stat.S_ISREG(os.lstat(path).st_mode)
+    except OSError:
+        return False
+
+
+def _atomic_write(path: str, content) -> None:
+    """Replace a regular file atomically while preserving its mode."""
+    parent = os.path.dirname(path)
+    if not _trusted_directory(parent):
+        raise RuntimeError('Untrusted destination directory')
+    old_mode = 0o644
+    if os.path.lexists(path):
+        if not _regular_file(path):
+            raise RuntimeError('Refusing to write a non-regular file')
+        old_mode = stat.S_IMODE(os.lstat(path).st_mode)
+    fd, temporary = tempfile.mkstemp(prefix='.minios-kernel-', dir=parent)
+    try:
+        os.fchmod(fd, old_mode)
+        binary = isinstance(content, bytes)
+        if binary:
+            fh = os.fdopen(fd, 'wb')
+        else:
+            fh = os.fdopen(fd, 'w', encoding='utf-8')
+        with fh:
+            fh.write(content)
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.replace(temporary, path)
+    except Exception:
+        try:
+            os.unlink(temporary)
+        except OSError:
+            pass
+        raise
+
+def _kernel_repository_path(minios_path: str, kernel_version: str, resolve: bool = True) -> str:
+    """Return a repository path only for a single, confined directory name."""
+    if not kernel_version or os.path.basename(kernel_version) != kernel_version or kernel_version in ('.', '..'):
+        raise ValueError("Invalid kernel version")
+    _require_trusted_minios_root(minios_path)
+    repository = get_kernel_repository_path(minios_path)
+    if os.path.lexists(repository) and not _trusted_directory(repository):
+        raise ValueError('Kernel repository is symlinked or untrusted')
+    candidate = os.path.join(repository, kernel_version)
+    if resolve:
+        candidate = os.path.realpath(candidate)
+    if os.path.commonpath((repository, candidate)) != repository:
+        raise ValueError("Kernel path escapes repository")
+    original = os.path.join(repository, kernel_version)
+    if os.path.lexists(original) and os.path.islink(original):
+        raise ValueError("Kernel repository entry is a symlink")
+    return candidate
+
 def get_kernel_path(minios_path: str, kernel_version: str) -> str:
     """Get the path to a specific kernel version in the repository."""
-    return os.path.join(get_kernel_repository_path(minios_path), kernel_version)
+    return _kernel_repository_path(minios_path, kernel_version)
 
 def package_kernel_to_repository(minios_path: str, kernel_version: str,
                                  squashfs_file: str, vmlinuz_file: str, initramfs_file: str) -> bool:
     """Packages a kernel and places it in the inactive kernel repository."""
-    kernel_repo_path = get_kernel_repository_path(minios_path)
-    kernel_version_path = get_kernel_path(minios_path, kernel_version)
-
     try:
-        os.makedirs(kernel_version_path, exist_ok=True)
+        kernel_repo_path = get_kernel_repository_path(minios_path)
+        kernel_version_path = _kernel_repository_path(minios_path, kernel_version, resolve=False)
+        _require_trusted_minios_root(minios_path)
+        if not os.path.exists(kernel_repo_path):
+            os.mkdir(kernel_repo_path)
+        if not _trusted_directory(kernel_repo_path):
+            raise RuntimeError('Kernel repository is symlinked or untrusted')
+        if os.path.lexists(kernel_version_path):
+            raise RuntimeError(f"Kernel {kernel_version} already exists in repository")
 
-        shutil.copy2(squashfs_file, os.path.join(kernel_version_path, os.path.basename(squashfs_file)))
-        shutil.copy2(vmlinuz_file, os.path.join(kernel_version_path, os.path.basename(vmlinuz_file)))
-        shutil.copy2(initramfs_file, os.path.join(kernel_version_path, os.path.basename(initramfs_file)))
+        staging_path = tempfile.mkdtemp(prefix='.kernel-copy-', dir=kernel_repo_path)
+        try:
+            shutil.copy2(squashfs_file, os.path.join(staging_path, os.path.basename(squashfs_file)))
+            shutil.copy2(vmlinuz_file, os.path.join(staging_path, os.path.basename(vmlinuz_file)))
+            shutil.copy2(initramfs_file, os.path.join(staging_path, os.path.basename(initramfs_file)))
+            os.rename(staging_path, kernel_version_path)
+        except Exception:
+            shutil.rmtree(staging_path, ignore_errors=True)
+            raise
 
         return True
     except Exception as e:
         print(f"Failed to package kernel to repository: {e}")
-        # Cleanup partial installation
-        if os.path.exists(kernel_version_path):
-            shutil.rmtree(kernel_version_path)
         return False
 
 def get_active_kernel(minios_path: str) -> Optional[str]:
@@ -116,7 +206,7 @@ def get_active_kernel(minios_path: str) -> Optional[str]:
     # First try to get active kernel from boot marker
     marker_file = os.path.join(minios_path, "boot", "active-kernel")
 
-    if os.path.exists(marker_file):
+    if _regular_file(marker_file):
         try:
             with open(marker_file, 'r') as f:
                 kernel_version = f.read().strip()
@@ -209,8 +299,17 @@ def deactivate_current_kernel(minios_path: str) -> bool:
         return True # Nothing to do
 
     # Always ensure the repository directory exists
-    kernel_version_path = get_kernel_path(minios_path, active_kernel_version)
-    os.makedirs(kernel_version_path, exist_ok=True)
+    try:
+        _require_trusted_minios_root(minios_path)
+        kernel_version_path = _kernel_repository_path(minios_path, active_kernel_version, resolve=False)
+        if os.path.lexists(kernel_version_path):
+            if not _trusted_directory(kernel_version_path):
+                raise RuntimeError('Kernel repository entry is symlinked or untrusted')
+        else:
+            os.mkdir(kernel_version_path)
+    except Exception as e:
+        print(f"Failed to prepare kernel repository: {e}")
+        return False
 
     # Determine operation based on kernel status
     is_running = is_kernel_currently_running(active_kernel_version)
@@ -226,9 +325,14 @@ def deactivate_current_kernel(minios_path: str) -> bool:
 
         print(f"Deactivating kernel {active_kernel_version}: will {operation} {len(active_files)} file(s)")
 
+        moved_files = []
         for f in active_files:
             if os.path.exists(f):
                 dest_path = os.path.join(kernel_version_path, os.path.basename(f))
+                if os.path.lexists(dest_path):
+                    raise RuntimeError(f'Repository file already exists: {dest_path}')
+                if not _regular_file(f):
+                    raise RuntimeError(f'Active kernel file is not regular: {f}')
 
                 if is_running:
                     # Copy files if kernel is running (keep originals)
@@ -237,6 +341,7 @@ def deactivate_current_kernel(minios_path: str) -> bool:
                 else:
                     # Move files if kernel is not running
                     shutil.move(f, dest_path)
+                    moved_files.append((f, dest_path))
                     print(f"Moved {os.path.basename(f)} to repository")
             else:
                 print(f"Warning: Expected file {f} not found")
@@ -249,11 +354,21 @@ def deactivate_current_kernel(minios_path: str) -> bool:
         return True
     except Exception as e:
         print(f"Failed to deactivate current kernel {active_kernel_version}: {e}")
-        # Attempt to rollback is complex, for now we fail
+        for source, destination in reversed(locals().get('moved_files', [])):
+            try:
+                if os.path.exists(destination) and not os.path.lexists(source):
+                    shutil.move(destination, source)
+            except OSError as rollback_error:
+                print(f"Failed to roll back {os.path.basename(source)}: {rollback_error}")
         return False
 
 def activate_kernel(minios_path: str, kernel_version: str) -> bool:
     """Activates a kernel from the repository."""
+    try:
+        _kernel_repository_path(minios_path, kernel_version, resolve=False)
+    except ValueError as e:
+        print(f"Failed to activate kernel {kernel_version}: {e}")
+        return False
     # Handle running kernel activation
     if is_kernel_currently_running(kernel_version):
         current_active = get_active_kernel(minios_path)
@@ -262,25 +377,39 @@ def activate_kernel(minios_path: str, kernel_version: str) -> bool:
             return True
         else:
             # Deactivate current and use running kernel files
+            previous_files = get_active_kernel_files(minios_path, current_active) if current_active else []
+            previous_boot_files = {}
+            for path in glob.glob(os.path.join(minios_path, 'boot', '**', '*.cfg'), recursive=True):
+                if not _regular_file(path):
+                    raise RuntimeError('Boot configuration is not a regular file')
+                with open(path, 'rb') as fh:
+                    previous_boot_files[path] = fh.read()
             if not deactivate_current_kernel(minios_path):
                 return False
 
-            # Update bootloader configurations
-            _update_bootloader_configs(minios_path, kernel_version)
+            if not _update_bootloader_configs(minios_path, kernel_version):
+                if current_active and not is_kernel_currently_running(current_active):
+                    previous_repo = get_kernel_path(minios_path, current_active)
+                    for original in previous_files:
+                        source = os.path.join(previous_repo, os.path.basename(original))
+                        if os.path.exists(source):
+                            shutil.move(source, original)
+                for path, content in previous_boot_files.items():
+                    _atomic_write(path, content)
+                return False
 
             # Create active kernel marker
             marker_file = os.path.join(minios_path, "boot", "active-kernel")
-            os.makedirs(os.path.dirname(marker_file), exist_ok=True)
-            with open(marker_file, 'w') as f:
-                f.write(kernel_version)
+            _atomic_write(marker_file, kernel_version)
 
             print(f"Activated running kernel {kernel_version} (files already in place).")
             return True
 
-    if not deactivate_current_kernel(minios_path):
+    try:
+        kernel_version_path = get_kernel_path(minios_path, kernel_version)
+    except ValueError as e:
+        print(f"Failed to activate kernel {kernel_version}: {e}")
         return False
-
-    kernel_version_path = get_kernel_path(minios_path, kernel_version)
     if not os.path.exists(kernel_version_path):
         print(f"Kernel version {kernel_version} not found in repository.")
         return False
@@ -292,26 +421,62 @@ def activate_kernel(minios_path: str, kernel_version: str) -> bool:
         initramfs_file = os.path.join(kernel_version_path, f"initrfs-{kernel_version}.img")
 
         # Verify all required files exist before copying
-        if not os.path.exists(squashfs_file):
+        if not _regular_file(squashfs_file):
             raise FileNotFoundError(f"SquashFS file not found: {squashfs_file}")
-        if not os.path.exists(vmlinuz_file):
+        if not _regular_file(vmlinuz_file):
             raise FileNotFoundError(f"Kernel file not found: {vmlinuz_file}")
-        if not os.path.exists(initramfs_file):
+        if not _regular_file(initramfs_file):
             raise FileNotFoundError(f"Initramfs file not found: {initramfs_file}")
 
-        # Copy kernel files to active locations
-        shutil.copy2(squashfs_file, os.path.join(minios_path, os.path.basename(squashfs_file)))
-        shutil.copy2(vmlinuz_file, os.path.join(minios_path, "boot", os.path.basename(vmlinuz_file)))
-        shutil.copy2(initramfs_file, os.path.join(minios_path, "boot", os.path.basename(initramfs_file)))
+        # Stage every input before changing the currently active kernel.
+        previous_kernel = get_active_kernel(minios_path)
+        previous_files = get_active_kernel_files(minios_path, previous_kernel) if previous_kernel else []
+        previous_boot_files = {}
+        for path in glob.glob(os.path.join(minios_path, 'boot', '**', '*.cfg'), recursive=True):
+            if not _regular_file(path):
+                raise RuntimeError('Boot configuration is not a regular file')
+            with open(path, 'rb') as fh:
+                previous_boot_files[path] = fh.read()
+        stage_dir = tempfile.mkdtemp(prefix='.kernel-activate-', dir=minios_path)
+        try:
+            staged_files = []
+            for source, directory in ((squashfs_file, minios_path), (vmlinuz_file, os.path.join(minios_path, 'boot')), (initramfs_file, os.path.join(minios_path, 'boot'))):
+                staged = os.path.join(stage_dir, os.path.basename(source))
+                shutil.copy2(source, staged)
+                staged_files.append((staged, os.path.join(directory, os.path.basename(source))))
 
-        # Update bootloader configurations
-        _update_bootloader_configs(minios_path, kernel_version)
+            if not deactivate_current_kernel(minios_path):
+                return False
+
+            installed_files = []
+            try:
+                for staged, destination in staged_files:
+                    if os.path.lexists(destination):
+                        raise RuntimeError(f'Refusing to overwrite existing file: {destination}')
+                    shutil.move(staged, destination)
+                    installed_files.append(destination)
+                if not _update_bootloader_configs(minios_path, kernel_version):
+                    raise RuntimeError("Bootloader configuration update failed")
+            except Exception:
+                for destination in installed_files:
+                    if os.path.exists(destination):
+                        os.unlink(destination)
+                # Restore files moved by deactivation before reporting failure.
+                if previous_kernel and not is_kernel_currently_running(previous_kernel):
+                    previous_repo = get_kernel_path(minios_path, previous_kernel)
+                    for original in previous_files:
+                        source = os.path.join(previous_repo, os.path.basename(original))
+                        if os.path.exists(source):
+                            shutil.move(source, original)
+                for path, content in previous_boot_files.items():
+                    _atomic_write(path, content)
+                raise
+        finally:
+            shutil.rmtree(stage_dir, ignore_errors=True)
 
         # Create active kernel marker
         marker_file = os.path.join(minios_path, "boot", "active-kernel")
-        os.makedirs(os.path.dirname(marker_file), exist_ok=True)
-        with open(marker_file, 'w') as f:
-            f.write(kernel_version)
+        _atomic_write(marker_file, kernel_version)
 
         print(f"Successfully copied kernel files for {kernel_version}")
         return True
@@ -326,7 +491,10 @@ def list_all_kernels(minios_path: str) -> List[str]:
     # Add packaged kernels
     kernel_repo_path = get_kernel_repository_path(minios_path)
     if os.path.exists(kernel_repo_path):
-        kernels.update([d for d in os.listdir(kernel_repo_path) if os.path.isdir(os.path.join(kernel_repo_path, d))])
+        if _trusted_directory(kernel_repo_path):
+            kernels.update([d for d in os.listdir(kernel_repo_path)
+                            if not os.path.islink(os.path.join(kernel_repo_path, d))
+                            and os.path.isdir(os.path.join(kernel_repo_path, d))])
 
     # Add active kernel
     active_kernel = get_active_kernel(minios_path)
@@ -342,12 +510,28 @@ def list_all_kernels(minios_path: str) -> List[str]:
 
 def delete_packaged_kernel(minios_path: str, kernel_version: str) -> bool:
     """Deletes a packaged kernel from the repository."""
-    kernel_version_path = get_kernel_path(minios_path, kernel_version)
-    if not os.path.exists(kernel_version_path):
+    try:
+        # Delete a repository symlink itself rather than resolving its target.
+        if not kernel_version or os.path.basename(kernel_version) != kernel_version or kernel_version in ('.', '..'):
+            raise ValueError('Invalid kernel version')
+        _require_trusted_minios_root(minios_path)
+        repository = get_kernel_repository_path(minios_path)
+        if not _trusted_directory(repository):
+            raise ValueError('Kernel repository is symlinked or untrusted')
+        kernel_version_path = os.path.join(repository, kernel_version)
+    except ValueError as e:
+        print(f"Failed to delete packaged kernel {kernel_version}: {e}")
+        return False
+    if not os.path.lexists(kernel_version_path):
         return True # Already gone
 
     try:
-        shutil.rmtree(kernel_version_path)
+        if os.path.islink(kernel_version_path):
+            os.unlink(kernel_version_path)
+        elif os.path.isdir(kernel_version_path):
+            shutil.rmtree(kernel_version_path)
+        else:
+            raise RuntimeError("Kernel repository entry is not a directory")
         return True
     except Exception as e:
         print(f"Failed to delete packaged kernel {kernel_version}: {e}")

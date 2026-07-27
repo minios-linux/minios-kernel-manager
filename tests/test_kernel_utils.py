@@ -107,6 +107,23 @@ class TestGetRepositoryKernels:
             for pkg in packages:
                 assert 'dbg' not in pkg.get('package', '')
 
+    def test_filters_non_versioned_and_duplicate_search_entries(self):
+        from kernel_utils import get_repository_kernels
+
+        output = ('linux-image-amd64 - meta package\n'
+                  'linux-image-6.1.0-1-amd64 - kernel\n'
+                  'linux-image-6.1.0-1-amd64 - duplicate\n'
+                  'linux-image-6.1.0-1-amd64-dbg - debug\n')
+
+        def run_side_effect(command, **kwargs):
+            if 'search' in command:
+                return MagicMock(stdout=output, returncode=0)
+            return MagicMock(stdout='Version: 1\nSize: 2000000\n', returncode=0)
+
+        with patch('subprocess.run', side_effect=run_side_effect):
+            packages = get_repository_kernels()
+        assert [package['package'] for package in packages] == ['linux-image-6.1.0-1-amd64']
+
     def test_handles_apt_error(self):
         """Test handling of apt-cache errors."""
         import subprocess
@@ -289,6 +306,19 @@ class TestCheckPackageCache:
             success, message = check_package_cache(force_update=False)
             # Should indicate problem
             assert isinstance(success, bool)
+
+    def test_recent_lists_do_not_require_pkgcache_bin(self):
+        import time
+        from kernel_utils import check_package_cache
+
+        def exists(path):
+            return path == '/var/lib/apt/lists'
+
+        with patch('os.path.exists', side_effect=exists), \
+             patch('os.listdir', return_value=['repo_Packages']), \
+             patch('os.path.isfile', return_value=True), \
+             patch('os.path.getmtime', return_value=time.time()):
+            assert check_package_cache() == (True, '')
 
 
 class TestGetNonSymlinkModulesDir:

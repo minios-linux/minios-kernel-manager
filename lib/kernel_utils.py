@@ -12,6 +12,7 @@ import tempfile
 import shutil
 import re
 import gettext
+import json
 from typing import Dict, List, Optional, Tuple
 
 # Initialize gettext
@@ -24,6 +25,8 @@ LAST_KERNEL_VERSIONS: Dict[str, Optional[str]] = {
     'display_version': None,
     'actual_version': None,
 }
+
+KERNEL_DPKG_METADATA_DIR = '.minios-kernel-dpkg'
 
 
 def get_last_kernel_versions() -> Dict[str, Optional[str]]:
@@ -61,14 +64,18 @@ def get_repository_kernels() -> List[dict]:
         result = subprocess.run(['apt-cache', 'search', '^linux-image-[0-9]'],
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, check=True)
 
+        seen = set()
         for line in result.stdout.strip().split('\n'):
             if line and ' - ' in line:
                 parts = line.split(' - ', 1)
                 pkg = parts[0]
                 description = parts[1] if len(parts) > 1 else ""
 
-                # Skip debug packages only
-                if 'dbg' not in pkg:
+                # APT search descriptions are not authoritative package metadata.
+                # Keep only versioned binary linux-image packages, once each.
+                if (re.match(r'^linux-image-[0-9][A-Za-z0-9.+:~_-]*$', pkg)
+                        and 'dbg' not in pkg and pkg not in seen):
+                    seen.add(pkg)
                     try:
                         show_result = subprocess.run(['apt-cache', 'show', pkg],
                                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, check=True)
@@ -152,7 +159,6 @@ def check_package_cache(force_update: bool = False) -> Tuple[bool, str]:
     """
     import time
 
-    cache_file = '/var/cache/apt/pkgcache.bin'
     lists_dir = '/var/lib/apt/lists'
 
     # Check if lists directory is empty or doesn't exist
@@ -165,13 +171,17 @@ def check_package_cache(force_update: bool = False) -> Tuple[bool, str]:
         except (OSError, PermissionError):
             lists_empty = True
 
-    # Check cache file age
+    # APT may not create pkgcache.bin; freshness belongs to downloaded lists.
     cache_outdated = True
-    if os.path.exists(cache_file) and not lists_empty:
+    if not lists_empty:
         try:
-            file_age = time.time() - os.path.getmtime(cache_file)
+            file_age = time.time() - max(
+                os.path.getmtime(os.path.join(lists_dir, name))
+                for name in files
+                if os.path.isfile(os.path.join(lists_dir, name))
+            )
             cache_outdated = file_age >= 24 * 60 * 60  # Older than 24 hours
-        except (OSError, PermissionError):
+        except (OSError, PermissionError, ValueError):
             cache_outdated = True
 
     # If lists are empty or cache is outdated
@@ -293,6 +303,100 @@ def _extracted_modules_versions(temp_dir: str) -> List[str]:
     return versions
 
 
+def _deb_field(deb_path: str, field: str) -> str:
+    result = subprocess.run(
+        ['dpkg-deb', '-f', deb_path, field],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        universal_newlines=True,
+        check=False,
+    )
+    return result.stdout.strip() if result.returncode == 0 else ''
+
+
+def _deb_status_stanza(deb_path: str) -> str:
+    result = subprocess.run(
+        ['dpkg-deb', '-f', deb_path],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+        check=True,
+    )
+    lines = result.stdout.rstrip().splitlines()
+    out = []
+    inserted = False
+    for line in lines:
+        out.append(line)
+        if line.startswith('Package: ') and not inserted:
+            out.append('Status: install ok installed')
+            inserted = True
+    if not inserted:
+        out.insert(0, 'Status: install ok installed')
+    return '\n'.join(out).rstrip() + '\n'
+
+
+def _deb_installed_list(deb_path: str) -> str:
+    result = subprocess.run(
+        ['dpkg-deb', '-c', deb_path],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+        check=True,
+    )
+    paths = []
+    for line in result.stdout.splitlines():
+        parts = line.split()
+        if len(parts) < 6:
+            continue
+        path = ' '.join(parts[5:])
+        if path.startswith('./'):
+            path = path[1:]
+        if path and path != '/':
+            paths.append(path.rstrip('/'))
+    return '/.\n' + '\n'.join(sorted(set(paths))) + ('\n' if paths else '')
+
+
+def preserve_kernel_dpkg_metadata_from_debs(deb_files: List[str], temp_dir: str, kernel_version: Optional[str]) -> None:
+    """Store compact dpkg metadata for kernel packages without keeping .deb files."""
+    metadata_dir = os.path.join(temp_dir, KERNEL_DPKG_METADATA_DIR)
+    status_dir = os.path.join(metadata_dir, 'status.d')
+    info_dir = os.path.join(metadata_dir, 'info')
+    os.makedirs(status_dir, exist_ok=True)
+    os.makedirs(info_dir, exist_ok=True)
+    packages = []
+
+    for deb_path in deb_files:
+        package = _deb_field(deb_path, 'Package')
+        if not package or not (
+            package.startswith('linux-image-')
+            or package.startswith('linux-modules-')
+            or package.startswith('linux-modules-extra-')
+        ):
+            continue
+        control_dir = tempfile.mkdtemp(prefix='minios-kernel-control-', dir=temp_dir)
+        try:
+            subprocess.run(['dpkg-deb', '-e', deb_path, control_dir], check=True)
+            with open(os.path.join(status_dir, f'{package}.status'), 'w', encoding='utf-8') as fh:
+                fh.write(_deb_status_stanza(deb_path))
+            with open(os.path.join(info_dir, f'{package}.list'), 'w', encoding='utf-8') as fh:
+                fh.write(_deb_installed_list(deb_path))
+            for name in os.listdir(control_dir):
+                src = os.path.join(control_dir, name)
+                if os.path.isfile(src) and name != 'control':
+                    shutil.copy2(src, os.path.join(info_dir, f'{package}.{name}'))
+        finally:
+            shutil.rmtree(control_dir, ignore_errors=True)
+        packages.append({
+            'name': package,
+            'version': _deb_field(deb_path, 'Version'),
+            'architecture': _deb_field(deb_path, 'Architecture'),
+        })
+
+    if packages:
+        with open(os.path.join(metadata_dir, 'manifest.json'), 'w', encoding='utf-8') as fh:
+            json.dump({'format': 1, 'kernel_version': kernel_version or '', 'packages': packages}, fh, indent=2)
+
+
 def process_manual_packages(package_paths: List[str], temp_dir: str) -> str:
     """Process manually selected .deb package(s), return display kernel version."""
     try:
@@ -358,6 +462,8 @@ def process_manual_packages(package_paths: List[str], temp_dir: str) -> str:
         # Store both versions for package_kernel() initramfs generation logic.
         LAST_KERNEL_VERSIONS['display_version'] = display_kernel_version
         LAST_KERNEL_VERSIONS['actual_version'] = actual_kernel_version if actual_kernel_version else None
+
+        preserve_kernel_dpkg_metadata_from_debs(package_paths, temp_dir, actual_kernel_version)
 
         return str(display_kernel_version)
 
@@ -445,6 +551,8 @@ def download_kernel_package(package_name: str, temp_dir: str, force_update: bool
         # Store both versions for later use
         LAST_KERNEL_VERSIONS['display_version'] = display_kernel_version
         LAST_KERNEL_VERSIONS['actual_version'] = actual_kernel_version
+
+        preserve_kernel_dpkg_metadata_from_debs(deb_files, temp_dir, actual_kernel_version)
 
         return str(display_kernel_version)
 

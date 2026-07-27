@@ -73,6 +73,14 @@ class TestFindMiniosDirectory:
             result = find_minios_directory()
             assert result is None
 
+    def test_parses_findmnt_target_with_spaces(self):
+        from minios_utils import find_minios_directory
+
+        target = '/media/Mini OS'
+        with patch('minios_utils._is_valid_minios_directory', side_effect=lambda path: path == target + '/minios'), \
+             patch('subprocess.run', return_value=MagicMock(stdout=target + '\n', returncode=0)):
+            assert find_minios_directory() == target + '/minios'
+
 
 class TestGetKernelRepositoryPath:
     """Tests for get_kernel_repository_path function."""
@@ -94,6 +102,13 @@ class TestGetKernelPath:
         
         result = get_kernel_path(temp_minios_dir, "6.1.0-18-amd64")
         assert result == os.path.join(temp_minios_dir, "kernels", "6.1.0-18-amd64")
+
+    @pytest.mark.parametrize('version', ['../outside', '/tmp/outside', '', '.', '..'])
+    def test_rejects_path_traversal(self, temp_minios_dir, version):
+        from minios_utils import get_kernel_path
+
+        with pytest.raises(ValueError):
+            get_kernel_path(temp_minios_dir, version)
 
 
 class TestGetActiveKernel:
@@ -185,6 +200,124 @@ class TestPackageKernelToRepository:
         )
         
         assert result is False
+
+    def test_failure_preserves_existing_repository_entry(self, temp_minios_dir):
+        from minios_utils import package_kernel_to_repository
+
+        existing = os.path.join(temp_minios_dir, 'kernels', '6.1.0-test')
+        os.makedirs(existing)
+        sentinel = os.path.join(existing, 'sentinel')
+        open(sentinel, 'w').close()
+
+        assert not package_kernel_to_repository(temp_minios_dir, '6.1.0-test', '/missing', '/missing', '/missing')
+        assert os.path.exists(sentinel)
+
+    def test_rejects_symlinked_repository(self, temp_minios_dir, tmp_path):
+        from minios_utils import package_kernel_to_repository
+
+        os.rmdir(os.path.join(temp_minios_dir, 'kernels'))
+        outside = tmp_path / 'outside'
+        outside.mkdir()
+        os.symlink(str(outside), os.path.join(temp_minios_dir, 'kernels'))
+
+        assert not package_kernel_to_repository(temp_minios_dir, '6.1.0-test', '/missing', '/missing', '/missing')
+        assert not list(outside.iterdir())
+
+
+class TestDeletePackagedKernel:
+    def test_rejects_traversal_and_preserves_outside_file(self, temp_minios_dir, tmp_path):
+        from minios_utils import delete_packaged_kernel
+
+        outside = tmp_path / 'outside'
+        outside.mkdir()
+        assert delete_packaged_kernel(temp_minios_dir, '../outside') is False
+        assert outside.exists()
+
+    def test_unlinks_repository_symlink_without_following_it(self, temp_minios_dir, tmp_path):
+        from minios_utils import delete_packaged_kernel
+
+        outside = tmp_path / 'outside'
+        outside.mkdir()
+        link = os.path.join(temp_minios_dir, 'kernels', 'test')
+        os.symlink(str(outside), link)
+
+        assert delete_packaged_kernel(temp_minios_dir, 'test') is True
+        assert not os.path.lexists(link)
+        assert outside.exists()
+
+
+class TestActivateKernel:
+    def test_rejects_symlinked_kernel_entry(self, temp_minios_dir, tmp_path):
+        from minios_utils import activate_kernel
+
+        outside = tmp_path / 'kernel'
+        outside.mkdir()
+        os.symlink(str(outside), os.path.join(temp_minios_dir, 'kernels', 'new'))
+
+        assert activate_kernel(temp_minios_dir, 'new') is False
+
+    def test_marker_write_is_atomic_and_preserves_mode(self, temp_minios_dir):
+        from minios_utils import activate_kernel
+
+        marker = os.path.join(temp_minios_dir, 'boot', 'active-kernel')
+        with open(marker, 'w') as fh:
+            fh.write('old')
+        os.chmod(marker, 0o640)
+        source_dir = os.path.join(temp_minios_dir, 'kernels', 'new')
+        os.makedirs(source_dir)
+        for name in ('01-kernel-new.sb', 'vmlinuz-new', 'initrfs-new.img'):
+            open(os.path.join(source_dir, name), 'w').close()
+
+        with patch('minios_utils.is_kernel_currently_running', return_value=False), \
+             patch('minios_utils._update_bootloader_configs', return_value=True):
+            assert activate_kernel(temp_minios_dir, 'new') is True
+
+        assert open(marker).read() == 'new'
+        assert os.stat(marker).st_mode & 0o777 == 0o640
+
+    def test_deactivation_rolls_back_partial_moves(self, temp_minios_dir):
+        from minios_utils import deactivate_current_kernel
+
+        version = 'old'
+        paths = [
+            os.path.join(temp_minios_dir, '01-kernel-old.sb'),
+            os.path.join(temp_minios_dir, 'boot', 'vmlinuz-old'),
+        ]
+        for path in paths:
+            open(path, 'w').close()
+        with open(os.path.join(temp_minios_dir, 'boot', 'active-kernel'), 'w') as fh:
+            fh.write(version)
+        os.makedirs(os.path.join(temp_minios_dir, 'kernels', version))
+        open(os.path.join(temp_minios_dir, 'kernels', version, '01-kernel-old.sb'), 'w').close()
+
+        with patch('minios_utils.is_kernel_currently_running', return_value=False):
+            assert deactivate_current_kernel(temp_minios_dir) is False
+        assert all(os.path.exists(path) for path in paths)
+    def test_bootloader_failure_rolls_back_new_files_and_restores_previous(self, temp_minios_dir):
+        from minios_utils import activate_kernel
+
+        old = 'old'
+        new = 'new'
+        old_files = [
+            os.path.join(temp_minios_dir, '01-kernel-{}.sb'.format(old)),
+            os.path.join(temp_minios_dir, 'boot', 'vmlinuz-{}'.format(old)),
+            os.path.join(temp_minios_dir, 'boot', 'initrfs-{}.img'.format(old)),
+        ]
+        for path in old_files:
+            open(path, 'w').close()
+        with open(os.path.join(temp_minios_dir, 'boot', 'active-kernel'), 'w') as fh:
+            fh.write(old)
+        source_dir = os.path.join(temp_minios_dir, 'kernels', new)
+        os.makedirs(source_dir)
+        for name in ('01-kernel-{}.sb'.format(new), 'vmlinuz-{}'.format(new), 'initrfs-{}.img'.format(new)):
+            open(os.path.join(source_dir, name), 'w').close()
+
+        with patch('minios_utils.is_kernel_currently_running', return_value=False), \
+             patch('minios_utils._update_bootloader_configs', return_value=False):
+            assert activate_kernel(temp_minios_dir, new) is False
+
+        assert all(os.path.exists(path) for path in old_files)
+        assert not os.path.exists(os.path.join(temp_minios_dir, '01-kernel-{}.sb'.format(new)))
 
 
 class TestFormatSize:

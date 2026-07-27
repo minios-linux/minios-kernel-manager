@@ -2,13 +2,13 @@
 # Copyright (C) 2025 MiniOS Linux
 # This file is distributed under the same license as the minios-kernel-manager package.
 # crims0n <crims0n@minios.dev>, 2025.
-# 
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: minios-kernel-manager 1.0.0\n"
 "Report-Msgid-Bugs-To: support@minios.dev\n"
-"POT-Creation-Date: 2026-06-18 13:28+0300\n"
-"PO-Revision-Date: 2026-06-18 10:28+0000\n"
+"POT-Creation-Date: 2026-07-17 14:32+0300\n"
+"PO-Revision-Date: 2026-07-17 11:32+0000\n"
 "Last-Translator: crims0n <crims0n@minios.dev>\n"
 "Language-Team: none\n"
 "Language: fr\n"
@@ -17,324 +17,344 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: lib/bootloader_utils.py:57
+#: lib/bootloader_utils.py:100
 msgid "Updated SYSLINUX config: {}"
 msgstr "Configuration SYSLINUX mise à jour : {}"
 
-#: lib/bootloader_utils.py:61
+#: lib/bootloader_utils.py:104
 msgid "Failed to update SYSLINUX config {}: {}"
 msgstr "Échec de la mise à jour de la configuration SYSLINUX {} : {}"
 
-#: lib/bootloader_utils.py:134
+#: lib/bootloader_utils.py:177
 msgid "No GRUB configuration files found"
 msgstr "Aucun fichier de configuration GRUB trouvé"
 
-#: lib/bootloader_utils.py:185
+#: lib/bootloader_utils.py:229
 msgid "Failed to update GRUB config {}: {}"
 msgstr "Échec de la mise à jour de la configuration GRUB {} : {}"
 
-#: lib/bootloader_utils.py:189
+#: lib/bootloader_utils.py:233
 msgid "Updated GRUB configs: {}"
 msgstr "Configurations GRUB mises à jour : {}"
 
-#: lib/bootloader_utils.py:191
+#: lib/bootloader_utils.py:235
 msgid "No GRUB config changes needed"
 msgstr "Aucune modification de configuration GRUB nécessaire"
 
-#: lib/bootloader_utils.py:196
+#: lib/bootloader_utils.py:240
 #, python-brace-format
 msgid "Error updating grub configs: {error}"
 msgstr "Erreur lors de la mise à jour des configurations GRUB : {error}"
 
-#: lib/build_utils.py:46
+#: lib/build_utils.py:86
+msgid "Cannot validate crypto initramfs: neither lsinitramfs nor lsinitrd is available"
+msgstr "Impossible de valider l’initramfs chiffré : ni lsinitramfs ni lsinitrd n’est disponible"
+
+#: lib/build_utils.py:94 lib/build_utils.py:99
+#, python-brace-format
+msgid "Cannot validate crypto initramfs with {tool}: {error}"
+msgstr "Impossible de valider l’initramfs chiffré avec {tool} : {error}"
+
+#: lib/build_utils.py:106
+msgid "Generated initramfs lacks its crypto marker, cryptsetup, or dm-crypt support"
+msgstr "L’initramfs généré ne contient pas son marqueur de chiffrement, cryptsetup ou la prise en charge de dm-crypt"
+
+#: lib/build_utils.py:120
 msgid "No initramfs builder found. Please ensure mkdracut or mkinitrfs is available."
 msgstr "Aucun générateur d'initramfs trouvé. Veuillez vous assurer que mkdracut ou mkinitrfs est disponible."
 
-#: lib/build_utils.py:99
+#: lib/build_utils.py:173
 #, python-brace-format
 msgid "vmlinuz for kernel {kernel_version} not found"
 msgstr "vmlinuz pour le noyau {kernel_version} non trouvé"
 
-#: lib/build_utils.py:117
+#: lib/build_utils.py:191
 msgid "temp_dir is required and must exist for SquashFS creation"
 msgstr "temp_dir est requis et doit exister pour la création de SquashFS"
 
-#: lib/build_utils.py:143
+#: lib/build_utils.py:217
 #, python-brace-format
 msgid "Kernel modules not found in extracted deb package for kernel {kernel_version}"
 msgstr "Modules du noyau non trouvés dans le paquet deb extrait pour le noyau {kernel_version}"
 
-#: lib/build_utils.py:147
+#: lib/build_utils.py:221
 #, python-brace-format
 msgid "Using system modules base: {base}"
 msgstr "Utilisation de la base des modules système : {base}"
 
-#: lib/build_utils.py:165
+#: lib/build_utils.py:247
 msgid "Generating module dependencies for SquashFS"
 msgstr "Génération des dépendances de modules pour SquashFS"
 
-#: lib/build_utils.py:180 lib/build_utils.py:510
+#: lib/build_utils.py:262 lib/build_utils.py:610
 msgid "Critical depmod error: {}"
 msgstr "Erreur critique de depmod : {}"
 
-#: lib/build_utils.py:181 lib/build_utils.py:511
+#: lib/build_utils.py:263 lib/build_utils.py:611
 msgid "depmod failed: {}"
 msgstr "depmod a échoué : {}"
 
-#: lib/build_utils.py:183 lib/build_utils.py:513
+#: lib/build_utils.py:265 lib/build_utils.py:613
 msgid "Module dependencies generated successfully"
 msgstr "Dépendances de modules générées avec succès"
 
-#: lib/build_utils.py:185 lib/build_utils.py:515
+#: lib/build_utils.py:267 lib/build_utils.py:615
 msgid "Failed to generate module dependencies: {}"
 msgstr "Échec de la génération des dépendances des modules : {}"
 
-#: lib/build_utils.py:189
+#: lib/build_utils.py:271
 #, python-brace-format
 msgid "Using extracted deb modules with structure: {path}"
 msgstr "Utilisation des modules deb extraits avec la structure : {path}"
 
-#: lib/build_utils.py:210
+#: lib/build_utils.py:292
 #, python-brace-format
 msgid "mksquashfs version detected: {major}.{minor}, no-strip support: {use_no_strip}"
 msgstr "Version de mksquashfs détectée : {major}.{minor}, support no-strip : {use_no_strip}"
 
-#: lib/build_utils.py:212
+#: lib/build_utils.py:294
 #, python-brace-format
 msgid "Could not parse version from: {version_line}"
 msgstr "Impossible d'analyser la version depuis : {version_line}"
 
-#: lib/build_utils.py:215
+#: lib/build_utils.py:297
 msgid "No version line found in output"
 msgstr "Aucune ligne de version trouvée dans la sortie"
 
-#: lib/build_utils.py:218
+#: lib/build_utils.py:300
 #, python-brace-format
 msgid "mksquashfs version check failed: {error}"
 msgstr "Vérification de la version de mksquashfs échouée : {error}"
 
-#: lib/build_utils.py:221
+#: lib/build_utils.py:303
 msgid "mksquashfs command not found. Please install squashfs-tools package."
 msgstr "Commande mksquashfs introuvable. Veuillez installer le paquet squashfs-tools."
 
-#: lib/build_utils.py:247
+#: lib/build_utils.py:329
 #, python-brace-format
 msgid "Starting SquashFS compression with {compression}..."
 msgstr "Démarrage de la compression SquashFS avec {compression}..."
 
-#: lib/build_utils.py:250
+#: lib/build_utils.py:332
 #, python-brace-format
 msgid "mksquashfs command: {command}"
 msgstr "Commande mksquashfs : {command}"
 
-#: lib/build_utils.py:302
+#: lib/build_utils.py:384
 msgid "Failed to create SquashFS image"
 msgstr "Échec de la création de l'image SquashFS"
 
-#: lib/build_utils.py:310
+#: lib/build_utils.py:392
 #, python-brace-format
 msgid "SquashFS image completed: {path}"
 msgstr "Image SquashFS terminée : {path}"
 
-#: lib/build_utils.py:329
+#: lib/build_utils.py:411
 msgid "Failed to detect initramfs builder: {}"
 msgstr "Échec de la détection du générateur d'initramfs : {}"
 
-#: lib/build_utils.py:331
+#: lib/build_utils.py:413
 msgid "Using initramfs builder: {}"
 msgstr "Utilisation du générateur d'initramfs : {}"
 
-#: lib/build_utils.py:347
+#: lib/build_utils.py:421
+msgid "Encrypted persistence is active, but the running initrd does not declare crypto capability"
+msgstr "La persistance chiffrée est active, mais l’initrd en cours d’exécution ne déclare pas la capacité de chiffrement"
+
+#: lib/build_utils.py:423
+msgid "Replacement kernel {} does not support dm-crypt"
+msgstr "Le noyau de remplacement {} ne prend pas en charge dm-crypt"
+
+#: lib/build_utils.py:425
+msgid "; refusing to replace the initrd because encrypted persistence would lose support"
+msgstr "; remplacement de l’initrd refusé car la persistance chiffrée ne serait plus prise en charge"
+
+#: lib/build_utils.py:444
 msgid "mkdracut not found - this tool requires MiniOS live environment"
 msgstr "mkdracut introuvable - cet outil nécessite l'environnement live MiniOS"
 
-#: lib/build_utils.py:372
+#: lib/build_utils.py:469
 msgid "Created temporary symlink: {} -> {}"
 msgstr "Lien symbolique temporaire créé : {} -> {}"
 
-#: lib/build_utils.py:376
+#: lib/build_utils.py:473
 msgid "Generating modules.dep for {}"
 msgstr "Génération de modules.dep pour {}"
 
-#: lib/build_utils.py:380
+#: lib/build_utils.py:477
 msgid "Successfully generated modules.dep"
 msgstr "modules.dep généré avec succès"
 
-#: lib/build_utils.py:382
+#: lib/build_utils.py:479
 msgid "depmod warning: {}"
 msgstr "Avertissement depmod : {}"
 
-#: lib/build_utils.py:384
+#: lib/build_utils.py:481
 msgid "Failed to run depmod: {}"
 msgstr "Échec de l'exécution de depmod : {}"
 
-#: lib/build_utils.py:386
+#: lib/build_utils.py:483
 msgid "Failed to create symlink {}: {}"
 msgstr "Échec de la création du lien symbolique {} : {}"
 
-#: lib/build_utils.py:398 lib/build_utils.py:535
+#: lib/build_utils.py:497 lib/build_utils.py:637
 msgid "Using custom temporary directory for initramfs: {}"
 msgstr "Utilisation du répertoire temporaire personnalisé pour l'initramfs : {}"
 
-#: lib/build_utils.py:401
+#: lib/build_utils.py:500
 msgid "Starting dracut initramfs generation..."
 msgstr "Démarrage de la génération de l'initramfs avec dracut..."
 
-#: lib/build_utils.py:430
+#: lib/build_utils.py:529
 #, python-brace-format
 msgid "mkdracut failed with return code {code}"
 msgstr "mkdracut a échoué avec le code de retour {code}"
 
-#: lib/build_utils.py:435
+#: lib/build_utils.py:534
 msgid "Failed to generate initramfs with dracut: {}"
 msgstr "Échec de la génération de l'initramfs avec dracut : {}"
 
-#: lib/build_utils.py:441
+#: lib/build_utils.py:540
 msgid "Removed temporary symlink: {}"
 msgstr "Lien symbolique temporaire supprimé : {}"
 
-#: lib/build_utils.py:446
+#: lib/build_utils.py:545
 msgid "Dracut succeeded but output file not found: {}"
 msgstr "Dracut a réussi mais le fichier de sortie est introuvable : {}"
 
-#: lib/build_utils.py:448
+#: lib/build_utils.py:547
 msgid "Successfully generated initramfs: {}"
 msgstr "initramfs généré avec succès : {}"
 
-#: lib/build_utils.py:458
+#: lib/build_utils.py:558
 msgid "mkinitrfs not found - this tool requires MiniOS live environment"
 msgstr "mkinitrfs non trouvé - cet outil nécessite un environnement live MiniOS"
 
-#: lib/build_utils.py:488
+#: lib/build_utils.py:588
 msgid "Removed existing symlink: {}"
 msgstr "Lien symbolique existant supprimé : {}"
 
-#: lib/build_utils.py:491
+#: lib/build_utils.py:591
 msgid "Using existing modules directory: {}"
 msgstr "Utilisation du répertoire de modules existant : {}"
 
-#: lib/build_utils.py:499
+#: lib/build_utils.py:599
 #, python-brace-format
 msgid "Created temporary symlink: {system_path} -> {extracted_path}"
 msgstr "Lien symbolique temporaire créé : {system_path} -> {extracted_path}"
 
-#: lib/build_utils.py:503
+#: lib/build_utils.py:603
 msgid "Generating module dependencies for initramfs"
 msgstr "Génération des dépendances de modules pour l'initramfs"
 
-#: lib/build_utils.py:538
+#: lib/build_utils.py:640
 msgid "Starting initramfs generation..."
 msgstr "Démarrage de la génération de l'initramfs..."
 
-#: lib/build_utils.py:572
+#: lib/build_utils.py:674
 #, python-brace-format
 msgid "mkinitrfs failed with return code {code}"
 msgstr "mkinitrfs a échoué avec le code de retour {code}"
 
-#: lib/build_utils.py:578
+#: lib/build_utils.py:680
 #, python-brace-format
 msgid "mkinitrfs failed: {error}"
 msgstr "mkinitrfs a échoué : {error}"
 
-#: lib/build_utils.py:580
+#: lib/build_utils.py:682
 #, python-brace-format
 msgid "mkinitrfs error: {error}"
 msgstr "Erreur mkinitrfs : {error}"
 
-#: lib/build_utils.py:602
+#: lib/build_utils.py:711
 msgid "mkinitrfs output was:"
 msgstr "La sortie de mkinitrfs était :"
 
-#: lib/build_utils.py:605
+#: lib/build_utils.py:714
 msgid "mkinitrfs did not return valid initramfs path"
 msgstr "mkinitrfs n'a pas renvoyé de chemin d'initramfs valide"
 
-#: lib/build_utils.py:608
+#: lib/build_utils.py:717
 #, python-brace-format
 msgid "Copying initramfs from {path}"
 msgstr "Copie de l'initramfs depuis {path}"
 
-#: lib/build_utils.py:610
+#: lib/build_utils.py:719
 #, python-brace-format
 msgid "Initramfs created: {path}"
 msgstr "Initramfs créé : {path}"
 
-#: lib/build_utils.py:622
-#, python-brace-format
-msgid "Removed temporary symlink: {path}"
-msgstr "Lien symbolique temporaire supprimé : {path}"
-
-#: lib/kernel_utils.py:181 lib/minios_kernel_manager.py:1299
+#: lib/kernel_utils.py:191 lib/minios_kernel_manager.py:1316
 msgid "Updating package lists..."
 msgstr "Mise à jour des listes de paquets..."
 
-#: lib/kernel_utils.py:183
+#: lib/kernel_utils.py:193
 msgid "Package lists updated"
 msgstr "Listes de paquets mises à jour"
 
-#: lib/kernel_utils.py:186
+#: lib/kernel_utils.py:196
 msgid "Failed to update package lists: {}"
 msgstr "Échec de la mise à jour des listes de paquets : {}"
 
-#: lib/kernel_utils.py:189
+#: lib/kernel_utils.py:199
 msgid "Error updating package lists: {}"
 msgstr "Erreur lors de la mise à jour des listes de paquets : {error}"
 
-#: lib/kernel_utils.py:193
+#: lib/kernel_utils.py:203
 msgid "Package database is outdated"
 msgstr "Base de données des paquets obsolète"
 
-#: lib/kernel_utils.py:194
+#: lib/kernel_utils.py:204
 msgid "Run 'apt update' or use --force-update"
 msgstr "Exécutez 'apt update' ou utilisez --force-update"
 
-#: lib/kernel_utils.py:327
+#: lib/kernel_utils.py:431
 msgid "Kernel modules were not found in the selected package. Please provide all required kernel .deb files, including linux-modules and linux-modules-extra packages."
 msgstr "Les modules du noyau n'ont pas été trouvés dans le paquet sélectionné. Veuillez fournir tous les fichiers .deb nécessaires au noyau, y compris les paquets linux-modules et linux-modules-extra."
 
-#: lib/kernel_utils.py:392
+#: lib/kernel_utils.py:498
 #, python-brace-format
 msgid "Downloading packages from repository: {packages}"
 msgstr "Téléchargement des paquets depuis le dépôt : {packages}"
 
-#: lib/kernel_utils.py:396
+#: lib/kernel_utils.py:502
 msgid "Download completed successfully"
 msgstr "Téléchargement terminé avec succès"
 
-#: lib/kernel_utils.py:412
+#: lib/kernel_utils.py:518
 #, python-brace-format
 msgid "Found package files: {count}"
 msgstr "Fichiers de paquets trouvés : {count}"
 
-#: lib/kernel_utils.py:423
+#: lib/kernel_utils.py:529
 msgid "Extracting package contents..."
 msgstr "Extraction du contenu du paquet..."
 
-#: lib/kernel_utils.py:432
+#: lib/kernel_utils.py:538
 msgid "Package extracted successfully"
 msgstr "Paquet extrait avec succès"
 
-#: lib/kernel_utils.py:497
+#: lib/kernel_utils.py:605
 #, python-brace-format
 msgid "Removing existing kernel modules for {kernel_version}"
 msgstr "Suppression des modules du noyau existants pour {kernel_version}"
 
-#: lib/kernel_utils.py:515
+#: lib/kernel_utils.py:623
 #, python-brace-format
 msgid "Error reading modules directory: {error}"
 msgstr "Erreur lors de la lecture du répertoire des modules : {error}"
 
-#: lib/kernel_utils.py:525
+#: lib/kernel_utils.py:633
 #, python-brace-format
 msgid "Kernel modules for {kernel_version} not found in package"
 msgstr "Modules du noyau pour {kernel_version} non trouvés dans le paquet"
 
-#: lib/kernel_utils.py:528
+#: lib/kernel_utils.py:636
 #, python-brace-format
 msgid "Installing kernel modules to {target_path}"
 msgstr "Installation des modules du noyau vers {target_path}"
 
-#: lib/kernel_utils.py:534
+#: lib/kernel_utils.py:642
 msgid "Building module dependencies"
 msgstr "Construction des dépendances de modules"
 
@@ -406,308 +426,308 @@ msgstr "Génération de l'initramfs"
 msgid "Installing to kernel repository"
 msgstr "Installation dans le dépôt des noyaux"
 
-#: lib/minios_kernel.py:209
+#: lib/minios_kernel.py:210
 msgid "Finalizing installation"
 msgstr "Finalisation de l'installation"
 
-#: lib/minios_kernel.py:211 lib/minios_kernel_manager.py:1656
-#: lib/minios_kernel_manager.py:1683 lib/minios_kernel_manager.py:1999
+#: lib/minios_kernel.py:212 lib/minios_kernel_manager.py:1679
+#: lib/minios_kernel_manager.py:1708 lib/minios_kernel_manager.py:2024
 msgid "Kernel packaging completed successfully!"
 msgstr "Empaquetage du noyau terminé avec succès !"
 
-#: lib/minios_kernel.py:248 lib/minios_kernel.py:290 lib/minios_kernel.py:359
-#: lib/minios_kernel.py:408 lib/minios_kernel.py:487
-#: lib/minios_kernel_manager.py:387 lib/minios_kernel_manager.py:666
+#: lib/minios_kernel.py:251 lib/minios_kernel.py:293 lib/minios_kernel.py:362
+#: lib/minios_kernel.py:411 lib/minios_kernel.py:490
+#: lib/minios_kernel_manager.py:392 lib/minios_kernel_manager.py:678
 msgid "MiniOS directory not found"
 msgstr "Répertoire MiniOS non trouvé"
 
-#: lib/minios_kernel.py:272 lib/minios_kernel.py:315
+#: lib/minios_kernel.py:275 lib/minios_kernel.py:318
 msgid "Available kernels"
 msgstr "Noyaux disponibles"
 
-#: lib/minios_kernel.py:274
+#: lib/minios_kernel.py:277
 msgid "active"
 msgstr "actif"
 
-#: lib/minios_kernel.py:278
+#: lib/minios_kernel.py:281
 msgid "Currently active kernel"
 msgstr "Noyau actuellement actif"
 
-#: lib/minios_kernel.py:280
+#: lib/minios_kernel.py:283
 msgid "No currently active kernel found"
 msgstr "Aucun noyau actuellement actif trouvé"
 
-#: lib/minios_kernel.py:294
+#: lib/minios_kernel.py:297
 msgid "Found MiniOS directory: {}"
 msgstr "Répertoire MiniOS trouvé : {}"
 
-#: lib/minios_kernel.py:302
+#: lib/minios_kernel.py:305
 msgid "Currently active kernel: {}"
 msgstr "Noyau actuellement actif : {}"
 
-#: lib/minios_kernel.py:328
+#: lib/minios_kernel.py:331
 msgid "Kernel {} is already active"
 msgstr "Le noyau {} est déjà actif"
 
-#: lib/minios_kernel.py:333
+#: lib/minios_kernel.py:336
 msgid "Activating kernel {}..."
 msgstr "Activation du noyau {} en cours..."
 
-#: lib/minios_kernel.py:346
+#: lib/minios_kernel.py:349
 msgid "Kernel {} activated successfully!"
 msgstr "Noyau {} activé avec succès !"
 
-#: lib/minios_kernel.py:348
+#: lib/minios_kernel.py:351
 msgid "Failed to activate kernel {}"
 msgstr "Échec de l'activation du noyau {}"
 
-#: lib/minios_kernel.py:368
+#: lib/minios_kernel.py:371
 msgid "Kernel {} not found"
 msgstr "Noyau {} non trouvé"
 
-#: lib/minios_kernel.py:377
+#: lib/minios_kernel.py:380
 msgid "No active kernel found"
 msgstr "Aucun noyau actif trouvé"
 
-#: lib/minios_kernel.py:395
+#: lib/minios_kernel.py:398
 msgid "Kernel"
 msgstr "Noyau"
 
-#: lib/minios_kernel.py:396
+#: lib/minios_kernel.py:399
 msgid "Active"
 msgstr "Actif"
 
-#: lib/minios_kernel.py:396
+#: lib/minios_kernel.py:399
 msgid "Available"
 msgstr "Disponible"
 
-#: lib/minios_kernel.py:397 lib/minios_kernel.py:475 lib/minios_kernel.py:477
+#: lib/minios_kernel.py:400 lib/minios_kernel.py:478 lib/minios_kernel.py:480
 msgid "Status"
 msgstr "Statut"
 
-#: lib/minios_kernel.py:398 lib/minios_kernel.py:472
+#: lib/minios_kernel.py:401 lib/minios_kernel.py:475
 msgid "MiniOS path"
 msgstr "Chemin MiniOS"
 
-#: lib/minios_kernel.py:400
+#: lib/minios_kernel.py:403
 msgid "Current active kernel"
 msgstr "Noyau actif actuel"
 
-#: lib/minios_kernel.py:401
+#: lib/minios_kernel.py:404
 msgid "Total available kernels"
 msgstr "Nombre total de noyaux disponibles"
 
-#: lib/minios_kernel.py:444
+#: lib/minios_kernel.py:447
 msgid "Directory is on a SquashFS filesystem (read-only)"
 msgstr "Le répertoire se trouve sur un système de fichiers SquashFS (lecture seule)"
 
-#: lib/minios_kernel.py:454
+#: lib/minios_kernel.py:457
 msgid "Permission denied: {}"
 msgstr "Permission refusée : {}"
 
-#: lib/minios_kernel.py:458
+#: lib/minios_kernel.py:461
 msgid "Error checking directory: {}"
 msgstr "Erreur lors de la vérification du répertoire : {}"
 
-#: lib/minios_kernel.py:473
+#: lib/minios_kernel.py:476
 msgid "Filesystem type"
 msgstr "Type de système de fichiers"
 
-#: lib/minios_kernel.py:475
+#: lib/minios_kernel.py:478
 msgid "Writable"
 msgstr "Écriture autorisée"
 
-#: lib/minios_kernel.py:477
+#: lib/minios_kernel.py:480
 msgid "Read-only"
 msgstr "Lecture seule"
 
-#: lib/minios_kernel.py:479
+#: lib/minios_kernel.py:482
 msgid "Reason"
 msgstr "Raison"
 
-#: lib/minios_kernel.py:500 lib/minios_kernel.py:506
+#: lib/minios_kernel.py:503 lib/minios_kernel.py:509
 msgid "Kernel {} deleted successfully"
 msgstr "Noyau {} supprimé avec succès"
 
-#: lib/minios_kernel.py:502 lib/minios_kernel.py:508
+#: lib/minios_kernel.py:505 lib/minios_kernel.py:511
 msgid "Failed to delete kernel {}"
 msgstr "Échec de la suppression du noyau {}"
 
-#: lib/minios_kernel.py:519
+#: lib/minios_kernel.py:522
 msgid "This tool requires root privileges. Please run with sudo or through pkexec."
 msgstr "Cet outil nécessite les privilèges root. Veuillez l'exécuter avec sudo ou pkexec."
 
-#: lib/minios_kernel.py:530
+#: lib/minios_kernel.py:533
 msgid "MiniOS Kernel Manager CLI"
 msgstr "CLI du gestionnaire de noyaux MiniOS"
 
-#: lib/minios_kernel.py:531 lib/minios_kernel.py:535
+#: lib/minios_kernel.py:534 lib/minios_kernel.py:538
 msgid "Output in JSON format"
 msgstr "Sortie au format JSON"
 
-#: lib/minios_kernel.py:537
+#: lib/minios_kernel.py:540
 msgid "Available commands"
 msgstr "Commandes disponibles"
 
-#: lib/minios_kernel.py:540
+#: lib/minios_kernel.py:543
 msgid "Package a kernel"
 msgstr "Empaqueter un noyau"
 
-#: lib/minios_kernel.py:542
+#: lib/minios_kernel.py:545
 msgid "Name of the kernel package in the repository"
 msgstr "Nom du paquet du noyau dans le dépôt"
 
-#: lib/minios_kernel.py:543
+#: lib/minios_kernel.py:546
 msgid "Path(s) to kernel .deb package(s)"
 msgstr "Chemin(s) vers le(s) paquet(s) .deb du noyau"
 
-#: lib/minios_kernel.py:544
+#: lib/minios_kernel.py:547
 msgid "Directory to save the packaged kernel files"
 msgstr "Répertoire où enregistrer les fichiers du noyau empaqueté"
 
-#: lib/minios_kernel.py:545
+#: lib/minios_kernel.py:548
 msgid "Compression method for SquashFS"
 msgstr "Méthode de compression pour SquashFS"
 
-#: lib/minios_kernel.py:546
+#: lib/minios_kernel.py:549
 msgid "Custom temporary directory (must have at least 1024MB free space)"
 msgstr "Répertoire temporaire personnalisé (doit avoir au moins 1024 Mo d'espace libre)"
 
-#: lib/minios_kernel.py:547
+#: lib/minios_kernel.py:550
 msgid "Force package lists update if outdated"
 msgstr "Forcer la mise à jour des listes de paquets si obsolètes"
 
-#: lib/minios_kernel.py:550
+#: lib/minios_kernel.py:553
 msgid "List available kernels"
 msgstr "Lister les noyaux disponibles"
 
-#: lib/minios_kernel.py:553
+#: lib/minios_kernel.py:556
 msgid "Activate a kernel"
 msgstr "Activer un noyau"
 
-#: lib/minios_kernel.py:554
+#: lib/minios_kernel.py:557
 msgid "Kernel version to activate"
 msgstr "Version du noyau à activer"
 
-#: lib/minios_kernel.py:557
+#: lib/minios_kernel.py:560
 msgid "Show kernel information"
 msgstr "Afficher les informations du noyau"
 
-#: lib/minios_kernel.py:558
+#: lib/minios_kernel.py:561
 msgid "Kernel version to get info about (current if not specified)"
 msgstr "Version du noyau pour obtenir des informations (actuelle si non spécifiée)"
 
-#: lib/minios_kernel.py:561
+#: lib/minios_kernel.py:564
 msgid "Check MiniOS directory status"
 msgstr "Vérifier l'état du répertoire MiniOS"
 
-#: lib/minios_kernel.py:564
+#: lib/minios_kernel.py:567
 msgid "Delete a packaged kernel"
 msgstr "Supprimer un noyau empaqueté"
 
-#: lib/minios_kernel.py:565
+#: lib/minios_kernel.py:568
 msgid "Kernel version to delete"
 msgstr "Version du noyau à supprimer"
 
-#: lib/minios_kernel_manager.py:380
+#: lib/minios_kernel_manager.py:385
 msgid "MiniOS directory is writable"
 msgstr "Le répertoire MiniOS est inscriptible"
 
-#: lib/minios_kernel_manager.py:385 lib/minios_kernel_manager.py:668
+#: lib/minios_kernel_manager.py:390 lib/minios_kernel_manager.py:680
 msgid "MiniOS directory is read-only"
 msgstr "Le répertoire MiniOS est en lecture seule"
 
-#: lib/minios_kernel_manager.py:425
+#: lib/minios_kernel_manager.py:431
 msgid "Manage Kernels"
 msgstr "Gérer les noyaux"
 
-#: lib/minios_kernel_manager.py:430 lib/minios_kernel_manager.py:631
+#: lib/minios_kernel_manager.py:436 lib/minios_kernel_manager.py:643
 msgid "Package Kernel"
 msgstr "Empaqueter le noyau"
 
-#: lib/minios_kernel_manager.py:467
+#: lib/minios_kernel_manager.py:475
 msgid "Select a packaged kernel to activate or delete:"
 msgstr "Sélectionnez un noyau empaqueté à activer ou supprimer :"
 
-#: lib/minios_kernel_manager.py:484 lib/minios_kernel_manager.py:2021
+#: lib/minios_kernel_manager.py:493 lib/minios_kernel_manager.py:2046
 msgid "Activating kernel..."
 msgstr "Activation du noyau en cours..."
 
-#: lib/minios_kernel_manager.py:514
+#: lib/minios_kernel_manager.py:523
 msgid "Manual Package"
 msgstr "Paquet manuel"
 
-#: lib/minios_kernel_manager.py:519
+#: lib/minios_kernel_manager.py:528
 msgid "Repository"
 msgstr "Dépôt"
 
-#: lib/minios_kernel_manager.py:538
+#: lib/minios_kernel_manager.py:547
 msgid "SquashFS Compression:"
 msgstr "Compression SquashFS :"
 
-#: lib/minios_kernel_manager.py:557 lib/minios_kernel_manager.py:1421
+#: lib/minios_kernel_manager.py:566 lib/minios_kernel_manager.py:1442
 msgid "No file selected"
 msgstr "Aucun fichier sélectionné"
 
-#: lib/minios_kernel_manager.py:562
+#: lib/minios_kernel_manager.py:571
 msgid "Browse..."
 msgstr "Parcourir..."
 
-#: lib/minios_kernel_manager.py:575 lib/minios_kernel_manager.py:576
+#: lib/minios_kernel_manager.py:584 lib/minios_kernel_manager.py:585
 msgid "Package Information:"
 msgstr "Informations sur le paquet :"
 
-#: lib/minios_kernel_manager.py:605
+#: lib/minios_kernel_manager.py:615
 msgid "Available Kernels:"
 msgstr "Noyaux disponibles :"
 
-#: lib/minios_kernel_manager.py:632 lib/minios_kernel_manager.py:674
+#: lib/minios_kernel_manager.py:644 lib/minios_kernel_manager.py:686
 msgid "Package kernel and add to repository"
 msgstr "Empaqueter le noyau et l'ajouter au dépôt"
 
-#: lib/minios_kernel_manager.py:670 lib/minios_kernel_manager.py:1446
-#: lib/minios_kernel_manager.py:1450
+#: lib/minios_kernel_manager.py:682 lib/minios_kernel_manager.py:1467
+#: lib/minios_kernel_manager.py:1471
 msgid "Please select a kernel first"
 msgstr "Veuillez d'abord sélectionner un noyau"
 
-#: lib/minios_kernel_manager.py:672
+#: lib/minios_kernel_manager.py:684
 msgid "Build in progress..."
 msgstr "Construction en cours..."
 
-#: lib/minios_kernel_manager.py:702
+#: lib/minios_kernel_manager.py:714
 msgid "No kernels packaged"
 msgstr "Aucun noyau empaqueté"
 
-#: lib/minios_kernel_manager.py:707
+#: lib/minios_kernel_manager.py:719
 msgid "Package a kernel first using the Package Kernel tab"
 msgstr "Empaquetez d'abord un noyau en utilisant l'onglet Empaqueter le noyau"
 
-#: lib/minios_kernel_manager.py:774
+#: lib/minios_kernel_manager.py:786
 msgid "ACTIVE"
 msgstr "ACTIF"
 
-#: lib/minios_kernel_manager.py:777 lib/minios_kernel_manager.py:1243
+#: lib/minios_kernel_manager.py:789 lib/minios_kernel_manager.py:1258
 msgid "AVAILABLE"
 msgstr "DISPONIBLE"
 
-#: lib/minios_kernel_manager.py:787
+#: lib/minios_kernel_manager.py:799
 msgid "RUNNING"
 msgstr "EN COURS D'EXÉCUTION"
 
-#: lib/minios_kernel_manager.py:821
+#: lib/minios_kernel_manager.py:833
 msgid "Please select a kernel to activate"
 msgstr "Veuillez sélectionner un noyau à activer"
 
-#: lib/minios_kernel_manager.py:825 lib/minios_kernel_manager.py:892
-#: lib/minios_kernel_manager.py:1454
+#: lib/minios_kernel_manager.py:837 lib/minios_kernel_manager.py:905
+#: lib/minios_kernel_manager.py:1475
 msgid "MiniOS directory is not writable"
 msgstr "Le répertoire MiniOS n'est pas inscriptible"
 
-#: lib/minios_kernel_manager.py:833 lib/minios_kernel_manager.py:2042
+#: lib/minios_kernel_manager.py:845 lib/minios_kernel_manager.py:2067
 msgid "Activate Kernel"
 msgstr "Activer le noyau"
 
-#: lib/minios_kernel_manager.py:836
+#: lib/minios_kernel_manager.py:848
 msgid ""
 "Are you sure you want to activate kernel {}?\n"
 "\n"
@@ -717,19 +737,19 @@ msgstr ""
 "\n"
 "Cela désactivera le noyau actuel et mettra à jour la configuration du chargeur de démarrage."
 
-#: lib/minios_kernel_manager.py:850
+#: lib/minios_kernel_manager.py:863
 msgid "Activating kernel, please wait..."
 msgstr "Activation du noyau, veuillez patienter..."
 
-#: lib/minios_kernel_manager.py:888
+#: lib/minios_kernel_manager.py:901
 msgid "Please select a kernel to delete"
 msgstr "Veuillez sélectionner un noyau à supprimer"
 
-#: lib/minios_kernel_manager.py:900 lib/minios_kernel_manager.py:2052
+#: lib/minios_kernel_manager.py:913 lib/minios_kernel_manager.py:2077
 msgid "Delete Kernel"
 msgstr "Supprimer le noyau"
 
-#: lib/minios_kernel_manager.py:903
+#: lib/minios_kernel_manager.py:916
 msgid ""
 "Are you sure you want to delete kernel '{}'?\n"
 "\n"
@@ -739,195 +759,195 @@ msgstr ""
 "\n"
 "Cette action ne peut pas être annulée."
 
-#: lib/minios_kernel_manager.py:929
+#: lib/minios_kernel_manager.py:942
 msgid "Select Kernel Package"
 msgstr "Sélectionner le paquet du noyau"
 
-#: lib/minios_kernel_manager.py:935 lib/minios_kernel_manager.py:1772
-#: lib/minios_kernel_manager.py:1941
+#: lib/minios_kernel_manager.py:948 lib/minios_kernel_manager.py:1797
+#: lib/minios_kernel_manager.py:1966
 msgid "Cancel"
 msgstr "Annuler"
 
-#: lib/minios_kernel_manager.py:936
+#: lib/minios_kernel_manager.py:949
 msgid "Open"
 msgstr "Ouvrir"
 
-#: lib/minios_kernel_manager.py:951
+#: lib/minios_kernel_manager.py:964
 msgid "Debian Package Files (*.deb)"
 msgstr "Fichiers de paquet Debian (*.deb)"
 
-#: lib/minios_kernel_manager.py:956
+#: lib/minios_kernel_manager.py:969
 msgid "All Files"
 msgstr "Tous les fichiers"
 
-#: lib/minios_kernel_manager.py:972 lib/minios_kernel_manager.py:1823
+#: lib/minios_kernel_manager.py:985 lib/minios_kernel_manager.py:1848
 msgid "{} files selected"
 msgstr "{} fichiers sélectionnés"
 
-#: lib/minios_kernel_manager.py:996
+#: lib/minios_kernel_manager.py:1009
 msgid "Files"
 msgstr "Fichiers"
 
-#: lib/minios_kernel_manager.py:997
+#: lib/minios_kernel_manager.py:1010
 msgid "Total size"
 msgstr "Taille totale"
 
-#: lib/minios_kernel_manager.py:1001
+#: lib/minios_kernel_manager.py:1014
 msgid "Selected files"
 msgstr "Fichiers sélectionnés"
 
-#: lib/minios_kernel_manager.py:1123
+#: lib/minios_kernel_manager.py:1136
 msgid "Fetching kernel list from repository..."
 msgstr "Récupération de la liste des noyaux depuis le dépôt..."
 
-#: lib/minios_kernel_manager.py:1125
+#: lib/minios_kernel_manager.py:1138
 msgid "Scanning for manual packages..."
 msgstr "Recherche des paquets manuels..."
 
-#: lib/minios_kernel_manager.py:1205
+#: lib/minios_kernel_manager.py:1220
 msgid "Manual package"
 msgstr "Paquet manuel"
 
-#: lib/minios_kernel_manager.py:1205
+#: lib/minios_kernel_manager.py:1220
 msgid "Repository kernel"
 msgstr "Noyau du dépôt"
 
-#: lib/minios_kernel_manager.py:1265
+#: lib/minios_kernel_manager.py:1282
 msgid "Package database outdated"
 msgstr "Base de données des paquets obsolète"
 
-#: lib/minios_kernel_manager.py:1267
+#: lib/minios_kernel_manager.py:1284
 msgid "The repository kernel list is empty. This may indicate an outdated package database. Update package lists now?"
 msgstr "La liste des noyaux du dépôt est vide. Cela peut indiquer une base de données des paquets obsolète. Mettre à jour les listes de paquets maintenant ?"
 
-#: lib/minios_kernel_manager.py:1333
+#: lib/minios_kernel_manager.py:1350
 msgid "Failed to update package lists"
 msgstr "Échec de la mise à jour des listes de paquets"
 
-#: lib/minios_kernel_manager.py:1355
+#: lib/minios_kernel_manager.py:1372
 msgid "No repository kernels found"
 msgstr "Aucun noyau de dépôt trouvé"
 
-#: lib/minios_kernel_manager.py:1357
+#: lib/minios_kernel_manager.py:1374
 msgid "No manual packages found"
 msgstr "Aucun paquet manuel trouvé"
 
-#: lib/minios_kernel_manager.py:1384
+#: lib/minios_kernel_manager.py:1403
 msgid "Failed to fetch repository kernels"
 msgstr "Échec de la récupération des noyaux du dépôt"
 
-#: lib/minios_kernel_manager.py:1497
+#: lib/minios_kernel_manager.py:1519
 msgid "Executing command: {}"
 msgstr "Exécution de la commande : {}"
 
-#: lib/minios_kernel_manager.py:1531
+#: lib/minios_kernel_manager.py:1554
 msgid "Failed to start packaging process. Please check the log for detailed error information."
 msgstr "Échec du démarrage du processus d'empaquetage. Veuillez consulter le journal pour des informations détaillées sur l'erreur."
 
-#: lib/minios_kernel_manager.py:1681
+#: lib/minios_kernel_manager.py:1706
 msgid "CLI tool finished successfully, installing to repository..."
 msgstr "L'outil CLI a terminé avec succès, installation vers le dépôt..."
 
-#: lib/minios_kernel_manager.py:1682
+#: lib/minios_kernel_manager.py:1707
 msgid "Installing kernel to repository..."
 msgstr "Installation du noyau dans le dépôt..."
 
-#: lib/minios_kernel_manager.py:1686
+#: lib/minios_kernel_manager.py:1711
 msgid "CLI tool finished successfully."
 msgstr "L'outil CLI a terminé avec succès."
 
-#: lib/minios_kernel_manager.py:1708
+#: lib/minios_kernel_manager.py:1733
 msgid "Kernel packaging failed with exit code: {}"
 msgstr "L'empaquetage du noyau a échoué avec le code de sortie : {}"
 
-#: lib/minios_kernel_manager.py:1712
+#: lib/minios_kernel_manager.py:1737
 msgid "Kernel packaging failed with exit code: {}. Please check the log above for detailed error information."
 msgstr "L'empaquetage du noyau a échoué avec le code de sortie : {}. Veuillez consulter le journal ci-dessus pour des informations détaillées sur l'erreur."
 
-#: lib/minios_kernel_manager.py:1727
+#: lib/minios_kernel_manager.py:1752
 msgid "Starting packaging process..."
 msgstr "Démarrage du processus d'empaquetage..."
 
-#: lib/minios_kernel_manager.py:1738
+#: lib/minios_kernel_manager.py:1763
 msgid "Packaging Log"
 msgstr "Journal d'empaquetage"
 
-#: lib/minios_kernel_manager.py:1750
+#: lib/minios_kernel_manager.py:1775
 msgid "Cancelling and cleaning up..."
 msgstr "Annulation et nettoyage en cours..."
 
-#: lib/minios_kernel_manager.py:1840 lib/minios_kernel_manager.py:1933
+#: lib/minios_kernel_manager.py:1865 lib/minios_kernel_manager.py:1958
 msgid "Back to Selection"
 msgstr "Retour à la sélection"
 
-#: lib/minios_kernel_manager.py:1864
+#: lib/minios_kernel_manager.py:1889
 msgid "Cancelling packaging..."
 msgstr "Annulation de l'empaquetage..."
 
-#: lib/minios_kernel_manager.py:1981
+#: lib/minios_kernel_manager.py:2006
 msgid "Error"
 msgstr "Erreur"
 
-#: lib/minios_kernel_manager.py:1995
+#: lib/minios_kernel_manager.py:2020
 msgid "Packaging Complete"
 msgstr "Empaquetage terminé"
 
-#: lib/minios_kernel_manager.py:2000
+#: lib/minios_kernel_manager.py:2025
 msgid "The new kernel is now available in the 'Manage Kernels' tab."
 msgstr "Le nouveau noyau est maintenant disponible dans l'onglet 'Gérer les noyaux'."
 
-#: lib/minios_utils.py:582
+#: lib/minios_utils.py:766
 msgid "Custom temporary directory does not exist: {}"
 msgstr "Le répertoire temporaire personnalisé n'existe pas : {}"
 
-#: lib/minios_utils.py:585
+#: lib/minios_utils.py:769
 msgid "Custom temporary directory is not writable: {}"
 msgstr "Le répertoire temporaire personnalisé n'est pas inscriptible : {}"
 
-#: lib/minios_utils.py:592
+#: lib/minios_utils.py:776
 #, python-brace-format
 msgid "Using custom temporary directory for {operation} ({available:.1f}MB available, {needed:.1f}MB needed)"
 msgstr "Utilisation du répertoire temporaire personnalisé pour {operation} ({available:.1f} Mo disponibles, {needed:.1f} Mo nécessaires)"
 
-#: lib/minios_utils.py:596
+#: lib/minios_utils.py:780
 msgid "Insufficient space in custom temporary directory '{}' for {}: {:.1f}MB available, {:.1f}MB needed"
 msgstr "Espace insuffisant dans le répertoire temporaire personnalisé '{}' pour {}: {:.1f} Mo disponibles, {:.1f} Mo nécessaires"
 
-#: lib/minios_utils.py:599
+#: lib/minios_utils.py:783
 msgid "Cannot check space in custom temporary directory '{}': {}"
 msgstr "Impossible de vérifier l'espace dans le répertoire temporaire personnalisé '{}' : {}"
 
-#: lib/minios_utils.py:611
+#: lib/minios_utils.py:795
 #, python-brace-format
 msgid "Using /tmp for {operation} ({available:.1f}MB available, {needed:.1f}MB needed)"
 msgstr "Utilisation de /tmp pour {operation} ({available:.1f} Mo disponibles, {needed:.1f} Mo nécessaires)"
 
-#: lib/minios_utils.py:615
+#: lib/minios_utils.py:799
 #, python-brace-format
 msgid "Insufficient space in /tmp for {operation} ({available:.1f}MB available, {needed:.1f}MB needed)"
 msgstr "Espace insuffisant dans /tmp pour {operation} ({available:.1f} Mo disponibles, {needed:.1f} Mo nécessaires)"
 
-#: lib/minios_utils.py:631
+#: lib/minios_utils.py:815
 msgid "No live system changes directory found, using /tmp anyway"
 msgstr "Aucun répertoire de modifications du système en direct trouvé, utilisation de /tmp de toute façon"
 
-#: lib/minios_utils.py:634
+#: lib/minios_utils.py:818
 msgid "Detected {} filesystem, using alternative: {}"
 msgstr "Système de fichiers {} détecté, utilisation de l'alternative : {}"
 
-#: lib/minios_utils.py:640
+#: lib/minios_utils.py:824
 msgid "Created alternative temporary directory: {}"
 msgstr "Répertoire temporaire alternatif créé : {}"
 
-#: lib/minios_utils.py:647
+#: lib/minios_utils.py:831
 msgid "Using alternative temporary directory: {} ({:.1f}MB available)"
 msgstr "Utilisation du répertoire temporaire alternatif : {} ({:.1f} Mo disponibles)"
 
-#: lib/minios_utils.py:653
+#: lib/minios_utils.py:837
 msgid "Insufficient disk space for operation. Need {:.1f}MB, but only {:.1f}MB available in /tmp and {:.1f}MB in {}"
 msgstr "Espace disque insuffisant pour l'opération. Besoin de {:.1f} Mo, mais seulement {:.1f} Mo disponibles dans /tmp et {:.1f} Mo dans {}"
 
-#: lib/minios_utils.py:663
+#: lib/minios_utils.py:847
 msgid "Could not check disk space: {}. Using default temporary directory."
 msgstr "Impossible de vérifier l'espace disque : {}. Utilisation du répertoire temporaire par défaut."
 

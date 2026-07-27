@@ -18,18 +18,92 @@ from typing import Optional, Callable
 try:
     # Try relative imports first (when imported as module)
     from .compression_utils import get_compression_params
-    from .kernel_utils import get_non_symlink_modules_dir
+    from .kernel_utils import KERNEL_DPKG_METADATA_DIR, get_non_symlink_modules_dir
     from .minios_utils import get_temp_dir_with_space_check
 except ImportError:
     # Fall back to absolute imports (when run as main script)
     from compression_utils import get_compression_params
-    from kernel_utils import get_non_symlink_modules_dir
+    from kernel_utils import KERNEL_DPKG_METADATA_DIR, get_non_symlink_modules_dir
     from minios_utils import get_temp_dir_with_space_check
 
 # Initialize gettext
 gettext.bindtextdomain('minios-kernel-manager', '/usr/share/locale')
 gettext.textdomain('minios-kernel-manager')
 _ = gettext.gettext
+
+INITRD_CRYPTO_CAPABILITY_MARKER = '/run/initramfs/etc/minios-initramfs-crypt'
+ENCRYPTED_PERSISTENCE_MARKER = '/run/initramfs/minios-crypt'
+
+
+def running_initrd_has_crypto_capability() -> bool:
+    """Return whether the running MiniOS initrd explicitly supports crypto."""
+    return os.path.exists(INITRD_CRYPTO_CAPABILITY_MARKER)
+
+
+def encrypted_persistence_is_active() -> bool:
+    """Return whether the running initrd has activated encrypted persistence."""
+    return os.path.exists(ENCRYPTED_PERSISTENCE_MARKER)
+
+
+def kernel_supports_dm_crypt(build_version: str, temp_dir: str = None) -> bool:
+    """Check the replacement kernel's config and modules for dm-crypt support."""
+    config_paths = [
+        os.path.join(temp_dir, 'boot', 'config-{}'.format(build_version)) if temp_dir else None,
+        '/boot/config-{}'.format(build_version),
+    ]
+    for config_path in config_paths:
+        if config_path and os.path.isfile(config_path):
+            try:
+                with open(config_path, 'r') as config_file:
+                    config = config_file.read()
+                    if 'CONFIG_DM_CRYPT=y' in config or 'CONFIG_DM_CRYPT=m' in config:
+                        return True
+            except OSError:
+                pass
+
+    module_roots = [
+        os.path.join(temp_dir, 'lib', 'modules', build_version) if temp_dir else None,
+        os.path.join(temp_dir, 'usr', 'lib', 'modules', build_version) if temp_dir else None,
+        os.path.join('/lib/modules', build_version),
+    ]
+    for module_root in module_roots:
+        if not module_root:
+            continue
+        for module_path in (
+            os.path.join(module_root, 'kernel', 'drivers', 'md', 'dm-crypt.ko*'),
+            os.path.join(module_root, 'kernel', 'crypto', 'dm-crypt.ko*'),
+        ):
+            if glob.glob(module_path):
+                return True
+    return False
+
+
+def validate_crypto_initramfs(output_image: str, builder: str = None) -> None:
+    """Ensure a crypto-enabled initrd contains the userspace and dm-crypt module."""
+    inspectors = ('lsinitrd', 'lsinitramfs') if builder == 'dracut' else ('lsinitramfs', 'lsinitrd')
+    inspector = next((tool for tool in inspectors if shutil.which(tool)), None)
+    if not inspector:
+        raise RuntimeError(_('Cannot validate crypto initramfs: neither lsinitramfs nor lsinitrd is available'))
+
+    try:
+        result = subprocess.run(
+            [inspector, output_image], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            universal_newlines=True, check=False,
+        )
+    except OSError as error:
+        raise RuntimeError(_('Cannot validate crypto initramfs with {tool}: {error}').format(
+            tool=inspector, error=error,
+        ))
+
+    if result.returncode != 0:
+        raise RuntimeError(_('Cannot validate crypto initramfs with {tool}: {error}').format(
+            tool=inspector, error=result.stderr.strip(),
+        ))
+
+    contents = result.stdout
+    if ('cryptsetup' not in contents or 'dm-crypt.ko' not in contents or
+            'etc/minios-initramfs-crypt' not in contents):
+        raise RuntimeError(_('Generated initramfs lacks its crypto marker, cryptsetup, or dm-crypt support'))
 
 
 def detect_initramfs_builder() -> str:
@@ -160,6 +234,14 @@ def create_squashfs_image(kernel_version: str, compression: str, output_dir: str
     # Copy modules to proper structure using ORIGINAL kernel version (so kernel can find them)
     shutil.copytree(modules_path, os.path.join(target_modules_dir, original_kernel_version))
 
+    metadata_src = os.path.join(temp_dir, KERNEL_DPKG_METADATA_DIR)
+    if os.path.isdir(metadata_src):
+        metadata_dst = os.path.join(temp_squashfs_dir, 'usr', 'share', 'minios', 'kernel-dpkg')
+        os.makedirs(os.path.dirname(metadata_dst), exist_ok=True)
+        if os.path.exists(metadata_dst):
+            shutil.rmtree(metadata_dst)
+        shutil.copytree(metadata_src, metadata_dst)
+
     # Generate modules.dep and other module dependency files for SquashFS
     try:
         print(f"I: {_('Generating module dependencies for SquashFS')}")
@@ -184,8 +266,8 @@ def create_squashfs_image(kernel_version: str, compression: str, output_dir: str
     except (subprocess.TimeoutExpired, subprocess.CalledProcessError, OSError) as e:
         print(f"W: {_('Failed to generate module dependencies: {}').format(str(e))}")
 
-    # Use the modules directory structure directly as source for SquashFS
-    source_path = system_modules_base
+    # Include metadata alongside the module tree, not merely the module subtree.
+    source_path = '.'
     print(f"I: {_('Using extracted deb modules with structure: {path}').format(path=f'{temp_squashfs_dir}/{system_modules_base}/{original_kernel_version}')}")
 
     # Get compression parameters
@@ -332,15 +414,30 @@ def generate_initramfs(kernel_version: str, output_dir: str, logger: Optional[Ca
 
     # Get modules directory
     modules_dir = get_non_symlink_modules_dir()
+    crypto_capable = running_initrd_has_crypto_capability()
+    encrypted_persistence = encrypted_persistence_is_active()
+
+    if encrypted_persistence and not crypto_capable:
+        raise RuntimeError(_('Encrypted persistence is active, but the running initrd does not declare crypto capability'))
+    if crypto_capable and not kernel_supports_dm_crypt(build_version, temp_dir):
+        message = _('Replacement kernel {} does not support dm-crypt').format(build_version)
+        if encrypted_persistence:
+            message += _('; refusing to replace the initrd because encrypted persistence would lose support')
+        raise RuntimeError(message)
 
     if builder == 'dracut':
-        return _generate_initramfs_dracut(kernel_version, build_version, output_image, modules_dir, temp_dir, custom_temp_dir, logger)
+        initramfs = _generate_initramfs_dracut(kernel_version, build_version, output_image, modules_dir, temp_dir, custom_temp_dir, logger, crypto_capable)
     else:  # livekit
-        return _generate_initramfs_livekit(kernel_version, build_version, output_image, modules_dir, temp_dir, custom_temp_dir, logger)
+        initramfs = _generate_initramfs_livekit(kernel_version, build_version, output_image, modules_dir, temp_dir, custom_temp_dir, logger, crypto_capable)
+
+    if crypto_capable:
+        validate_crypto_initramfs(initramfs, builder)
+    return initramfs
 
 
 def _generate_initramfs_dracut(kernel_version: str, build_version: str, output_image: str,
-                                modules_dir: str, temp_dir: str = None, custom_temp_dir: str = None, logger: Optional[Callable] = None) -> str:
+                                modules_dir: str, temp_dir: str = None, custom_temp_dir: str = None,
+                                logger: Optional[Callable] = None, crypto_capable: bool = False) -> str:
     """Generate initramfs using dracut/mkdracut"""
     mkdracut_path = "/run/initramfs/dracut-mos/mkdracut"
     if not os.path.exists(mkdracut_path):
@@ -390,6 +487,8 @@ def _generate_initramfs_dracut(kernel_version: str, build_version: str, output_i
 
     # Execute mkdracut with parameters: -k KERNEL -n -c
     cmd = [mkdracut_path, "-k", build_version, "-n", "-c", "-o", output_image]
+    if crypto_capable:
+        cmd.append('--crypt')
 
     # Prepare environment with custom temp directory if provided
     env = os.environ.copy()
@@ -450,7 +549,8 @@ def _generate_initramfs_dracut(kernel_version: str, build_version: str, output_i
 
 
 def _generate_initramfs_livekit(kernel_version: str, build_version: str, output_image: str,
-                                 modules_dir: str, temp_dir: str = None, custom_temp_dir: str = None, logger: Optional[Callable] = None) -> str:
+                                  modules_dir: str, temp_dir: str = None, custom_temp_dir: str = None,
+                                  logger: Optional[Callable] = None, crypto_capable: bool = False) -> str:
     """Generate initramfs using livekit/mkinitrfs"""
     # Check if mkinitrfs exists
     mkinitrfs_path = "/run/initramfs/mkinitrfs"
@@ -521,6 +621,8 @@ def _generate_initramfs_livekit(kernel_version: str, build_version: str, output_
 
     # Execute mkinitrfs with default parameters: -k KERNEL -n -c -dm
     cmd = [mkinitrfs_path, "-k", build_version, "-n", "-c", "-dm"]
+    if crypto_capable:
+        cmd.append('--crypt')
 
     # Add config file path if available
     if temp_dir:
@@ -578,6 +680,13 @@ def _generate_initramfs_livekit(kernel_version: str, build_version: str, output_
             raise RuntimeError(_("mkinitrfs failed: {error}").format(error=e))
         else:
             raise RuntimeError(_("mkinitrfs error: {error}").format(error=e))
+    finally:
+        # Do not leave a system modules symlink behind when mkinitrfs fails.
+        if cleanup_symlink and os.path.islink(cleanup_symlink):
+            try:
+                os.unlink(cleanup_symlink)
+            except OSError:
+                pass
 
     # Always show some output in logger if provided
     if logger:
@@ -614,14 +723,6 @@ def _generate_initramfs_livekit(kernel_version: str, build_version: str, output_
         os.remove(temp_initramfs_path)
     except OSError:
         pass  # Ignore cleanup errors
-
-    # Clean up temporary symlink if created
-    if cleanup_symlink and os.path.islink(cleanup_symlink):
-        try:
-            os.remove(cleanup_symlink)
-            print(f"I: {_('Removed temporary symlink: {path}').format(path=cleanup_symlink)}")
-        except OSError as e:
-            print(f"Warning: Failed to remove temporary symlink {cleanup_symlink}: {e}")
 
     # Copy log if available
     temp_dir_parent = os.path.dirname(os.path.dirname(temp_initramfs_path)) if temp_initramfs_path else None

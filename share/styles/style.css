@@ -1,5 +1,52 @@
 /* Kernel Manager Styles */
 
+headerbar,
+.titlebar {
+    min-height: 32px;
+}
+
+headerbar.minios-headerbar { padding-top: 0; padding-bottom: 0; }
+
+headerbar button.titlebutton,
+.titlebar button.titlebutton {
+    min-width: 30px;
+    min-height: 28px;
+    padding: 0;
+}
+
+.manager-status-banner {
+    border: 1px solid alpha(@borders, 0.65);
+    border-radius: 5px;
+    padding: 8px 10px;
+}
+
+.manager-status-banner.status-success {
+    background-color: alpha(#73d216, 0.12);
+    border-color: alpha(#4e9a06, 0.45);
+}
+
+.manager-status-banner.status-error {
+    background-color: alpha(#e01b24, 0.12);
+    border-color: alpha(#e01b24, 0.45);
+}
+
+.manager-notebook { margin-top: 2px; }
+.manager-page { background-color: transparent; }
+
+.manager-list-card,
+.content-card {
+    border: 1px solid alpha(@borders, 0.65);
+    border-radius: 5px;
+    background-color: transparent;
+    padding: 3px;
+}
+
+.manager-footer {
+    padding-top: 8px;
+}
+
+.dim-label { opacity: 0.72; }
+
 /* ==================== Button Styles ==================== */
 /* General button styling - uniform height for all buttons */
 button {
@@ -52,9 +99,9 @@ button.destructive-action:disabled {
 
 /* ==================== List Styles ==================== */
 listbox {
-    background-color: #fafafa;
-    border: 1px solid #d9d9d9;
-    border-radius: 3px;
+    background-color: alpha(@theme_base_color, 0.35);
+    border: none;
+    border-radius: 2px;
 }
 
 listbox row {
@@ -63,7 +110,7 @@ listbox row {
     padding: 0;
     transition: all 0.15s ease-out;
     min-height: 80px;
-    border-bottom: 1px solid #e8e8e8;
+    border-bottom: 1px solid alpha(@borders, 0.45);
 }
 
 listbox row:last-child {
@@ -71,7 +118,7 @@ listbox row:last-child {
 }
 
 listbox row:hover {
-    background-color: #f5f5f5;
+    background-color: alpha(@theme_fg_color, 0.06);
 }
 
 row:selected {
@@ -154,11 +201,11 @@ label.running-kernel-badge {
 /* ==================== Context Menu Styles ==================== */
 menu,
 .context-menu {
-    border: 1px solid #a6a6a6;
+    border: 1px solid alpha(@borders, 0.8);
     border-radius: 3px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     padding: 2px;
-    background-color: #f6f6f6;
+    background-color: @theme_bg_color;
 }
 
 menuitem {
@@ -185,10 +232,10 @@ menuitem:hover {
 
 /* ==================== Custom Popup Styles ==================== */
 window.popup {
-    border: 1px solid #a6a6a6;
+    border: 1px solid alpha(@borders, 0.8);
     border-radius: 3px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    background-color: #f6f6f6;
+    background-color: @theme_bg_color;
 }
 
 window.popup button {
@@ -200,11 +247,11 @@ window.popup button {
 }
 
 window.popup button:hover {
-    background: linear-gradient(to bottom, #e6e6e6, #d0d0d0);
+    background-color: alpha(@theme_fg_color, 0.08);
 }
 
 window.popup separator {
-    color: #a6a6a6;
+    color: alpha(@borders, 0.8);
     margin: 2px 0;
 }
 

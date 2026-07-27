@@ -9,12 +9,59 @@ import os
 import re
 import shutil
 import gettext
+import stat
+import tempfile
 from typing import Optional, List
 
 # Initialize gettext
 gettext.bindtextdomain('minios-kernel-manager', '/usr/share/locale')
 gettext.textdomain('minios-kernel-manager')
 _ = gettext.gettext
+
+
+def _trusted_directory(path: str) -> bool:
+    """Reject symlinked configuration roots and parents before writing."""
+    path = os.path.abspath(path)
+    current = os.path.sep
+    for component in path.strip(os.path.sep).split(os.path.sep):
+        if not component:
+            continue
+        current = os.path.join(current, component)
+        try:
+            mode = os.lstat(current).st_mode
+        except OSError:
+            return False
+        if stat.S_ISLNK(mode) or not stat.S_ISDIR(mode):
+            return False
+    return True
+
+
+def _atomic_write_config(path: str, content, encoding: str = None) -> None:
+    """Atomically replace a regular config without following a symlink."""
+    parent = os.path.dirname(path)
+    if not _trusted_directory(parent):
+        raise RuntimeError('Untrusted boot configuration directory')
+    try:
+        mode = stat.S_IMODE(os.lstat(path).st_mode)
+    except OSError:
+        raise RuntimeError('Boot configuration is missing or untrusted')
+    if os.path.islink(path) or not os.path.isfile(path):
+        raise RuntimeError('Boot configuration is not a regular file')
+
+    fd, temporary = tempfile.mkstemp(prefix='.minios-kernel-', dir=parent)
+    try:
+        os.fchmod(fd, mode)
+        with os.fdopen(fd, 'w', encoding=encoding) as fh:
+            fh.write(content)
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.replace(temporary, path)
+    except Exception:
+        try:
+            os.unlink(temporary)
+        except OSError:
+            pass
+        raise
 
 def update_syslinux_config(minios_path: str, kernel_version: str) -> bool:
     """
@@ -26,11 +73,8 @@ def update_syslinux_config(minios_path: str, kernel_version: str) -> bool:
             if not os.path.exists(config_file):
                 return True
 
-            try:
-                os.chmod(config_file, 0o644)
-            except (OSError, NotImplementedError):
-                pass
-
+            if os.path.islink(config_file) or not os.path.isfile(config_file):
+                raise RuntimeError('SYSLINUX configuration is not a regular file')
             with open(config_file, 'rb') as f:
                 raw_data = f.read()
 
@@ -52,8 +96,7 @@ def update_syslinux_config(minios_path: str, kernel_version: str) -> bool:
             new_content = re.sub(r'(initrd=/minios/boot/)initrfs-[^\s]+', f'\\1initrfs-{version}.img', new_content)
 
             if new_content != content:
-                with open(config_file, 'w', encoding=detected_encoding) as f:
-                    f.write(new_content)
+                _atomic_write_config(config_file, new_content, detected_encoding)
                 print(f"I: {_('Updated SYSLINUX config: {}').format(config_file)}")
 
             return True
@@ -139,6 +182,8 @@ def update_grub_config(minios_path: str, kernel_version: str) -> bool:
         
         for config_file in config_files:
             try:
+                if os.path.islink(config_file) or not os.path.isfile(config_file):
+                    raise RuntimeError('GRUB configuration is not a regular file')
                 with open(config_file, 'r', encoding='utf-8') as f:
                     content = f.read()
                 
@@ -177,8 +222,7 @@ def update_grub_config(minios_path: str, kernel_version: str) -> bool:
                 
                 # Only write if content changed
                 if content != original_content:
-                    with open(config_file, 'w', encoding='utf-8') as f:
-                        f.write(content)
+                    _atomic_write_config(config_file, content, 'utf-8')
                     updated_files.append(os.path.basename(config_file))
                 
             except Exception as e:
