@@ -61,6 +61,8 @@ except ImportError:
 gi.require_version('Gtk', '3.0')
 gi.require_version('Gio', '2.0')
 from gi.repository import Gtk, GLib, Gio, Pango
+from minios_gui import (LogView, apply_minios_css, ask_confirmation, new_icon,
+                        show_error_dialog, show_info_dialog)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # CLI Interface Functions
@@ -72,27 +74,30 @@ def run_minios_kernel(args):
     
     return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
 
+
+def _last_ndjson_record(output):
+    """Parse the final typed record from compact CLI NDJSON output."""
+    records = []
+    for line in (output or '').splitlines():
+        if line.strip():
+            record = json.loads(line)
+            if not isinstance(record, dict) or not record.get('type'):
+                raise ValueError('CLI returned an untyped JSON record')
+            records.append(record)
+    if not records:
+        raise ValueError('CLI returned no NDJSON records')
+    return records[-1]
+
 def activate_kernel_cli(kernel_version):
     """Activate kernel using minios-kernel CLI with JSON output"""
     try:
         # Use pkexec to execute the script with JSON output
         result = run_minios_kernel(['--json', 'activate', kernel_version])
         
-        if result.returncode == 0:
-            # Parse JSON response
-            data = json.loads(result.stdout)
-            
-            if data.get('success'):
-                return True, data.get('message', 'Kernel activated successfully')
-            else:
-                return False, data.get('error', 'Unknown error')
-        else:
-            # Try to parse JSON error response
-            try:
-                error_data = json.loads(result.stderr)
-                return False, error_data.get('error', result.stderr)
-            except json.JSONDecodeError:
-                return False, result.stderr or f"Command failed with return code {result.returncode}"
+        data = _last_ndjson_record(result.stdout)
+        if result.returncode == 0 and data.get('success'):
+            return True, data.get('message', 'Kernel activated successfully')
+        return False, data.get('error', result.stderr or 'Unknown error')
             
     except json.JSONDecodeError as e:
         # Fallback to text parsing if JSON fails
@@ -115,7 +120,7 @@ def list_kernels_cli():
         
         if result.returncode == 0:
             # Parse JSON response
-            data = json.loads(result.stdout)
+            data = _last_ndjson_record(result.stdout)
             
             kernels = []
             active_kernel = data.get('active_kernel')
@@ -165,36 +170,6 @@ def list_kernels_cli():
         print(f"Error listing kernels: {str(e)}")
         return [], None
 
-def package_kernel_cli(source_type, source_path, output_dir, squashfs_comp="zstd", initrd_comp="zstd"):
-    """Package kernel using minios-kernel CLI with JSON output"""
-    try:
-        # Build command arguments
-        cmd_args = ['--json', 'package', '-o', output_dir, '--sqfs-comp', squashfs_comp]
-        
-        if source_type == 'repo':
-            cmd_args.extend(['--repo', source_path])
-        else:  # deb
-            if isinstance(source_path, list):
-                deb_files = [str(path) for path in source_path if path]
-                cmd_args.extend(['--deb'] + deb_files)
-            else:
-                cmd_args.extend(['--deb', source_path])
-        
-        # Use pkexec to execute the script
-        result = run_minios_kernel(cmd_args)
-        
-        if result.returncode == 0:
-            return True, result.stdout
-        else:
-            # Try to parse JSON error response
-            try:
-                error_data = json.loads(result.stderr)
-                return False, error_data.get('error', result.stderr)
-            except json.JSONDecodeError:
-                return False, result.stderr or f"Command failed with return code {result.returncode}"
-    except Exception as e:
-        return False, str(e)
-
 def update_package_lists_gui():
     """Update package lists directly via pkexec apt update"""
     try:
@@ -213,7 +188,7 @@ def delete_kernel_cli(kernel_version):
         result = run_minios_kernel(['--json', 'delete', kernel_version])
         
         if result.returncode == 0:
-            response_data = json.loads(result.stdout)
+            response_data = _last_ndjson_record(result.stdout)
             success = response_data.get('success', False)
             message = response_data.get('message', '')
             error = response_data.get('error', '')
@@ -223,8 +198,11 @@ def delete_kernel_cli(kernel_version):
             else:
                 return False, error
         else:
-            # Try to parse error from stderr or stdout
-            error_msg = result.stderr.strip() or result.stdout.strip()
+            try:
+                response_data = _last_ndjson_record(result.stdout)
+                error_msg = response_data.get('error', '')
+            except (ValueError, json.JSONDecodeError):
+                error_msg = result.stderr.strip()
             return False, f"Command failed with exit code {result.returncode}: {error_msg}"
             
     except json.JSONDecodeError as e:
@@ -237,7 +215,7 @@ def check_minios_status_cli():
     try:
         result = run_minios_kernel(['status', '--json'])
         if result.returncode == 0:
-            status_data = json.loads(result.stdout)
+            status_data = _last_ndjson_record(result.stdout)
             return status_data
         else:
             return {
@@ -297,17 +275,6 @@ except Exception as e:
 # ──────────────────────────────────────────────────────────────────────────────
 # Helper Functions
 # ──────────────────────────────────────────────────────────────────────────────
-def apply_css_if_exists():
-    """Apply CSS styling to the application if the file exists."""
-    if os.path.exists(CSS_FILE_PATH):
-        provider = Gtk.CssProvider()
-        provider.load_from_path(CSS_FILE_PATH)
-        Gtk.StyleContext.add_provider_for_screen(
-            Gtk.Widget.get_screen(Gtk.Window()),
-            provider,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-        )
-
 # ──────────────────────────────────────────────────────────────────────────────
 # Main Application Window
 # ──────────────────────────────────────────────────────────────────────────────
@@ -338,7 +305,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         self.add(self.main_vbox)
 
         # Apply CSS if available
-        apply_css_if_exists()
+        apply_minios_css(CSS_FILE_PATH)
 
         # Build the user interface
         self._build_header_bar()
@@ -377,22 +344,21 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         """Build system status information panel"""
         # MiniOS directory status - simplified
         minios_hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        minios_hbox.get_style_context().add_class("manager-status-banner")
         
         if self.minios_path and self.minios_writable:
             minios_icon_name = "emblem-default"  # Green checkmark
-            minios_hbox.get_style_context().add_class("status-success")
+            minios_hbox.get_style_context().add_class("success-banner")
             status_text = _("MiniOS directory is writable")
         else:
             minios_icon_name = "dialog-error"  # Error icon
-            minios_hbox.get_style_context().add_class("status-error")
+            minios_hbox.get_style_context().add_class("error-banner")
             if self.minios_path:
                 status_text = _("MiniOS directory is read-only")
             else:
                 status_text = _("MiniOS directory not found")
         
         # Status icon
-        status_icon = Gtk.Image.new_from_icon_name(minios_icon_name, Gtk.IconSize.MENU)
+        status_icon = new_icon(minios_icon_name, Gtk.IconSize.LARGE_TOOLBAR)
         minios_hbox.pack_start(status_icon, False, False, 0)
         
         # Status text - clean and simple
@@ -478,6 +444,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         
         # Packaged kernels list
         self.packaged_kernel_list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.SINGLE)
+        self.packaged_kernel_list.get_style_context().add_class('minios-selectable')
         self.packaged_kernel_list.connect("row-selected", self._on_packaged_kernel_selected)
         self.packaged_kernel_list.connect("button-press-event", self._on_list_button_press)
         
@@ -505,6 +472,22 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         self.activate_loading_box.set_visible(False)
         
         tab_box.pack_start(overlay, True, True, 0)
+
+        actions = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        actions.set_halign(Gtk.Align.END)
+        self.delete_kernel_button = Gtk.Button(label=_("Delete Kernel"))
+        self.delete_kernel_button.get_style_context().add_class(
+            'destructive-action')
+        self.delete_kernel_button.set_sensitive(False)
+        self.delete_kernel_button.connect("clicked", self._on_delete_clicked)
+        actions.pack_start(self.delete_kernel_button, False, False, 0)
+        self.activate_kernel_button = Gtk.Button(label=_("Activate Kernel"))
+        self.activate_kernel_button.get_style_context().add_class(
+            'suggested-action')
+        self.activate_kernel_button.set_sensitive(False)
+        self.activate_kernel_button.connect("clicked", self._on_activate_clicked)
+        actions.pack_start(self.activate_kernel_button, False, False, 0)
+        tab_box.pack_start(actions, False, False, 0)
         
         # Populate packaged kernels
         self._populate_packaged_kernels()
@@ -568,10 +551,11 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         self.selected_file_label.get_style_context().add_class('dim-label')
         file_selection_box.pack_start(self.selected_file_label, True, True, 0)
         
-        self.browse_button = Gtk.Button.new_with_label(_("Browse..."))
-        self.browse_button.set_image(Gtk.Image.new_from_icon_name("document-open", Gtk.IconSize.BUTTON))
-        self.browse_button.set_always_show_image(True)
-        self.browse_button.get_style_context().add_class('suggested-action')
+        self.browse_button = Gtk.Button.new_with_label(_("Browse…"))
+        self.browse_button.set_image(new_icon(
+            "document-open-symbolic", Gtk.IconSize.BUTTON))
+        self.browse_button.set_size_request(96, -1)
+        self.browse_button.set_valign(Gtk.Align.CENTER)
         self.browse_button.connect("clicked", self._on_browse_clicked)
         file_selection_box.pack_start(self.browse_button, False, False, 0)
         
@@ -616,6 +600,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         self.repo_selection_box.pack_start(kernel_list_label, False, False, 0)
 
         self.kernel_list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.SINGLE)
+        self.kernel_list.get_style_context().add_class('minios-selectable')
         self.kernel_list.connect("row-selected", self._on_kernel_selected)
 
         sw = Gtk.ScrolledWindow()
@@ -705,7 +690,9 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             main_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
             main_box.set_halign(Gtk.Align.CENTER)
             
-            icon = Gtk.Image.new_from_icon_name("dialog-information", Gtk.IconSize.DND)
+            # Large informational empty-state illustration. This is intentionally
+            # distinct from the small symbolic field-help icons next to labels.
+            icon = new_icon("dialog-information", Gtk.IconSize.DND)
             main_box.pack_start(icon, False, False, 0)
             
             info_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
@@ -742,18 +729,20 @@ class KernelPackWindow(Gtk.ApplicationWindow):
                 row = Gtk.ListBoxRow()
                 
                 # Add CSS classes based on kernel status
-                if kernel_info.get('is_running'):
-                    row.get_style_context().add_class('kernel-status-running')
-                elif kernel_info.get('is_active'):
-                    row.get_style_context().add_class('kernel-status-active')
+                if kernel_info.get('is_active'):
+                    row.get_style_context().add_class('row-status-active')
+                elif kernel_info.get('is_running'):
+                    row.get_style_context().add_class('row-status-running')
                 else:
-                    row.get_style_context().add_class('kernel-status-available')
+                    row.get_style_context().add_class('row-status-available')
                 
                 main_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=15)
-                main_box.get_style_context().add_class('kernel-item')
+                main_box.get_style_context().add_class('manager-state-row-content')
                 
                 # Use the new icon from kernel_info
-                img = Gtk.Image.new_from_icon_name(kernel_info.get('icon_name', 'package-x-generic'), Gtk.IconSize.DND)
+                img = new_icon(
+                    kernel_info.get('icon_name', 'package-x-generic'),
+                    Gtk.IconSize.DND)
                 main_box.pack_start(img, False, False, 0)
                 
                 info_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
@@ -768,7 +757,8 @@ class KernelPackWindow(Gtk.ApplicationWindow):
                 
                 # Description with kernel type and size
                 desc_label = Gtk.Label()
-                desc_label.set_markup(f'<span size="small" color="#555555">{GLib.markup_escape_text(kernel_info["description"])}</span>')
+                desc_label.set_markup(f'<span size="small">{GLib.markup_escape_text(kernel_info["description"])}</span>')
+                desc_label.get_style_context().add_class('dim-label')
                 desc_label.set_halign(Gtk.Align.START)
                 desc_label.set_ellipsize(Pango.EllipsizeMode.END)
                 info_box.pack_start(desc_label, False, False, 0)
@@ -782,12 +772,12 @@ class KernelPackWindow(Gtk.ApplicationWindow):
                 
                 # Primary status badge
                 status_label = Gtk.Label()
+                status_label.get_style_context().add_class('badge')
                 if kernel_info.get('is_active'):
                     status_text = _('ACTIVE')
-                    status_label.get_style_context().add_class('active-kernel-badge')
+                    status_label.get_style_context().add_class('badge-success')
                 else:
                     status_text = _('AVAILABLE')
-                    status_label.get_style_context().add_class('available-kernel-badge')
                 
                 status_label.set_markup(f'<span size="small" weight="bold">{GLib.markup_escape_text(status_text)}</span>')
                 status_label.set_halign(Gtk.Align.CENTER)
@@ -797,7 +787,8 @@ class KernelPackWindow(Gtk.ApplicationWindow):
                 if kernel_info.get('is_running'):
                     running_label = Gtk.Label()
                     running_text = _('RUNNING')
-                    running_label.get_style_context().add_class('running-kernel-badge')
+                    running_label.get_style_context().add_class('badge')
+                    running_label.get_style_context().add_class('badge-warning')
                     running_label.set_markup(f'<span size="small" weight="bold">{GLib.markup_escape_text(running_text)}</span>')
                     running_label.set_halign(Gtk.Align.CENTER)
                     status_box.pack_start(running_label, False, False, 0)
@@ -819,13 +810,18 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             if not kernel_info:
                 return
 
-            # Kernel status tracking (buttons removed, only context menu now)
-            is_active = kernel_info['status'] == 'active'
-            is_running = is_kernel_currently_running(self.selected_packaged_kernel)
-            # Context menu will handle sensitivity based on kernel status
+            # Sensitivity is based on backend booleans, never translated or
+            # presentation status text.
+            is_active = bool(kernel_info.get('is_active', False))
+            is_running = bool(kernel_info.get('is_running', False))
+            self.activate_kernel_button.set_sensitive(
+                not is_active and self.minios_writable)
+            self.delete_kernel_button.set_sensitive(
+                not is_active and not is_running and self.minios_writable)
         else:
             self.selected_packaged_kernel = None
-            # No buttons to update - using context menu only
+            self.activate_kernel_button.set_sensitive(False)
+            self.delete_kernel_button.set_sensitive(False)
 
     def _on_activate_clicked(self, button):
         """Handle activate kernel button click"""
@@ -837,23 +833,12 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             self._show_error(_("MiniOS directory is not writable"))
             return
         
-        dialog = Gtk.MessageDialog(
-            transient_for=self,
-            flags=0,
-            message_type=Gtk.MessageType.QUESTION,
-            buttons=Gtk.ButtonsType.YES_NO,
-            text=_("Activate Kernel")
-        )
-        dialog.format_secondary_text(
-            _("Are you sure you want to activate kernel {}?\n\n" 
-              "This will deactivate the current kernel and update the bootloader configuration.").format(
-                self.selected_packaged_kernel)
-        )
-        
-        response = dialog.run()
-        dialog.destroy()
-        
-        if response == Gtk.ResponseType.YES:
+        if ask_confirmation(
+                self,
+                _("Activate kernel {}?").format(self.selected_packaged_kernel),
+                _("The current kernel will be deactivated and the bootloader "
+                  "configuration will be updated."),
+                confirm_label=_("Activate Kernel")):
             self._activate_kernel()
 
     def _activate_kernel(self):
@@ -905,21 +890,12 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             self._show_error(_("MiniOS directory is not writable"))
             return
         
-        dialog = Gtk.MessageDialog(
-            transient_for=self,
-            flags=0,
-            message_type=Gtk.MessageType.WARNING,
-            buttons=Gtk.ButtonsType.YES_NO,
-            text=_("Delete Kernel")
-        )
-        dialog.format_secondary_text(
-            _("Are you sure you want to delete kernel '{}'?\n\nThis action cannot be undone.").format(self.selected_packaged_kernel)
-        )
-        
-        response = dialog.run()
-        dialog.destroy()
-        
-        if response == Gtk.ResponseType.YES:
+        if ask_confirmation(
+                self,
+                _("Delete kernel '{}'?").format(self.selected_packaged_kernel),
+                _("This action cannot be undone."),
+                destructive=True,
+                confirm_label=_("Delete Kernel")):
             self._delete_kernel()
 
     def _delete_kernel(self):
@@ -947,6 +923,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         
         cancel_button = dialog.add_button(_("Cancel"), Gtk.ResponseType.CANCEL)
         open_button = dialog.add_button(_("Open"), Gtk.ResponseType.OK)
+        open_button.get_style_context().add_class('suggested-action')
         
         open_button.set_can_default(True)
         open_button.grab_default()
@@ -1187,11 +1164,11 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             row = Gtk.ListBoxRow()
             
             main_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=15)
-            main_box.get_style_context().add_class('kernel-item')
+            main_box.get_style_context().add_class('manager-state-row-content')
             
             # Use unified icon for all kernels
             icon_name = "package-x-generic"
-            img = Gtk.Image.new_from_icon_name(icon_name, Gtk.IconSize.DND)
+            img = new_icon(icon_name, Gtk.IconSize.DND)
             main_box.pack_start(img, False, False, 0)
             
             info_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
@@ -1256,7 +1233,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             # Repository kernels are always available for download
             status_label = Gtk.Label()
             status_text = _('AVAILABLE')
-            status_label.get_style_context().add_class('available-kernel-badge')
+            status_label.get_style_context().add_class('badge')
             status_label.set_markup(f'<span size="small" weight="bold">{GLib.markup_escape_text(status_text)}</span>')
             status_label.set_halign(Gtk.Align.CENTER)
             status_box.pack_start(status_label, False, False, 0)
@@ -1278,14 +1255,19 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             transient_for=self,
             modal=True,
             message_type=Gtk.MessageType.QUESTION,
-            buttons=Gtk.ButtonsType.YES_NO,
+            buttons=Gtk.ButtonsType.NONE,
             text=_("Package database outdated")
         )
         dialog.format_secondary_text(_("The repository kernel list is empty. This may indicate an outdated package database. Update package lists now?"))
+        dialog.add_button(_("Cancel"), Gtk.ResponseType.CANCEL)
+        update_button = dialog.add_button(
+            _("Update Package Lists"), Gtk.ResponseType.OK)
+        update_button.get_style_context().add_class('suggested-action')
+        dialog.set_default_response(Gtk.ResponseType.CANCEL)
         
         def on_response(dialog, response_id):
             dialog.destroy()
-            if response_id == Gtk.ResponseType.YES:
+            if response_id == Gtk.ResponseType.OK:
                 self._update_package_lists_with_progress()
             else:
                 # Show empty list message
@@ -1342,16 +1324,8 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             for child in self.kernel_list.get_children():
                 self.kernel_list.remove(child)
             
-            error_dialog = Gtk.MessageDialog(
-                transient_for=self,
-                modal=True,
-                message_type=Gtk.MessageType.ERROR,
-                buttons=Gtk.ButtonsType.OK,
-                text=_("Failed to update package lists")
-            )
-            error_dialog.format_secondary_text(message)
-            error_dialog.run()
-            error_dialog.destroy()
+            show_error_dialog(
+                self, _("Failed to update package lists"), message)
             
             self._show_no_kernels_found()
 
@@ -1363,7 +1337,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         main_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         main_box.set_halign(Gtk.Align.CENTER)
         
-        icon = Gtk.Image.new_from_icon_name("dialog-warning", Gtk.IconSize.DND)
+        icon = new_icon("dialog-warning", Gtk.IconSize.DND)
         main_box.pack_start(icon, False, False, 0)
         
         info_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
@@ -1394,7 +1368,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         main_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         main_box.set_halign(Gtk.Align.CENTER)
         
-        icon = Gtk.Image.new_from_icon_name("dialog-error", Gtk.IconSize.DND)
+        icon = new_icon("dialog-error", Gtk.IconSize.DND)
         main_box.pack_start(icon, False, False, 0)
         
         info_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
@@ -1675,7 +1649,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
                     else:
                         self._update_progress(progress, "")
                     return True
-                elif data.get('type') == 'success':
+                elif data.get('type') == 'result' and data.get('success'):
                     self._update_progress(1.0, _("Kernel packaging completed successfully!"))
                     return True
                 elif data.get('type') == 'error':
@@ -1762,13 +1736,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         log_frame = Gtk.Frame()
         log_frame.set_label(_("Packaging Log"))
         
-        scrolled_log = Gtk.ScrolledWindow()
-        scrolled_log.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        
-        self.log_textview = Gtk.TextView()
-        self.log_textview.set_editable(False)
-        self.log_buffer = self.log_textview.get_buffer()
-        scrolled_log.add(self.log_textview)
+        self.log_view = LogView(maximum_characters=2 * 1024 * 1024)
         
         # Create cancellation overlay components
         self.cancel_loading_spinner = Gtk.Spinner()
@@ -1782,7 +1750,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         
         # Create overlay for log area
         log_overlay = Gtk.Overlay()
-        log_overlay.add(scrolled_log)
+        log_overlay.add(self.log_view)
         log_overlay.add_overlay(self.cancel_loading_box)
         self.cancel_loading_box.set_visible(False)  # Initially hidden
         
@@ -1796,7 +1764,6 @@ class KernelPackWindow(Gtk.ApplicationWindow):
 
         self.cancel_button = Gtk.Button.new_with_label(_("Cancel"))
         self.cancel_button.connect("clicked", self._on_cancel_clicked)
-        self.cancel_button.get_style_context().add_class('destructive-action')
         button_box.pack_start(self.cancel_button, False, False, 0)
 
         self.show_all()
@@ -1983,51 +1950,22 @@ class KernelPackWindow(Gtk.ApplicationWindow):
     def _log_message(self, message):
         """Add message to log"""
         timestamp = time.strftime("%H:%M:%S")
-        full_message = f"[{timestamp}] {message}\n"
-        
-        end_iter = self.log_buffer.get_end_iter()
-        self.log_buffer.insert(end_iter, full_message)
-        
-        # Scroll to end safely
-        if hasattr(self, 'log_textview') and self.log_textview.get_buffer() == self.log_buffer:
-            end_iter = self.log_buffer.get_end_iter()
-            self.log_textview.scroll_to_iter(end_iter, 0.0, False, 0.0, 0.0)
+        self.log_view.append_line(message, timestamp=timestamp)
 
     def _show_error(self, message):
         """Show error dialog"""
         # Also log the error message
         self._log_message(message)
         
-        dialog = Gtk.MessageDialog(
-            transient_for=self,
-            flags=0,
-            message_type=Gtk.MessageType.ERROR,
-            buttons=Gtk.ButtonsType.OK,
-            text=_("Error")
-        )
-        dialog.format_secondary_text(message)
-        
-        dialog.run()
-        dialog.destroy()
+        show_error_dialog(self, _("Error"), message)
 
     def _show_completion_message(self):
         """Show completion message with instructions"""
-        dialog = Gtk.MessageDialog(
-            transient_for=self,
-            flags=0,
-            message_type=Gtk.MessageType.INFO,
-            buttons=Gtk.ButtonsType.OK,
-            text=_("Packaging Complete")
-        )
-        
         instructions = (
             _("Kernel packaging completed successfully!") + "\n\n" +
             _("The new kernel is now available in the 'Manage Kernels' tab.")
         )
-        
-        dialog.format_secondary_text(instructions)
-        dialog.run()
-        dialog.destroy()
+        show_info_dialog(self, _("Packaging Complete"), instructions)
 
     def _show_activate_loading(self, show, text=None):
         """Show or hide kernel activation loading indicator"""
@@ -2064,7 +2002,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         self.context_menu.get_style_context().add_class('kernel-context-menu')
         
         # Activate menu item
-        activate_item = Gtk.MenuItem(label=_("Activate Kernel"))
+        activate_item = Gtk.MenuItem.new_with_mnemonic(_("_Activate Kernel"))
         activate_item.get_style_context().add_class('context-menu-activate')
         activate_item.connect("activate", self._on_context_activate)
         self.context_menu.append(activate_item)
@@ -2074,7 +2012,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         self.context_menu.append(separator)
         
         # Delete menu item
-        delete_item = Gtk.MenuItem(label=_("Delete Kernel"))
+        delete_item = Gtk.MenuItem.new_with_mnemonic(_("_Delete Kernel"))
         delete_item.get_style_context().add_class('context-menu-delete')
         delete_item.connect("activate", self._on_context_delete)
         self.context_menu.append(delete_item)
@@ -2128,11 +2066,11 @@ class KernelPackWindow(Gtk.ApplicationWindow):
                         else:
                             delete_item.set_sensitive(True)
                 else:
-                    # If we can't get kernel info, check writeability
+                    # Unknown state is not permission to mutate a kernel.
                     if activate_item is not None:
-                        activate_item.set_sensitive(self.minios_writable)
+                        activate_item.set_sensitive(False)
                     if delete_item is not None:
-                        delete_item.set_sensitive(self.minios_writable)
+                        delete_item.set_sensitive(False)
                 
                 # Show context menu
                 self.context_menu.popup_at_pointer(event)

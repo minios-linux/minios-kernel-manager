@@ -1,4 +1,4 @@
-# MiniOS Kernel Manager 1.2.0
+# MiniOS Kernel Manager 1.2.1
 
 GTK3 and command-line tools for packaging, inspecting, activating, and removing
 Linux kernels in MiniOS.

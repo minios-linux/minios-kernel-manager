@@ -13,6 +13,7 @@ import shutil
 import re
 import gettext
 import json
+import stat
 from typing import Dict, List, Optional, Tuple
 
 # Initialize gettext
@@ -404,8 +405,13 @@ def process_manual_packages(package_paths: List[str], temp_dir: str) -> str:
             raise RuntimeError('No package files provided')
 
         for package_path in package_paths:
-            if not os.path.exists(package_path):
+            try:
+                package_mode = os.lstat(package_path).st_mode
+            except OSError:
                 raise RuntimeError(f'Package not found: {package_path}')
+            if not stat.S_ISREG(package_mode):
+                raise RuntimeError(
+                    f'Package is not a regular non-symlink file: {package_path}')
 
         # Extract all provided packages into a single temp directory
         for package_path in package_paths:

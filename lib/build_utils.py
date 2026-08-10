@@ -17,12 +17,12 @@ from typing import Optional, Callable
 # Use only system installed modules
 try:
     # Try relative imports first (when imported as module)
-    from .compression_utils import get_compression_params
+    from .compression_utils import get_available_compressions, get_compression_params
     from .kernel_utils import KERNEL_DPKG_METADATA_DIR, get_non_symlink_modules_dir
     from .minios_utils import get_temp_dir_with_space_check
 except ImportError:
     # Fall back to absolute imports (when run as main script)
-    from compression_utils import get_compression_params
+    from compression_utils import get_available_compressions, get_compression_params
     from kernel_utils import KERNEL_DPKG_METADATA_DIR, get_non_symlink_modules_dir
     from minios_utils import get_temp_dir_with_space_check
 
@@ -33,6 +33,61 @@ _ = gettext.gettext
 
 INITRD_CRYPTO_CAPABILITY_MARKER = '/run/initramfs/etc/minios-initramfs-crypt'
 ENCRYPTED_PERSISTENCE_MARKER = '/run/initramfs/minios-crypt'
+
+SQUASHFS_DECODER_OPTIONS = {
+    'gzip': 'CONFIG_SQUASHFS_ZLIB',
+    'lzo': 'CONFIG_SQUASHFS_LZO',
+    'lz4': 'CONFIG_SQUASHFS_LZ4',
+    'xz': 'CONFIG_SQUASHFS_XZ',
+    'zstd': 'CONFIG_SQUASHFS_ZSTD',
+    'lzma': 'CONFIG_SQUASHFS_LZMA',
+}
+
+
+def validate_squashfs_compatibility(build_version: str, compression: str,
+                                    temp_dir: str) -> None:
+    """Validate the actual encoder and target kernel SquashFS capabilities."""
+    available = get_available_compressions()
+    if compression not in available:
+        raise RuntimeError(
+            _('Installed mksquashfs does not advertise the {} compressor').format(
+                compression))
+
+    decoder_option = SQUASHFS_DECODER_OPTIONS.get(compression)
+    if not decoder_option:
+        raise RuntimeError(
+            _('No target-kernel SquashFS decoder check is defined for {}').format(
+                compression))
+
+    config_paths = (
+        os.path.join(temp_dir, 'boot', 'config-{}'.format(build_version)),
+        os.path.join(temp_dir, 'usr', 'boot', 'config-{}'.format(build_version)),
+    )
+    config_path = next((path for path in config_paths
+                        if os.path.isfile(path) and not os.path.islink(path)), None)
+    if not config_path:
+        raise RuntimeError(
+            _('Target kernel configuration was not found for {}').format(
+                build_version))
+
+    settings = {}
+    try:
+        with open(config_path, 'r', encoding='utf-8') as config_file:
+            for line in config_file:
+                line = line.strip()
+                if '=' in line and line.startswith('CONFIG_'):
+                    key, value = line.split('=', 1)
+                    settings[key] = value
+    except OSError as error:
+        raise RuntimeError(
+            _('Cannot read target kernel configuration: {}').format(error))
+
+    if settings.get('CONFIG_SQUASHFS') != 'y':
+        raise RuntimeError(_('Target kernel requires CONFIG_SQUASHFS=y'))
+    if settings.get(decoder_option) != 'y':
+        raise RuntimeError(
+            _('Target kernel requires {option}=y for {compression}').format(
+                option=decoder_option, compression=compression))
 
 
 def running_initrd_has_crypto_capability() -> bool:
@@ -192,9 +247,10 @@ def create_squashfs_image(kernel_version: str, compression: str, output_dir: str
 
     output_image = os.path.join(output_dir, f"01-kernel-{kernel_version}.sb")
 
-    # Remove existing image
-    if os.path.exists(output_image):
-        os.remove(output_image)
+    # Build outputs are new private-workspace files. Never follow or replace a
+    # pre-created path here.
+    if os.path.lexists(output_image):
+        raise RuntimeError(_('Refusing to replace an existing SquashFS output'))
 
     # Find modules directory in extracted deb contents - look for any kernel version
     modules_base_paths = [
@@ -216,18 +272,18 @@ def create_squashfs_image(kernel_version: str, compression: str, output_dir: str
     if not modules_path:
         raise RuntimeError(_("Kernel modules not found in extracted deb package for kernel {kernel_version}").format(kernel_version=kernel_version))
 
+    validate_squashfs_compatibility(
+        original_kernel_version, compression, temp_dir)
+
     # Use system modules base path instead of package path
     system_modules_base = get_system_modules_base()
     print(f"I: {_('Using system modules base: {base}').format(base=system_modules_base)}")
 
     # Create temporary structure with proper paths for SquashFS
-    # Use parent directory of temp_dir as base to keep all temp files in one location
-    base_temp_dir = os.path.dirname(temp_dir) if temp_dir else None
-    temp_squashfs_dir = tempfile.mkdtemp(prefix=f"minios-kernel-{kernel_version}-squashfs-", dir=base_temp_dir)
-
-    # Fix permissions to 755 to ensure proper access to SquashFS contents
-    # tempfile.mkdtemp() creates directories with 700 by default, but SquashFS needs 755
-    os.chmod(temp_squashfs_dir, 0o755)
+    # Keep all staging below the root-owned private packaging workspace.
+    temp_squashfs_dir = tempfile.mkdtemp(
+        prefix=f".squashfs-{kernel_version}-", dir=temp_dir)
+    os.chmod(temp_squashfs_dir, 0o700)
     target_modules_dir = os.path.join(temp_squashfs_dir, system_modules_base)
     os.makedirs(target_modules_dir, exist_ok=True)
 

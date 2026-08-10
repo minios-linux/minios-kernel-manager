@@ -70,7 +70,8 @@ try:
     from .build_utils import create_squashfs_image, generate_initramfs, copy_vmlinuz
     from .minios_utils import (
         find_minios_directory, activate_kernel, list_all_kernels, get_active_kernel,
-        get_temp_dir_with_space_check, is_kernel_currently_running
+        get_temp_dir_with_space_check, is_kernel_currently_running,
+        package_kernel_to_repository, publish_kernel_artifacts
     )
 except ImportError:
     # Fall back to absolute imports (when run as main script)
@@ -81,8 +82,48 @@ except ImportError:
     from build_utils import create_squashfs_image, generate_initramfs, copy_vmlinuz
     from minios_utils import (
         find_minios_directory, activate_kernel, list_all_kernels, get_active_kernel,
-        get_temp_dir_with_space_check, is_kernel_currently_running
+        get_temp_dir_with_space_check, is_kernel_currently_running,
+        package_kernel_to_repository, publish_kernel_artifacts
     )
+
+
+def _emit_record(record, stream=None):
+    """Write one compact typed NDJSON record."""
+    if stream is None:
+        stream = sys.stdout
+    print(json.dumps(record, ensure_ascii=False, separators=(',', ':')),
+          file=stream, flush=True)
+
+
+def _record_stream(args):
+    return getattr(args, 'json_stream', sys.stdout)
+
+
+def _failure_record(args, command, message, **fields):
+    record = {
+        'type': 'error',
+        'command': command,
+        'success': False,
+        'error': str(message),
+    }
+    record.update(fields)
+    _emit_record(record, _record_stream(args))
+
+
+class StructuredArgumentParser(argparse.ArgumentParser):
+    """Keep argparse diagnostics off structured stdout."""
+    def error(self, message):
+        if '--json' in sys.argv:
+            self.print_usage(sys.stderr)
+            print('{}: {}'.format(self.prog, message), file=sys.stderr)
+            _emit_record({
+                'type': 'error',
+                'command': 'arguments',
+                'success': False,
+                'error': message,
+            })
+            raise SystemExit(2)
+        super().error(message)
 
 def activity_indicator(stop_event, message):
     """Show activity indicator during long operations"""
@@ -105,29 +146,26 @@ def package_kernel(args):
                 "percent": percent,
                 "message": message if message else ""
             }
-            print(json.dumps(progress_data), flush=True)
+            _emit_record(progress_data, _record_stream(args))
 
     temp_dir = None
     kernel_version = None
     global _temp_dir
 
     try:
-        # Ensure output directory exists and is writable
-        if not os.path.exists(args.output):
-            try:
-                os.makedirs(args.output, exist_ok=True)
-                print("I: {}".format(_('Created output directory: {}')).format(args.output), flush=True)
-            except Exception as e:
-                raise RuntimeError(_("Failed to create output directory '{}': {}").format(args.output, str(e)))
-
-        # Check if output directory is writable
-        if not os.access(args.output, os.W_OK):
-            raise RuntimeError(_("Output directory '{}' is not writable").format(args.output))
-
         # Check available space and choose appropriate temporary directory
         # Use 1024MB estimate for full kernel packaging
         temp_dir = get_temp_dir_with_space_check(1024, "minios-kernel-", "kernel_packaging", args.temp_dir)
         _temp_dir = temp_dir  # Set global for signal handler
+
+        workspace_stat = os.lstat(temp_dir)
+        if (not os.path.isdir(temp_dir) or os.path.islink(temp_dir)
+                or workspace_stat.st_uid != os.geteuid()
+                or (workspace_stat.st_mode & 0o7777) != 0o700):
+            raise RuntimeError(_('Packaging workspace is not private and root-owned'))
+
+        artifact_dir = os.path.join(temp_dir, 'artifacts')
+        os.mkdir(artifact_dir, 0o700)
 
         # Create temporary directory message (always log for cleanup purposes)
         print("I: {}".format(_('Created temporary directory: {}')).format(temp_dir), flush=True)
@@ -146,15 +184,17 @@ def package_kernel(args):
         # Skip system installation for packaging - modules will be used directly from temp_dir
 
         progress_print(50, _("Copying kernel files"))
-        copy_vmlinuz(kernel_version, temp_dir, args.output)
+        copy_vmlinuz(kernel_version, temp_dir, artifact_dir)
 
         progress_print(60, _("Creating SquashFS image"))
-        create_squashfs_image(kernel_version, args.sqfs_comp, args.output, logger=None, temp_dir=temp_dir)
+        create_squashfs_image(
+            kernel_version, args.sqfs_comp, artifact_dir,
+            logger=None, temp_dir=temp_dir)
 
         progress_print(80, _("Generating initramfs"))
         # This will require running as root if it calls a privileged helper
         # Pass the same custom temp dir that was used for the main packaging
-        custom_initramfs_temp = args.temp_dir if args.temp_dir else None
+        custom_initramfs_temp = temp_dir
 
         # Get the actual kernel version for system operations (modules, initramfs)
         # This was determined during the download/extraction process
@@ -187,25 +227,30 @@ def package_kernel(args):
                     if version_dirs:
                         original_kernel_version = version_dirs[0]
 
-        generate_initramfs(kernel_version, args.output, logger=None, temp_dir=temp_dir,
+        generate_initramfs(kernel_version, artifact_dir, logger=None, temp_dir=temp_dir,
                          custom_temp_dir=custom_initramfs_temp, original_kernel_version=original_kernel_version)
+
+        artifact_files = [
+            os.path.join(artifact_dir, f"01-kernel-{kernel_version}.sb"),
+            os.path.join(artifact_dir, f"vmlinuz-{kernel_version}"),
+            os.path.join(artifact_dir, f"initrfs-{kernel_version}.img"),
+        ]
+        if not all(os.path.isfile(path) and not os.path.islink(path)
+                   for path in artifact_files):
+            raise RuntimeError(_('Packaging did not produce a complete regular-file bundle'))
+
+        # Publication happens only after all artifacts have completed in the
+        # private workspace. Existing files and symlinks are never overwritten.
+        publish_kernel_artifacts(args.output, artifact_files)
 
         # Move packaged kernel to MiniOS kernels directory if not already there
         minios_path = find_minios_directory()
         if minios_path and args.output != os.path.join(minios_path, "kernels", kernel_version):
             progress_print(95, _("Installing to kernel repository"))
-            from minios_utils import package_kernel_to_repository
-
-            # Get the packaged files
-            vmlinuz_file = os.path.join(args.output, f"vmlinuz-{kernel_version}")
-            initramfs_file = os.path.join(args.output, f"initrfs-{kernel_version}.img")
-            squashfs_file = os.path.join(args.output, f"01-kernel-{kernel_version}.sb")
-
-            # Install to repository
-            if all(os.path.exists(f) for f in [vmlinuz_file, initramfs_file, squashfs_file]):
-                if not package_kernel_to_repository(minios_path, kernel_version,
-                                                    squashfs_file, vmlinuz_file, initramfs_file):
-                    raise RuntimeError("Failed to install packaged kernel to repository")
+            if not package_kernel_to_repository(
+                    minios_path, kernel_version,
+                    artifact_files[0], artifact_files[1], artifact_files[2]):
+                raise RuntimeError("Failed to install packaged kernel to repository")
         else:
             progress_print(95, _("Finalizing installation"))
 
@@ -219,18 +264,16 @@ def package_kernel(args):
             success_data = {
                 "success": True,
                 "message": "Kernel packaging completed successfully",
-                "type": "success"
+                "type": "result",
+                "command": "package",
+                "kernel_version": kernel_version,
             }
-            print(json.dumps(success_data), flush=True)
+            _emit_record(success_data, _record_stream(args))
 
     except Exception as e:
         if args.json:
-            error_data = {
-                "success": False,
-                "error": str(e),
-                "type": "error"
-            }
-            print(json.dumps(error_data), file=sys.stderr, flush=True)
+            _failure_record(args, 'package', e)
+            print("E: {}".format(e), file=sys.stderr, flush=True)
         else:
             print("E: {}".format(e), file=sys.stderr, flush=True)
         cleanup_temp_dir()
@@ -246,7 +289,10 @@ def list_kernels_cmd(args):
     minios_path = find_minios_directory()
     if not minios_path:
         if args.json:
-            print(json.dumps({"error": "MiniOS directory not found", "kernels": []}))
+            _failure_record(
+                args, 'list', _('MiniOS directory not found'), kernels=[])
+            print("E: {}".format(_('MiniOS directory not found')),
+                  file=sys.stderr, flush=True)
         else:
             print("E: {}".format(_('MiniOS directory not found')), file=sys.stderr, flush=True)
         sys.exit(1)
@@ -266,11 +312,13 @@ def list_kernels_cmd(args):
             })
 
         result = {
+            "type": "list",
+            "success": True,
             "kernels": kernels_json,
             "active_kernel": current_kernel,
             "minios_path": minios_path
         }
-        print(json.dumps(result, indent=2))
+        _emit_record(result, _record_stream(args))
     else:
         print("{}:".format(_("Available kernels")))
         for kernel in available_kernels:
@@ -288,7 +336,9 @@ def activate_kernel_cmd(args):
     minios_path = find_minios_directory()
     if not minios_path:
         if args.json:
-            print(json.dumps({"success": False, "error": "MiniOS directory not found"}))
+            _failure_record(args, 'activate', _('MiniOS directory not found'))
+            print("E: {}".format(_('MiniOS directory not found')),
+                  file=sys.stderr, flush=True)
         else:
             print("E: {}".format(_('MiniOS directory not found')), file=sys.stderr, flush=True)
         sys.exit(1)
@@ -308,11 +358,10 @@ def activate_kernel_cmd(args):
     if args.kernel_version not in available_kernels:
         error_msg = f"Kernel {args.kernel_version} not found in repository"
         if args.json:
-            print(json.dumps({
-                "success": False,
-                "error": error_msg,
-                "available_kernels": available_kernels
-            }))
+            _failure_record(
+                args, 'activate', error_msg,
+                available_kernels=available_kernels)
+            print("E: {}".format(error_msg), file=sys.stderr, flush=True)
         else:
             print("E: {}".format(error_msg), file=sys.stderr, flush=True)
             print("{}: {}".format(_('Available kernels'), ', '.join(available_kernels)), file=sys.stderr, flush=True)
@@ -321,12 +370,14 @@ def activate_kernel_cmd(args):
     # Check if kernel is already active
     if args.kernel_version == current_kernel:
         if args.json:
-            print(json.dumps({
+            _emit_record({
+                "type": "result",
+                "command": "activate",
                 "success": True,
                 "message": f"Kernel {args.kernel_version} is already active",
                 "kernel_version": args.kernel_version,
                 "already_active": True
-            }))
+            }, _record_stream(args))
         else:
             print("I: {}".format(_('Kernel {} is already active')).format(args.kernel_version), flush=True)
         return
@@ -338,12 +389,23 @@ def activate_kernel_cmd(args):
     success = activate_kernel(minios_path, args.kernel_version)
 
     if args.json:
-        print(json.dumps({
-            "success": success,
-            "kernel_version": args.kernel_version,
-            "previous_kernel": current_kernel,
-            "message": f"Kernel {args.kernel_version} activated successfully" if success else f"Failed to activate kernel {args.kernel_version}"
-        }))
+        if success:
+            _emit_record({
+                "type": "result",
+                "command": "activate",
+                "success": True,
+                "kernel_version": args.kernel_version,
+                "previous_kernel": current_kernel,
+                "message": f"Kernel {args.kernel_version} activated successfully",
+            }, _record_stream(args))
+        else:
+            error_msg = f"Failed to activate kernel {args.kernel_version}"
+            _failure_record(
+                args, 'activate', error_msg,
+                kernel_version=args.kernel_version,
+                previous_kernel=current_kernel)
+            print("E: {}".format(error_msg), file=sys.stderr, flush=True)
+            raise SystemExit(1)
     else:
         if success:
             print("I: {}".format(_('Kernel {} activated successfully!')).format(args.kernel_version), flush=True)
@@ -357,7 +419,9 @@ def info_kernel_cmd(args):
     minios_path = find_minios_directory()
     if not minios_path:
         if args.json:
-            print(json.dumps({"error": "MiniOS directory not found"}))
+            _failure_record(args, 'info', _('MiniOS directory not found'))
+            print("E: {}".format(_('MiniOS directory not found')),
+                  file=sys.stderr, flush=True)
         else:
             print("E: {}".format(_('MiniOS directory not found')), file=sys.stderr, flush=True)
         sys.exit(1)
@@ -370,7 +434,10 @@ def info_kernel_cmd(args):
         if target_kernel not in available_kernels:
             error_msg = _("Kernel {} not found").format(target_kernel)
             if args.json:
-                print(json.dumps({"error": error_msg, "available_kernels": available_kernels}))
+                _failure_record(
+                    args, 'info', error_msg,
+                    available_kernels=available_kernels)
+                print("E: {}".format(error_msg), file=sys.stderr, flush=True)
             else:
                 print("E: {}".format(error_msg), file=sys.stderr, flush=True)
             sys.exit(1)
@@ -379,13 +446,18 @@ def info_kernel_cmd(args):
         if not target_kernel:
             error_msg = _("No active kernel found")
             if args.json:
-                print(json.dumps({"error": error_msg, "available_kernels": available_kernels}))
+                _failure_record(
+                    args, 'info', error_msg,
+                    available_kernels=available_kernels)
+                print("E: {}".format(error_msg), file=sys.stderr, flush=True)
             else:
                 print("E: {}".format(error_msg), file=sys.stderr, flush=True)
             sys.exit(1)
 
     if args.json:
         info = {
+            "type": "info",
+            "success": True,
             "kernel_version": target_kernel,
             "is_active": target_kernel == current_kernel,
             "is_running": is_kernel_currently_running(target_kernel),
@@ -393,7 +465,7 @@ def info_kernel_cmd(args):
             "available_kernels": available_kernels,
             "active_kernel": current_kernel
         }
-        print(json.dumps(info, indent=2))
+        _emit_record(info, _record_stream(args))
     else:
         print("{}: {}".format(_("Kernel"), target_kernel))
         status_text = _("Active") if target_kernel == current_kernel else _("Available")
@@ -410,7 +482,9 @@ def status_cmd(args):
     if not minios_path:
         error_msg = _("MiniOS directory not found")
         if args.json:
-            print(json.dumps({"success": False, "error": error_msg, "found": False, "writable": False}))
+            _failure_record(
+                args, 'status', error_msg, found=False, writable=False)
+            print("E: {}".format(error_msg), file=sys.stderr, flush=True)
         else:
             print("E: {}".format(error_msg), file=sys.stderr, flush=True)
         sys.exit(1)
@@ -462,6 +536,7 @@ def status_cmd(args):
 
     if args.json:
         result = {
+            "type": "status",
             "success": True,
             "minios_path": minios_path,
             "found": True,
@@ -470,7 +545,7 @@ def status_cmd(args):
         }
         if error_msg:
             result["error"] = error_msg
-        print(json.dumps(result))
+        _emit_record(result, _record_stream(args))
     else:
         print("{}: {}".format(_("MiniOS path"), minios_path))
         print("{}: {}".format(_("Filesystem type"), fs_type))
@@ -489,7 +564,8 @@ def delete_kernel_cmd(args):
     if not minios_path:
         error_msg = _("MiniOS directory not found")
         if args.json:
-            print(json.dumps({"success": False, "error": error_msg}))
+            _failure_record(args, 'delete', error_msg)
+            print(error_msg, file=sys.stderr)
         else:
             print(error_msg, file=sys.stderr)
         sys.exit(1)
@@ -498,12 +574,19 @@ def delete_kernel_cmd(args):
     success = delete_packaged_kernel(minios_path, kernel_version)
 
     if args.json:
-        result = {"success": success}
+        result = {
+            "type": "result" if success else "error",
+            "command": "delete",
+            "success": success,
+        }
         if success:
             result["message"] = _("Kernel {} deleted successfully").format(kernel_version)
         else:
             result["error"] = _("Failed to delete kernel {}").format(kernel_version)
-        print(json.dumps(result))
+        _emit_record(result, _record_stream(args))
+        if not success:
+            print(result["error"], file=sys.stderr)
+            raise SystemExit(1)
     else:
         if success:
             print(_("Kernel {} deleted successfully").format(kernel_version))
@@ -521,20 +604,22 @@ def main():
     if os.geteuid() != 0 and not help_requested:
         error_msg = _("This tool requires root privileges. Please run with sudo or through pkexec.")
         if json_output:
-            print(json.dumps({"success": False, "error": error_msg}, ensure_ascii=False), file=sys.stderr)
+            _emit_record({
+                'type': 'error',
+                'command': 'privilege',
+                'success': False,
+                'error': error_msg,
+            })
+            print(error_msg, file=sys.stderr)
         else:
             print(error_msg, file=sys.stderr)
         sys.exit(1)
 
-    # Ensure unbuffered output for real-time GUI updates (Python 3.6 compatible)
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, line_buffering=True)
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, line_buffering=True)
-
-    parser = argparse.ArgumentParser(description=_("MiniOS Kernel Manager CLI"))
+    parser = StructuredArgumentParser(description=_("MiniOS Kernel Manager CLI"))
     parser.add_argument('--json', action='store_true', help=_('Output in JSON format'))
 
     # Global options
-    parent_parser = argparse.ArgumentParser(add_help=False)
+    parent_parser = StructuredArgumentParser(add_help=False)
     parent_parser.add_argument('--json', action='store_true', help=_('Output in JSON format'))
 
     subparsers = parser.add_subparsers(dest='command', help=_('Available commands'))
@@ -577,9 +662,20 @@ def main():
     if global_json:
         args.json = True
 
+    if args.json:
+        # Preserve the machine stream and send every existing utility/build log
+        # to stderr for the rest of this invocation.
+        args.json_stream = sys.stdout
+        sys.stdout = sys.stderr
+
     # Handle missing subcommand
     if not args.command:
-        parser.print_help()
+        if args.json:
+            message = _('A command is required')
+            _failure_record(args, 'arguments', message)
+            print(message, file=sys.stderr)
+        else:
+            parser.print_help()
         sys.exit(1)
     elif args.command == 'package':
         package_kernel(args)

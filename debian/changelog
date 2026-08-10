@@ -1,3 +1,22 @@
+minios-kernel-manager (1.2.1) unstable; urgency=high
+
+  * Adopt python3-minios-gui 1.0.0 for shared styling, icons, dialogs, row
+    sizing, status accents, and bounded log output.
+  * Confine privileged package construction to private workspaces and reject
+    symlinked or mismatched kernel artifacts.
+  * Refuse deletion of active, running, or symlinked kernel repository entries.
+  * Roll back boot files, bootloader configuration, and the active marker as one
+    activation transaction, and accept only an identical retained repository
+    copy during subsequent kernel switches.
+  * Verify the actual mksquashfs compressor and the target kernel's built-in
+    SquashFS decoder before publishing a kernel bundle.
+  * Emit typed one-line NDJSON records with nonzero status on failed mutations.
+  * Use shared manager row sizing and active-first status accents consistent
+    with Session Manager.
+  * Restore Python 3.6 and pytest 3.3 compatibility in the source test suite.
+
+ -- crims0n <crims0n@minios.dev>  Mon, 10 Aug 2026 00:29:10 +0300
+
 minios-kernel-manager (1.2.0) unstable; urgency=medium
 
   * Preserve encrypted-persistence support when rebuilding kernels and reject

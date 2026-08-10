@@ -30,7 +30,8 @@ class TestCryptoCapability:
              patch('build_utils.get_non_symlink_modules_dir', return_value='/lib/modules'), \
              patch('build_utils.running_initrd_has_crypto_capability', return_value=True), \
              patch('build_utils.encrypted_persistence_is_active', return_value=True), \
-             patch('build_utils.kernel_supports_dm_crypt', return_value=False):
+             patch('build_utils.kernel_supports_dm_crypt', return_value=False), \
+             patch('build_utils._', side_effect=lambda message: message):
             with pytest.raises(RuntimeError, match='encrypted persistence'):
                 generate_initramfs('6.1-test', '/output')
 
@@ -47,7 +48,7 @@ class TestCryptoBuilderArguments:
              patch('subprocess.Popen', return_value=process) as popen:
             _generate_initramfs_dracut('test', 'test', output_image, '/lib/modules', crypto_capable=True)
 
-        assert '--crypt' in popen.call_args.args[0]
+        assert '--crypt' in popen.call_args[0][0]
 
     def test_mkinitrfs_omits_crypt_when_not_capable(self):
         from build_utils import _generate_initramfs_livekit
@@ -61,7 +62,7 @@ class TestCryptoBuilderArguments:
              patch('subprocess.Popen', return_value=process) as popen:
             _generate_initramfs_livekit('test', 'test', '/output/initrfs-test.img', '/lib/modules', crypto_capable=False)
 
-        assert '--crypt' not in popen.call_args.args[0]
+        assert '--crypt' not in popen.call_args[0][0]
 
 
 class TestCryptoInitramfsValidation:
@@ -70,10 +71,11 @@ class TestCryptoInitramfsValidation:
 
         result = MagicMock(returncode=0, stdout='usr/sbin/cryptsetup\n', stderr='')
         with patch('shutil.which', side_effect=lambda tool: '/usr/bin/lsinitramfs' if tool == 'lsinitramfs' else None), \
-             patch('subprocess.run', return_value=result) as run:
+             patch('subprocess.run', return_value=result) as run, \
+             patch('build_utils._', side_effect=lambda message: message):
             with pytest.raises(RuntimeError, match='lacks its crypto marker'):
                 validate_crypto_initramfs('/output/initrfs-test.img')
-        assert run.call_args.args[0][0] == 'lsinitramfs'
+        assert run.call_args[0][0][0] == 'lsinitramfs'
 
     def test_lsinitramfs_accepts_crypto_capable_output(self):
         from build_utils import validate_crypto_initramfs
@@ -98,11 +100,63 @@ class TestCryptoInitramfsValidation:
         with patch('shutil.which', side_effect=lambda tool: '/usr/bin/{}'.format(tool)), \
              patch('subprocess.run', return_value=result) as run:
             validate_crypto_initramfs('/output/initrfs-test.img', 'dracut')
-        assert run.call_args.args[0][0] == 'lsinitrd'
+        assert run.call_args[0][0][0] == 'lsinitrd'
 
     def test_fails_clearly_without_an_initrd_inspector(self):
         from build_utils import validate_crypto_initramfs
 
-        with patch('shutil.which', return_value=None):
+        with patch('shutil.which', return_value=None), \
+             patch('build_utils._', side_effect=lambda message: message):
             with pytest.raises(RuntimeError, match='neither lsinitramfs nor lsinitrd is available'):
                 validate_crypto_initramfs('/output/initrfs-test.img')
+
+
+class TestSquashfsCompatibility:
+    def write_config(self, tmp_path, content):
+        boot = tmp_path / 'boot'
+        boot.mkdir()
+        config = boot / 'config-test'
+        config.write_text(content, encoding='utf-8')
+
+    def test_accepts_advertised_encoder_and_builtin_target_decoder(self, tmp_path):
+        from build_utils import validate_squashfs_compatibility
+
+        self.write_config(
+            tmp_path,
+            'CONFIG_SQUASHFS=y\nCONFIG_SQUASHFS_ZSTD=y\n')
+        with patch('build_utils.get_available_compressions',
+                   return_value=['gzip', 'zstd']):
+            validate_squashfs_compatibility('test', 'zstd', str(tmp_path))
+
+    def test_rejects_compressor_not_advertised_by_actual_mksquashfs(self, tmp_path):
+        from build_utils import validate_squashfs_compatibility
+
+        self.write_config(
+            tmp_path,
+            'CONFIG_SQUASHFS=y\nCONFIG_SQUASHFS_ZSTD=y\n')
+        with patch('build_utils.get_available_compressions',
+                   return_value=['gzip']):
+            with pytest.raises(RuntimeError, match='does not advertise'):
+                validate_squashfs_compatibility('test', 'zstd', str(tmp_path))
+
+    def test_rejects_modular_squashfs_base_support(self, tmp_path):
+        from build_utils import validate_squashfs_compatibility
+
+        self.write_config(
+            tmp_path,
+            'CONFIG_SQUASHFS=m\nCONFIG_SQUASHFS_ZSTD=y\n')
+        with patch('build_utils.get_available_compressions',
+                   return_value=['zstd']):
+            with pytest.raises(RuntimeError, match='CONFIG_SQUASHFS=y'):
+                validate_squashfs_compatibility('test', 'zstd', str(tmp_path))
+
+    def test_rejects_modular_selected_decoder(self, tmp_path):
+        from build_utils import validate_squashfs_compatibility
+
+        self.write_config(
+            tmp_path,
+            'CONFIG_SQUASHFS=y\nCONFIG_SQUASHFS_ZSTD=m\n')
+        with patch('build_utils.get_available_compressions',
+                   return_value=['zstd']):
+            with pytest.raises(RuntimeError, match='CONFIG_SQUASHFS_ZSTD=y'):
+                validate_squashfs_compatibility('test', 'zstd', str(tmp_path))

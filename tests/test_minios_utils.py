@@ -7,8 +7,9 @@ Tests for minios_utils module.
 import sys
 import os
 import subprocess
+import stat
 import pytest
-from unittest.mock import patch, MagicMock, mock_open
+from unittest.mock import patch, MagicMock
 
 # Add lib directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'lib'))
@@ -154,18 +155,16 @@ class TestPackageKernelToRepository:
         import tempfile
         from minios_utils import package_kernel_to_repository
         
-        # Create temporary kernel files
-        with tempfile.NamedTemporaryFile(suffix='.sb', delete=False) as sqfs, \
-             tempfile.NamedTemporaryFile(prefix='vmlinuz-', delete=False) as vmlinuz, \
-             tempfile.NamedTemporaryFile(suffix='.img', delete=False) as initramfs:
-            
-            sqfs.write(b'squashfs content')
-            vmlinuz.write(b'vmlinuz content')
-            initramfs.write(b'initramfs content')
-            
-            sqfs_path = sqfs.name
-            vmlinuz_path = vmlinuz.name
-            initramfs_path = initramfs.name
+        source_dir = tempfile.mkdtemp()
+        sqfs_path = os.path.join(source_dir, '01-kernel-6.1.0-test.sb')
+        vmlinuz_path = os.path.join(source_dir, 'vmlinuz-6.1.0-test')
+        initramfs_path = os.path.join(source_dir, 'initrfs-6.1.0-test.img')
+        for path, content in (
+                (sqfs_path, b'squashfs content'),
+                (vmlinuz_path, b'vmlinuz content'),
+                (initramfs_path, b'initramfs content')):
+            with open(path, 'wb') as artifact:
+                artifact.write(content)
         
         try:
             result = package_kernel_to_repository(
@@ -186,6 +185,7 @@ class TestPackageKernelToRepository:
             for f in [sqfs_path, vmlinuz_path, initramfs_path]:
                 if os.path.exists(f):
                     os.unlink(f)
+            os.rmdir(source_dir)
 
     def test_packaging_failure(self, temp_minios_dir):
         """Test packaging failure with missing files."""
@@ -223,6 +223,74 @@ class TestPackageKernelToRepository:
         assert not package_kernel_to_repository(temp_minios_dir, '6.1.0-test', '/missing', '/missing', '/missing')
         assert not list(outside.iterdir())
 
+    def test_rejects_symlink_artifact_without_publishing(self, temp_minios_dir, tmp_path):
+        from minios_utils import package_kernel_to_repository
+
+        source = tmp_path / 'source'
+        source.mkdir()
+        victim = source / 'victim'
+        victim.write_bytes(b'victim')
+        squashfs = source / '01-kernel-test.sb'
+        os.symlink(str(victim), str(squashfs))
+        vmlinuz = source / 'vmlinuz-test'
+        initramfs = source / 'initrfs-test.img'
+        vmlinuz.write_bytes(b'kernel')
+        initramfs.write_bytes(b'initrd')
+
+        assert not package_kernel_to_repository(
+            temp_minios_dir, 'test', str(squashfs), str(vmlinuz),
+            str(initramfs))
+        assert not os.path.lexists(
+            os.path.join(temp_minios_dir, 'kernels', 'test'))
+        assert victim.read_bytes() == b'victim'
+
+
+class TestPublishKernelArtifacts:
+    def test_refuses_existing_symlink_and_rolls_back_other_artifacts(self, tmp_path):
+        from minios_utils import publish_kernel_artifacts
+
+        source = tmp_path / 'source'
+        output = tmp_path / 'output'
+        source.mkdir()
+        output.mkdir()
+        victim = tmp_path / 'victim'
+        victim.write_bytes(b'unchanged')
+        names = ('01-kernel-test.sb', 'vmlinuz-test', 'initrfs-test.img')
+        artifacts = []
+        for name in names:
+            path = source / name
+            path.write_bytes(name.encode('ascii'))
+            artifacts.append(str(path))
+        os.symlink(str(victim), str(output / 'vmlinuz-test'))
+
+        with pytest.raises(OSError):
+            publish_kernel_artifacts(str(output), artifacts)
+
+        assert not (output / '01-kernel-test.sb').exists()
+        assert os.path.islink(str(output / 'vmlinuz-test'))
+        assert victim.read_bytes() == b'unchanged'
+
+    def test_publishes_only_complete_regular_files(self, tmp_path):
+        from minios_utils import publish_kernel_artifacts
+
+        source = tmp_path / 'source'
+        output = tmp_path / 'output'
+        source.mkdir()
+        artifacts = []
+        for name in ('01-kernel-test.sb', 'vmlinuz-test', 'initrfs-test.img'):
+            path = source / name
+            path.write_bytes(name.encode('ascii'))
+            artifacts.append(str(path))
+
+        published = publish_kernel_artifacts(str(output), artifacts)
+
+        assert {os.path.basename(path) for path in published} == {
+            os.path.basename(path) for path in artifacts}
+        for source_path in artifacts:
+            destination = output / os.path.basename(source_path)
+            assert destination.read_bytes() == open(source_path, 'rb').read()
+            assert not os.path.islink(str(destination))
+
 
 class TestDeletePackagedKernel:
     def test_rejects_traversal_and_preserves_outside_file(self, temp_minios_dir, tmp_path):
@@ -233,7 +301,7 @@ class TestDeletePackagedKernel:
         assert delete_packaged_kernel(temp_minios_dir, '../outside') is False
         assert outside.exists()
 
-    def test_unlinks_repository_symlink_without_following_it(self, temp_minios_dir, tmp_path):
+    def test_refuses_repository_symlink_without_following_it(self, temp_minios_dir, tmp_path):
         from minios_utils import delete_packaged_kernel
 
         outside = tmp_path / 'outside'
@@ -241,9 +309,28 @@ class TestDeletePackagedKernel:
         link = os.path.join(temp_minios_dir, 'kernels', 'test')
         os.symlink(str(outside), link)
 
-        assert delete_packaged_kernel(temp_minios_dir, 'test') is True
-        assert not os.path.lexists(link)
+        assert delete_packaged_kernel(temp_minios_dir, 'test') is False
+        assert os.path.islink(link)
         assert outside.exists()
+
+    def test_refuses_active_kernel(self, temp_minios_dir):
+        from minios_utils import delete_packaged_kernel
+
+        os.makedirs(os.path.join(temp_minios_dir, 'kernels', 'active'))
+        with open(os.path.join(temp_minios_dir, 'boot', 'active-kernel'), 'w') as marker:
+            marker.write('active')
+
+        assert delete_packaged_kernel(temp_minios_dir, 'active') is False
+        assert os.path.isdir(os.path.join(temp_minios_dir, 'kernels', 'active'))
+
+    def test_refuses_running_kernel(self, temp_minios_dir):
+        from minios_utils import delete_packaged_kernel
+
+        path = os.path.join(temp_minios_dir, 'kernels', 'running')
+        os.makedirs(path)
+        with patch('minios_utils.is_kernel_currently_running', return_value=True):
+            assert delete_packaged_kernel(temp_minios_dir, 'running') is False
+        assert os.path.isdir(path)
 
 
 class TestActivateKernel:
@@ -263,6 +350,12 @@ class TestActivateKernel:
         with open(marker, 'w') as fh:
             fh.write('old')
         os.chmod(marker, 0o640)
+        for path in (
+                os.path.join(temp_minios_dir, '01-kernel-old.sb'),
+                os.path.join(temp_minios_dir, 'boot', 'vmlinuz-old'),
+                os.path.join(temp_minios_dir, 'boot', 'initrfs-old.img')):
+            with open(path, 'wb') as artifact:
+                artifact.write(b'old')
         source_dir = os.path.join(temp_minios_dir, 'kernels', 'new')
         os.makedirs(source_dir)
         for name in ('01-kernel-new.sb', 'vmlinuz-new', 'initrfs-new.img'):
@@ -274,6 +367,145 @@ class TestActivateKernel:
 
         assert open(marker).read() == 'new'
         assert os.stat(marker).st_mode & 0o777 == 0o640
+
+    def test_marker_failure_rolls_back_files_bootloader_and_marker(self, temp_minios_dir):
+        import minios_utils
+        from minios_utils import activate_kernel
+
+        old = 'old'
+        new = 'new'
+        marker = os.path.join(temp_minios_dir, 'boot', 'active-kernel')
+        with open(marker, 'w') as marker_file:
+            marker_file.write(old)
+        grub_dir = os.path.join(temp_minios_dir, 'boot', 'grub')
+        os.makedirs(grub_dir)
+        grub = os.path.join(grub_dir, 'grub.cfg')
+        with open(grub, 'w') as config:
+            config.write('old config')
+
+        for version, content in ((old, b'old'), (new, b'new')):
+            if version == new:
+                base = os.path.join(temp_minios_dir, 'kernels', version)
+                os.makedirs(base)
+                paths = (
+                    os.path.join(base, '01-kernel-new.sb'),
+                    os.path.join(base, 'vmlinuz-new'),
+                    os.path.join(base, 'initrfs-new.img'))
+            else:
+                paths = (
+                    os.path.join(temp_minios_dir, '01-kernel-old.sb'),
+                    os.path.join(temp_minios_dir, 'boot', 'vmlinuz-old'),
+                    os.path.join(temp_minios_dir, 'boot', 'initrfs-old.img'))
+            for path in paths:
+                with open(path, 'wb') as artifact:
+                    artifact.write(content)
+
+        real_atomic_write = minios_utils._atomic_write
+
+        def fail_new_marker(path, content):
+            if path == marker and content == new:
+                raise OSError('marker write failed')
+            return real_atomic_write(path, content)
+
+        def update_bootloader(path, version):
+            with open(grub, 'w') as config:
+                config.write('new config')
+            return True
+
+        with patch('minios_utils.is_kernel_currently_running', return_value=False), \
+             patch('minios_utils._update_bootloader_configs', side_effect=update_bootloader), \
+             patch('minios_utils._atomic_write', side_effect=fail_new_marker):
+            assert activate_kernel(temp_minios_dir, new) is False
+
+        assert open(marker).read() == old
+        assert open(grub).read() == 'old config'
+        for path in (
+                os.path.join(temp_minios_dir, '01-kernel-old.sb'),
+                os.path.join(temp_minios_dir, 'boot', 'vmlinuz-old'),
+                os.path.join(temp_minios_dir, 'boot', 'initrfs-old.img')):
+            assert open(path, 'rb').read() == b'old'
+        assert not os.path.exists(os.path.join(temp_minios_dir, '01-kernel-new.sb'))
+
+    def test_subsequent_switch_accepts_only_identical_retained_bundle(self, temp_minios_dir):
+        from minios_utils import activate_kernel
+
+        old = 'old'
+        new = 'new'
+        with open(os.path.join(temp_minios_dir, 'boot', 'active-kernel'), 'w') as marker:
+            marker.write(old)
+        for path in (
+                os.path.join(temp_minios_dir, '01-kernel-old.sb'),
+                os.path.join(temp_minios_dir, 'boot', 'vmlinuz-old'),
+                os.path.join(temp_minios_dir, 'boot', 'initrfs-old.img')):
+            with open(path, 'wb') as artifact:
+                artifact.write(b'old')
+        new_repository = os.path.join(temp_minios_dir, 'kernels', new)
+        os.makedirs(new_repository)
+        for name in ('01-kernel-new.sb', 'vmlinuz-new', 'initrfs-new.img'):
+            with open(os.path.join(new_repository, name), 'wb') as artifact:
+                artifact.write(b'new')
+
+        with patch('minios_utils.is_kernel_currently_running', return_value=False), \
+             patch('minios_utils._update_bootloader_configs', return_value=True):
+            assert activate_kernel(temp_minios_dir, new) is True
+            assert activate_kernel(temp_minios_dir, old) is True
+
+        assert open(os.path.join(temp_minios_dir, 'boot', 'active-kernel')).read() == old
+        assert set(os.listdir(new_repository)) == {
+            '01-kernel-new.sb', 'vmlinuz-new', 'initrfs-new.img'}
+
+    @pytest.mark.parametrize('retained_state', ['incomplete', 'different'])
+    def test_rejects_bad_retained_repository_copy(self, temp_minios_dir, retained_state):
+        from minios_utils import deactivate_current_kernel
+
+        version = 'active'
+        with open(os.path.join(temp_minios_dir, 'boot', 'active-kernel'), 'w') as marker:
+            marker.write(version)
+        active_paths = (
+            os.path.join(temp_minios_dir, '01-kernel-active.sb'),
+            os.path.join(temp_minios_dir, 'boot', 'vmlinuz-active'),
+            os.path.join(temp_minios_dir, 'boot', 'initrfs-active.img'))
+        for path in active_paths:
+            with open(path, 'wb') as artifact:
+                artifact.write(b'active')
+        repository = os.path.join(temp_minios_dir, 'kernels', version)
+        os.makedirs(repository)
+        names = ['01-kernel-active.sb', 'vmlinuz-active']
+        if retained_state == 'different':
+            names.append('initrfs-active.img')
+        for name in names:
+            with open(os.path.join(repository, name), 'wb') as artifact:
+                artifact.write(b'different' if name.startswith('initrfs') else b'active')
+
+        with patch('minios_utils.is_kernel_currently_running', return_value=False):
+            assert deactivate_current_kernel(temp_minios_dir) is False
+        assert all(os.path.exists(path) for path in active_paths)
+
+
+class TestPrivatePackagingWorkspace:
+    def test_custom_workspace_is_private_and_owned_by_backend_user(self, tmp_path):
+        from minios_utils import get_temp_dir_with_space_check
+
+        workspace = get_temp_dir_with_space_check(
+            required_mb=0, custom_temp_dir=str(tmp_path))
+        try:
+            workspace_stat = os.lstat(workspace)
+            assert workspace_stat.st_uid == os.geteuid()
+            assert stat.S_IMODE(workspace_stat.st_mode) == 0o700
+            assert not os.path.islink(workspace)
+        finally:
+            os.rmdir(workspace)
+
+    def test_rejects_symlinked_custom_workspace_parent(self, tmp_path):
+        from minios_utils import get_temp_dir_with_space_check
+
+        real_parent = tmp_path / 'real'
+        real_parent.mkdir()
+        link = tmp_path / 'link'
+        os.symlink(str(real_parent), str(link))
+        with pytest.raises(RuntimeError, match='symlinked or untrusted'):
+            get_temp_dir_with_space_check(
+                required_mb=0, custom_temp_dir=str(link))
 
     def test_deactivation_rolls_back_partial_moves(self, temp_minios_dir):
         from minios_utils import deactivate_current_kernel
@@ -391,21 +623,10 @@ class TestGetUnionFilesystemType:
     def test_detect_overlayfs(self):
         """Test detecting OverlayFS."""
         from minios_utils import get_union_filesystem_type
-        
-        proc_cmdline = "BOOT_IMAGE=/minios/boot/vmlinuz union=overlayfs"
-        proc_filesystems = "nodev\toverlayfs\n"
-        
-        files = {
-            '/proc/cmdline': proc_cmdline,
-            '/proc/filesystems': proc_filesystems
-        }
-        
-        def mock_open_func(path, *args, **kwargs):
-            if path in files:
-                return mock_open(read_data=files[path])()
-            raise FileNotFoundError(path)
-        
-        with patch('builtins.open', side_effect=mock_open_func):
+
+        mount_output = "overlay on / type overlay (rw,relatime)\n"
+
+        with patch('subprocess.run', return_value=MagicMock(stdout=mount_output, returncode=0)):
             result = get_union_filesystem_type()
             assert result == 'overlayfs'
 
@@ -447,7 +668,7 @@ class TestCliHelp:
             [launcher, '--help'],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True,
+            universal_newlines=True,
             check=False,
         )
 
