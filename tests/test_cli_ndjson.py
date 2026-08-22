@@ -152,6 +152,7 @@ def test_package_progress_and_result_are_ndjson_and_logs_are_stderr(tmp_path):
          patch('minios_kernel.copy_vmlinuz', side_effect=copy_vmlinuz), \
          patch('minios_kernel.create_squashfs_image', side_effect=create_squashfs), \
          patch('minios_kernel.generate_initramfs', side_effect=generate_initramfs), \
+         patch('minios_kernel.validate_kernel_bundle_artifacts'), \
          patch('minios_kernel.get_last_kernel_versions',
                return_value={'actual_version': 'test'}), \
          patch('minios_kernel.find_minios_directory', return_value=None):
@@ -163,5 +164,6 @@ def test_package_progress_and_result_are_ndjson_and_logs_are_stderr(tmp_path):
     assert any(record['type'] == 'progress' for record in records)
     assert observed_workspace == {'uid': os.geteuid(), 'mode': 0o700}
     assert 'Created temporary directory' in stderr.getvalue()
+    assert list(workspace_parent.iterdir()) == []
     assert {path.name for path in output.iterdir()} == {
         '01-kernel-test.sb', 'vmlinuz-test', 'initrfs-test.img'}

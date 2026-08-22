@@ -1,3 +1,20 @@
+minios-kernel-manager (1.2.2) unstable; urgency=high
+
+  * Use minios-gui 1.1.0 shared HeaderBar and status banner components.
+  * Discover and download real versioned kernel packages through the existing
+    system APT configuration, using only temporary package workspaces.
+  * Validate monolithic, Debian split, and Ubuntu split package ownership.
+  * Produce compact format-1 registration metadata without embedding source
+    package payloads in kernel bundles.
+  * Preserve package control data, archive hashes, transformed payload hashes,
+    and file ownership required for native dpkg registration.
+  * Accept canonical tracked 01-kernel bundles and legacy 1.2.1 bundles during
+    activation while keeping new Manager-produced bundles frozen.
+  * Build initramfs from the selected extracted config and module tree, accept
+    modular SquashFS support, and refuse ambiguous same-version module trees.
+
+ -- crims0n <crims0n@minios.dev>  Wed, 12 Aug 2026 01:00:00 +0300
+
 minios-kernel-manager (1.2.1) unstable; urgency=high
 
   * Adopt python3-minios-gui 1.0.0 for shared styling, icons, dialogs, row

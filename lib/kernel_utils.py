@@ -14,7 +14,17 @@ import re
 import gettext
 import json
 import stat
+import sys
 from typing import Dict, List, Optional, Tuple
+
+try:
+    from .kernel_acquisition import (
+        SUPPORT_DIR, analyze_and_extract_packages,
+    )
+except ImportError:
+    from kernel_acquisition import (
+        SUPPORT_DIR, analyze_and_extract_packages,
+    )
 
 # Initialize gettext
 gettext.bindtextdomain('minios-kernel-manager', '/usr/share/locale')
@@ -27,7 +37,7 @@ LAST_KERNEL_VERSIONS: Dict[str, Optional[str]] = {
     'actual_version': None,
 }
 
-KERNEL_DPKG_METADATA_DIR = '.minios-kernel-dpkg'
+KERNEL_DPKG_METADATA_DIR = SUPPORT_DIR
 
 
 def get_last_kernel_versions() -> Dict[str, Optional[str]]:
@@ -58,41 +68,36 @@ def get_manual_packages() -> List[str]:
 
 
 def get_repository_kernels() -> List[dict]:
-    """Get list of available repository kernels with detailed information"""
+    """Return real versioned kernel packages from the system APT cache."""
     packages = []
     try:
-        # Search for kernel packages
-        result = subprocess.run(['apt-cache', 'search', '^linux-image-[0-9]'],
-                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, check=True)
-
+        result = subprocess.run(
+            ['apt-cache', 'search', '^linux-image-[0-9]'],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            universal_newlines=True, check=True)
         seen = set()
         for line in result.stdout.strip().split('\n'):
-            if line and ' - ' in line:
-                parts = line.split(' - ', 1)
-                pkg = parts[0]
-                description = parts[1] if len(parts) > 1 else ""
-
-                # APT search descriptions are not authoritative package metadata.
-                # Keep only versioned binary linux-image packages, once each.
-                if (re.match(r'^linux-image-[0-9][A-Za-z0-9.+:~_-]*$', pkg)
-                        and 'dbg' not in pkg and pkg not in seen):
-                    seen.add(pkg)
-                    try:
-                        show_result = subprocess.run(['apt-cache', 'show', pkg],
-                                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, check=True)
-
-                        pkg_info = _parse_package_info(show_result.stdout, pkg, description)
-                        if pkg_info and pkg_info['size'] > 1 * 1024 * 1024:  # 1MB threshold
-                            packages.append(pkg_info)
-
-                    except (subprocess.CalledProcessError, ValueError, IndexError):
-                        continue
-
+            if not line or ' - ' not in line:
+                continue
+            package_name, description = line.split(' - ', 1)
+            if (not re.match(r'^linux-image-[0-9][A-Za-z0-9.+:~_-]*$', package_name)
+                    or 'dbg' in package_name or package_name in seen):
+                continue
+            seen.add(package_name)
+            try:
+                show = subprocess.run(
+                    ['apt-cache', 'show', package_name],
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    universal_newlines=True, check=True)
+                info = _parse_package_info(
+                    show.stdout, package_name, description)
+                if info:
+                    packages.append(info)
+            except (subprocess.CalledProcessError, ValueError, IndexError):
+                continue
     except subprocess.CalledProcessError:
         pass
-
-    # Sort by version (newer first)
-    packages.sort(key=lambda x: x['version'], reverse=True)
+    packages.sort(key=lambda item: item['version'], reverse=True)
     return packages
 
 def _parse_package_info(apt_show_output: str, package_name: str, description: str) -> Optional[dict]:
@@ -149,63 +154,16 @@ def _format_size(size_bytes: int) -> str:
 
 
 def check_package_cache(force_update: bool = False) -> Tuple[bool, str]:
-    """
-    Check if package cache is outdated and handle accordingly.
-
-    Args:
-        force_update: If True, automatically update outdated cache
-
-    Returns:
-        (success, message): True if can proceed, False if should stop
-    """
-    import time
-
-    lists_dir = '/var/lib/apt/lists'
-
-    # Check if lists directory is empty or doesn't exist
-    lists_empty = True
-    if os.path.exists(lists_dir):
-        try:
-            # Check if directory has any files (excluding lock files)
-            files = [f for f in os.listdir(lists_dir) if not f.startswith('lock')]
-            lists_empty = len(files) == 0
-        except (OSError, PermissionError):
-            lists_empty = True
-
-    # APT may not create pkgcache.bin; freshness belongs to downloaded lists.
-    cache_outdated = True
-    if not lists_empty:
-        try:
-            file_age = time.time() - max(
-                os.path.getmtime(os.path.join(lists_dir, name))
-                for name in files
-                if os.path.isfile(os.path.join(lists_dir, name))
-            )
-            cache_outdated = file_age >= 24 * 60 * 60  # Older than 24 hours
-        except (OSError, PermissionError, ValueError):
-            cache_outdated = True
-
-    # If lists are empty or cache is outdated
-    if lists_empty or cache_outdated:
-        if force_update:
-            try:
-                print("I: {}".format(_('Updating package lists...')), flush=True)
-                result = subprocess.run(['apt', 'update'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-                print("I: {}".format(_('Package lists updated')), flush=True)
-                return True, ""
-            except subprocess.CalledProcessError as e:
-                error_msg = _("Failed to update package lists: {}").format(str(e))
-                return False, error_msg
-            except Exception as e:
-                error_msg = _("Error updating package lists: {}").format(str(e))
-                return False, error_msg
-        else:
-            # Show warning and stop
-            print("W: {}".format(_('Package database is outdated')), flush=True)
-            print("E: {}".format(_('Run \'apt update\' or use --force-update')), flush=True)
-            return False, "Package database is outdated"
-
-    return True, ""
+    """Optionally refresh the existing system APT package lists."""
+    if not force_update:
+        return True, ''
+    try:
+        subprocess.run(
+            ['apt', 'update'], check=True, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, universal_newlines=True)
+        return True, ''
+    except subprocess.CalledProcessError as error:
+        return False, _("Failed to update package lists: {}").format(error)
 
 
 def _extract_dep_package(dep_line: str) -> Optional[str]:
@@ -219,39 +177,39 @@ def _extract_dep_package(dep_line: str) -> Optional[str]:
     return pkg
 
 
+def _is_versioned_kernel_package(package_name: str) -> bool:
+    return bool(re.match(
+        r'^linux-(?:image|binary|base|modules|modules-extra)-[0-9]'
+        r'[A-Za-z0-9.+:~_-]*$', package_name)) and 'dbg' not in package_name
+
+
 def resolve_kernel_dependencies(package_name: str) -> List[str]:
-    """Resolve additional kernel module packages needed for packaging.
-
-    Returns linux-modules* dependencies from apt metadata. On Debian this is
-    usually an empty list; on Ubuntu this includes linux-modules and sometimes
-    linux-modules-extra packages.
-    """
-    dependencies: List[str] = []
-
-    try:
-        env = os.environ.copy()
-        env['LC_ALL'] = 'C'
-        env['LANG'] = 'C'
-        env['LANGUAGE'] = 'C'
-        result = subprocess.run(
-            ['apt-cache', 'depends', package_name],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            universal_newlines=True,
-            check=True,
-            env=env,
-        )
-    except subprocess.CalledProcessError:
-        return dependencies
-
-    for line in result.stdout.splitlines():
-        dep_pkg = _extract_dep_package(line)
-        if not dep_pkg:
+    """Return only versioned split-kernel packages required by the image."""
+    dependencies = []
+    pending = [package_name]
+    inspected = set()
+    environment = os.environ.copy()
+    environment.update({'LC_ALL': 'C', 'LANG': 'C', 'LANGUAGE': 'C'})
+    while pending:
+        current = pending.pop(0)
+        if current in inspected:
             continue
-        if dep_pkg.startswith('linux-modules-'):
-            if dep_pkg not in dependencies:
-                dependencies.append(dep_pkg)
-
+        inspected.add(current)
+        try:
+            result = subprocess.run(
+                ['apt-cache', 'depends', current],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                universal_newlines=True, check=True, env=environment)
+        except subprocess.CalledProcessError:
+            continue
+        for line in result.stdout.splitlines():
+            dependency = _extract_dep_package(line)
+            if (not dependency or dependency == package_name or
+                    not _is_versioned_kernel_package(dependency)):
+                continue
+            if dependency not in dependencies:
+                dependencies.append(dependency)
+                pending.append(dependency)
     return dependencies
 
 
@@ -358,44 +316,10 @@ def _deb_installed_list(deb_path: str) -> str:
 
 
 def preserve_kernel_dpkg_metadata_from_debs(deb_files: List[str], temp_dir: str, kernel_version: Optional[str]) -> None:
-    """Store compact dpkg metadata for kernel packages without keeping .deb files."""
-    metadata_dir = os.path.join(temp_dir, KERNEL_DPKG_METADATA_DIR)
-    status_dir = os.path.join(metadata_dir, 'status.d')
-    info_dir = os.path.join(metadata_dir, 'info')
-    os.makedirs(status_dir, exist_ok=True)
-    os.makedirs(info_dir, exist_ok=True)
-    packages = []
-
-    for deb_path in deb_files:
-        package = _deb_field(deb_path, 'Package')
-        if not package or not (
-            package.startswith('linux-image-')
-            or package.startswith('linux-modules-')
-            or package.startswith('linux-modules-extra-')
-        ):
-            continue
-        control_dir = tempfile.mkdtemp(prefix='minios-kernel-control-', dir=temp_dir)
-        try:
-            subprocess.run(['dpkg-deb', '-e', deb_path, control_dir], check=True)
-            with open(os.path.join(status_dir, f'{package}.status'), 'w', encoding='utf-8') as fh:
-                fh.write(_deb_status_stanza(deb_path))
-            with open(os.path.join(info_dir, f'{package}.list'), 'w', encoding='utf-8') as fh:
-                fh.write(_deb_installed_list(deb_path))
-            for name in os.listdir(control_dir):
-                src = os.path.join(control_dir, name)
-                if os.path.isfile(src) and name != 'control':
-                    shutil.copy2(src, os.path.join(info_dir, f'{package}.{name}'))
-        finally:
-            shutil.rmtree(control_dir, ignore_errors=True)
-        packages.append({
-            'name': package,
-            'version': _deb_field(deb_path, 'Version'),
-            'architecture': _deb_field(deb_path, 'Architecture'),
-        })
-
-    if packages:
-        with open(os.path.join(metadata_dir, 'manifest.json'), 'w', encoding='utf-8') as fh:
-            json.dump({'format': 1, 'kernel_version': kernel_version or '', 'packages': packages}, fh, indent=2)
+    """Validate local archives and produce canonical frozen support data."""
+    detected = analyze_and_extract_packages(deb_files, temp_dir)
+    if kernel_version and detected != kernel_version:
+        raise RuntimeError('Kernel package version does not match extracted payload')
 
 
 def process_manual_packages(package_paths: List[str], temp_dir: str) -> str:
@@ -413,63 +337,13 @@ def process_manual_packages(package_paths: List[str], temp_dir: str) -> str:
                 raise RuntimeError(
                     f'Package is not a regular non-symlink file: {package_path}')
 
-        # Extract all provided packages into a single temp directory
-        for package_path in package_paths:
-            subprocess.run(['dpkg-deb', '-x', package_path, temp_dir], check=True)
-
-        # Determine display version from linux-image package filename when present
-        display_kernel_version = None
-        for package_path in package_paths:
-            filename = os.path.basename(package_path)
-            match = re.search(r'linux-image-(.+?)_', filename)
-            if match:
-                display_kernel_version = match.group(1)
-                break
-
-        actual_kernel_version = _detect_kernel_version_from_extracted(temp_dir)
-        modules_versions = _extracted_modules_versions(temp_dir)
-
-        # If user provided a single package and no modules were extracted,
-        # explain split-package requirement clearly (Ubuntu-style kernels).
-        if len(package_paths) == 1 and not modules_versions:
-            raise RuntimeError(
-                _(
-                    'Kernel modules were not found in the selected package. '
-                    'Please provide all required kernel .deb files, including '
-                    'linux-modules and linux-modules-extra packages.'
-                )
-            )
-
-        if not actual_kernel_version:
-            # Last resort: parse package control info for linux-image package name
-            for package_path in package_paths:
-                subprocess.run(['dpkg-deb', '-e', package_path, os.path.join(temp_dir, 'DEBIAN')], check=True)
-                control_file = os.path.join(temp_dir, 'DEBIAN', 'control')
-                if not os.path.exists(control_file):
-                    continue
-                with open(control_file, 'r') as f:
-                    control_content = f.read()
-                match = re.search(r'Package:\s*linux-image-(.+)', control_content)
-                if match:
-                    actual_kernel_version = match.group(1)
-                    if not display_kernel_version:
-                        display_kernel_version = actual_kernel_version
-                    break
-
-        if not actual_kernel_version and not display_kernel_version:
-            raise RuntimeError('Could not determine kernel version from package(s)')
-
-        if not display_kernel_version:
-            display_kernel_version = actual_kernel_version
-
-        if not display_kernel_version:
-            raise RuntimeError('Could not determine kernel display version from package(s)')
+        actual_kernel_version = analyze_and_extract_packages(
+            package_paths, temp_dir)
+        display_kernel_version = actual_kernel_version
 
         # Store both versions for package_kernel() initramfs generation logic.
         LAST_KERNEL_VERSIONS['display_version'] = display_kernel_version
         LAST_KERNEL_VERSIONS['actual_version'] = actual_kernel_version if actual_kernel_version else None
-
-        preserve_kernel_dpkg_metadata_from_debs(package_paths, temp_dir, actual_kernel_version)
 
         return str(display_kernel_version)
 
@@ -484,94 +358,42 @@ def process_manual_package(package_path: str, temp_dir: str) -> str:
     return process_manual_packages([package_path], temp_dir)
 
 
-def download_kernel_package(package_name: str, temp_dir: str, force_update: bool = False) -> str:
-    """Download and extract kernel package, return kernel version"""
-    deb_files: List[str] = []
-    dependency_packages: List[str] = []
-    packages_to_download: List[str] = [package_name]
-
-    # Check package cache before attempting download
+def download_kernel_package(package_name: str, temp_dir: str,
+                            force_update: bool = False) -> str:
+    """Download a real kernel package into the temporary workspace."""
+    if (not package_name.startswith('linux-image-') or
+            not _is_versioned_kernel_package(package_name)):
+        raise RuntimeError(
+            "Repository mode requires a real versioned kernel package")
     cache_ok, cache_message = check_package_cache(force_update)
     if not cache_ok:
         raise RuntimeError(cache_message)
-
+    packages = [package_name] + resolve_kernel_dependencies(package_name)
     try:
-        # Step 1: Resolve split module packages when needed (Ubuntu-style)
-        dependency_packages = resolve_kernel_dependencies(package_name)
-        packages_to_download = [package_name] + dependency_packages
-
-        print(
-            f"I: {_('Downloading packages from repository: {packages}').format(packages=', '.join(packages_to_download))}",
-            flush=True,
-        )
-        subprocess.run(['apt-get', 'download'] + packages_to_download, cwd=temp_dir, check=True)
-        print(f"I: {_('Download completed successfully')}", flush=True)
-
-    except subprocess.CalledProcessError as e:
-        raise RuntimeError(f"Failed to download package '{package_name}' from repository: {e}")
-
-    try:
-        # Step 2: Find downloaded .deb files for all resolved packages
-        for pkg in packages_to_download:
-            pkg_debs = glob.glob(os.path.join(temp_dir, f"{pkg}_*.deb"))
-            if not pkg_debs:
-                raise RuntimeError(f"Downloaded .deb file for '{pkg}' not found in {temp_dir}")
-            for deb in pkg_debs:
-                if deb not in deb_files:
-                    deb_files.append(deb)
-
-        print(
-            f"I: {_('Found package files: {count}').format(count=len(deb_files))}",
-            flush=True,
-        )
-
-    except RuntimeError:
-        raise
-    except Exception as e:
-        raise RuntimeError(f"Error locating downloaded package: {e}")
-
-    try:
-        # Step 3: Extract package contents
-        print(f"I: {_('Extracting package contents...')}", flush=True)
-        for deb_file in deb_files:
-            subprocess.run(
-                ['dpkg-deb', '-x', deb_file, temp_dir],
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                universal_newlines=True,
-            )
-        print(f"I: {_('Package extracted successfully')}", flush=True)
-
-        # Determine actual kernel version from extracted package contents.
-        # Priority: vmlinuz filename > modules directory name > package name.
-        actual_kernel_version = _detect_kernel_version_from_extracted(temp_dir)
-
-        # Final fallback: use package name
-        if not actual_kernel_version:
-            actual_kernel_version = package_name.replace('linux-image-', '')
-
-        # For output files, use package name (preserves -unsigned suffix if present)
-        display_kernel_version = package_name.replace('linux-image-', '')
-
-        # Store both versions for later use
-        LAST_KERNEL_VERSIONS['display_version'] = display_kernel_version
+        result = subprocess.run(
+            ['apt-get', 'download'] + packages, cwd=temp_dir, check=True,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            universal_newlines=True)
+        if result.stdout:
+            print(result.stdout, end='' if result.stdout.endswith('\n') else '\n',
+                  file=sys.stderr, flush=True)
+        archives = []
+        for package in packages:
+            matches = glob.glob(os.path.join(temp_dir, '{}_*.deb'.format(package)))
+            if not matches:
+                raise RuntimeError(
+                    "Downloaded .deb file for '{}' was not found".format(package))
+            archives.extend(path for path in matches if path not in archives)
+        actual_kernel_version = analyze_and_extract_packages(
+            archives, temp_dir)
+        LAST_KERNEL_VERSIONS['display_version'] = actual_kernel_version
         LAST_KERNEL_VERSIONS['actual_version'] = actual_kernel_version
-
-        preserve_kernel_dpkg_metadata_from_debs(deb_files, temp_dir, actual_kernel_version)
-
-        return str(display_kernel_version)
-
-    except subprocess.CalledProcessError as e:
-        failed_deb = os.path.basename(deb_files[0]) if deb_files else package_name
-        error_msg = f"Failed to extract package '{failed_deb}'"
-        if e.stderr:
-            error_msg += f": {e.stderr.strip()}"
-        else:
-            error_msg += f": dpkg-deb returned exit code {e.returncode}"
-        raise RuntimeError(error_msg)
+        return str(actual_kernel_version)
+    except subprocess.CalledProcessError as error:
+        raise RuntimeError(
+            "Failed to download package '{}': {}".format(package_name, error))
     except Exception as e:
-        raise RuntimeError(f"Error extracting package: {e}")
+        raise RuntimeError("Error processing repository kernel: {}".format(e))
 
 
 def get_non_symlink_modules_dir() -> str:

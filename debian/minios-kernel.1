@@ -1,4 +1,4 @@
-.TH MINIOS-KERNEL 1 "August 2026" "MiniOS Kernel Manager 1.2.1" "User Commands"
+.TH MINIOS-KERNEL 1 "August 2026" "MiniOS Kernel Manager 1.2.2" "User Commands"
 .SH NAME
 minios-kernel \- Command-line tool for managing MiniOS kernels
 .SH SYNOPSIS
@@ -74,11 +74,13 @@ Delete the specified packaged kernel from the repository.
 .SH PACKAGE OPTIONS
 .TP
 .BI --repo " package-name"
-Download and package kernel from APT repository.
+Download and package a real versioned kernel package from the existing system
+APT configuration. Tracking metapackages such as linux-image-amd64 are rejected.
 .TP
 .BI --deb " deb-file..."
-Package a kernel from one or more local .deb files. Split kernels require the
-matching image and modules packages.
+Package a kernel from one or more local .deb files. Debian split kernels require
+a coherent image, binary, base, and modules set; Ubuntu split kernels require
+the matching image and modules packages, plus modules-extra when selected.
 .TP
 .BI "-o, --output " output-dir
 Directory to save packaged kernel files. Required.
@@ -90,14 +92,24 @@ Compression method for SquashFS image. Default: \fBzstd\fR.
 Custom temporary directory (must have at least 1024MB free space).
 .TP
 .B --force-update
-Refresh APT lists before repository packaging. Without this option, lists older
-than 24 hours are rejected.
+Run apt update before repository packaging. Without this option, the existing
+system package lists are used without an age gate.
 .SH PACKAGING
 Repository mode resolves matching linux-modules packages automatically. Local
 mode accepts multiple packages for split kernels. The output includes the
 kernel image, initramfs, and SquashFS module; selected dpkg metadata is retained
 inside the SquashFS at
 .IR /usr/share/minios/kernel-dpkg/ .
+.PP
+Repository downloads are temporary workspace inputs and are removed after
+success or handled failure. Local input archives remain caller-owned. New
+bundles use canonical frozen format 1 with a manual held image package, automatic
+subordinate kernel packages, and no embedded repository configuration.
+.PP
+The canonical runtime module path is /lib/modules/<version>. The physical path
+stored in the bundle follows the running base system: lib/modules on traditional
+layouts or usr/lib/modules when /lib is usrmerged. Packaging refuses an existing
+same-version module tree rather than mix it with a different package revision.
 .PP
 When a writable MiniOS root is detected and the output is not already the
 repository directory, the completed package is staged atomically into
@@ -117,6 +129,10 @@ kernel image, and initramfs. Boot files and bootloader configuration are updated
 atomically and restored if activation fails. GRUB configuration is required;
 SYSLINUX configuration is updated when present. Activation affects the next
 boot and does not reboot the machine.
+.PP
+Activation accepts Manager-produced frozen format-1 bundles and canonical
+tracked bundles produced by 01-kernel. The legacy 1.2.1 metadata shape is
+accepted only by the live activation compatibility path.
 .SH EXAMPLES
 List available kernels:
 .RS

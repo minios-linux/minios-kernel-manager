@@ -61,8 +61,8 @@ except ImportError:
 gi.require_version('Gtk', '3.0')
 gi.require_version('Gio', '2.0')
 from gi.repository import Gtk, GLib, Gio, Pango
-from minios_gui import (LogView, apply_minios_css, ask_confirmation, new_icon,
-                        show_error_dialog, show_info_dialog)
+from minios_gui import (LogView, StatusBanner, apply_minios_css, ask_confirmation,
+                        new_header_bar, new_icon, show_error_dialog, show_info_dialog)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # CLI Interface Functions
@@ -334,40 +334,22 @@ class KernelPackWindow(Gtk.ApplicationWindow):
 
     def _build_header_bar(self):
         """Build the header bar"""
-        header = Gtk.HeaderBar(show_close_button=True)
-        header.set_has_subtitle(False)
-        header.get_style_context().add_class("minios-headerbar")
-        header.props.title = _(APP_TITLE)
-        self.set_titlebar(header)
+        self.set_titlebar(new_header_bar(_(APP_TITLE)))
 
     def _build_system_status_info(self):
-        """Build system status information panel"""
-        # MiniOS directory status - simplified
-        minios_hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        
+        """Build system status information panel."""
         if self.minios_path and self.minios_writable:
-            minios_icon_name = "emblem-default"  # Green checkmark
-            minios_hbox.get_style_context().add_class("success-banner")
+            intent = 'success'
             status_text = _("MiniOS directory is writable")
         else:
-            minios_icon_name = "dialog-error"  # Error icon
-            minios_hbox.get_style_context().add_class("error-banner")
-            if self.minios_path:
-                status_text = _("MiniOS directory is read-only")
-            else:
-                status_text = _("MiniOS directory not found")
-        
-        # Status icon
-        status_icon = new_icon(minios_icon_name, Gtk.IconSize.LARGE_TOOLBAR)
-        minios_hbox.pack_start(status_icon, False, False, 0)
-        
-        # Status text - clean and simple
-        minios_status_label = Gtk.Label()
-        minios_status_label.set_markup(f'<b>{GLib.markup_escape_text(status_text)}</b>')
-        minios_status_label.set_halign(Gtk.Align.START)
-        minios_hbox.pack_start(minios_status_label, False, False, 0)
-        
-        self.main_vbox.pack_start(minios_hbox, False, False, 0)
+            intent = 'error'
+            status_text = (
+                _("MiniOS directory is read-only") if self.minios_path
+                else _("MiniOS directory not found"))
+        banner = StatusBanner(status_text, intent=intent)
+        banner.label.set_markup(
+            '<b>{}</b>'.format(GLib.markup_escape_text(status_text)))
+        self.main_vbox.pack_start(banner, False, False, 0)
 
     def _build_main_ui(self):
         """Build main interface with tabs"""
@@ -554,6 +536,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         self.browse_button = Gtk.Button.new_with_label(_("Browse…"))
         self.browse_button.set_image(new_icon(
             "document-open-symbolic", Gtk.IconSize.BUTTON))
+        self.browse_button.get_style_context().add_class('minios-text-button')
         self.browse_button.set_size_request(96, -1)
         self.browse_button.set_valign(Gtk.Align.CENTER)
         self.browse_button.connect("clicked", self._on_browse_clicked)

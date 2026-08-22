@@ -12,6 +12,10 @@ import shutil
 import glob
 import tempfile
 import gettext
+import filecmp
+import lzma
+import re
+import stat
 from typing import Optional, Callable
 
 # Use only system installed modules
@@ -19,11 +23,13 @@ try:
     # Try relative imports first (when imported as module)
     from .compression_utils import get_available_compressions, get_compression_params
     from .kernel_utils import KERNEL_DPKG_METADATA_DIR, get_non_symlink_modules_dir
+    from .kernel_acquisition import finalize_payload_metadata, validate_embedded_support_tree
     from .minios_utils import get_temp_dir_with_space_check
 except ImportError:
     # Fall back to absolute imports (when run as main script)
     from compression_utils import get_available_compressions, get_compression_params
     from kernel_utils import KERNEL_DPKG_METADATA_DIR, get_non_symlink_modules_dir
+    from kernel_acquisition import finalize_payload_metadata, validate_embedded_support_tree
     from minios_utils import get_temp_dir_with_space_check
 
 # Initialize gettext
@@ -82,11 +88,12 @@ def validate_squashfs_compatibility(build_version: str, compression: str,
         raise RuntimeError(
             _('Cannot read target kernel configuration: {}').format(error))
 
-    if settings.get('CONFIG_SQUASHFS') != 'y':
-        raise RuntimeError(_('Target kernel requires CONFIG_SQUASHFS=y'))
-    if settings.get(decoder_option) != 'y':
+    if settings.get('CONFIG_SQUASHFS') not in ('y', 'm'):
         raise RuntimeError(
-            _('Target kernel requires {option}=y for {compression}').format(
+            _('Target kernel requires CONFIG_SQUASHFS support'))
+    if settings.get(decoder_option) not in ('y', 'm'):
+        raise RuntimeError(
+            _('Target kernel requires {option} for {compression}').format(
                 option=decoder_option, compression=compression))
 
 
@@ -231,6 +238,20 @@ def copy_vmlinuz(kernel_version: str, temp_dir: str, output_dir: str, kernel_sou
     return output_path
 
 
+def normalize_modules_order(modules_root: str) -> None:
+    """Keep modules.order aligned with decompressed module filenames."""
+    path = os.path.join(modules_root, 'modules.order')
+    if not os.path.isfile(path) or os.path.islink(path):
+        return
+    with open(path, 'r', encoding='utf-8') as source:
+        lines = source.readlines()
+    normalized = [re.sub(r'\.ko\.(?:xz|zst)(?=\s*$)', '.ko', line)
+                  for line in lines]
+    if normalized != lines:
+        with open(path, 'w', encoding='utf-8') as output:
+            output.writelines(normalized)
+
+
 def create_squashfs_image(kernel_version: str, compression: str, output_dir: str,
                          logger: Optional[Callable] = None, temp_dir: str = None) -> str:
     """Create SquashFS image of kernel modules
@@ -288,15 +309,36 @@ def create_squashfs_image(kernel_version: str, compression: str, output_dir: str
     os.makedirs(target_modules_dir, exist_ok=True)
 
     # Copy modules to proper structure using ORIGINAL kernel version (so kernel can find them)
-    shutil.copytree(modules_path, os.path.join(target_modules_dir, original_kernel_version))
+    shutil.copytree(
+        modules_path, os.path.join(target_modules_dir, original_kernel_version),
+        symlinks=True)
 
-    metadata_src = os.path.join(temp_dir, KERNEL_DPKG_METADATA_DIR)
-    if os.path.isdir(metadata_src):
-        metadata_dst = os.path.join(temp_squashfs_dir, 'usr', 'share', 'minios', 'kernel-dpkg')
-        os.makedirs(os.path.dirname(metadata_dst), exist_ok=True)
-        if os.path.exists(metadata_dst):
-            shutil.rmtree(metadata_dst)
-        shutil.copytree(metadata_src, metadata_dst)
+    # Old target kmod must consume the final representation, so decompress
+    # modules in private staging before depmod and before payload hashes exist.
+    staged_modules = os.path.join(target_modules_dir, original_kernel_version)
+    for parent, _directories, filenames in os.walk(staged_modules):
+        for filename in filenames:
+            source = os.path.join(parent, filename)
+            if filename.endswith('.ko.xz'):
+                destination = source[:-3]
+                with lzma.open(source, 'rb') as compressed, open(destination, 'wb') as output:
+                    shutil.copyfileobj(compressed, output)
+                os.chmod(destination, stat.S_IMODE(os.lstat(source).st_mode))
+                os.unlink(source)
+            elif filename.endswith('.ko.zst'):
+                destination = source[:-4]
+                result = subprocess.run(
+                    ['zstd', '-q', '-d', '-f', source, '-o', destination],
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    universal_newlines=True, check=False)
+                if result.returncode != 0:
+                    raise RuntimeError(
+                        _('Cannot decompress staged kernel module: {}').format(
+                            result.stderr.strip()))
+                os.chmod(destination, stat.S_IMODE(os.lstat(source).st_mode))
+                os.unlink(source)
+
+    normalize_modules_order(staged_modules)
 
     # Generate modules.dep and other module dependency files for SquashFS
     try:
@@ -312,15 +354,27 @@ def create_squashfs_image(kernel_version: str, compression: str, output_dir: str
             depmod_result = subprocess.run(['depmod', '-b', temp_squashfs_dir, original_kernel_version],
                                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=30)
         if depmod_result.returncode != 0:
-            error_msg = depmod_result.stderr.strip()
-            # Stop build on any ERROR, continue on WARNING
-            if "ERROR:" in error_msg:
-                raise RuntimeError(_('Critical depmod error: {}').format(error_msg))
-            print(f"W: {_('depmod failed: {}').format(error_msg)}")
-        else:
-            print(f"I: {_('Module dependencies generated successfully')}")
+            raise RuntimeError(
+                _('depmod failed for staged kernel: {}').format(
+                    depmod_result.stderr.strip()))
+        print(f"I: {_('Module dependencies generated successfully')}")
     except (subprocess.TimeoutExpired, subprocess.CalledProcessError, OSError) as e:
-        print(f"W: {_('Failed to generate module dependencies: {}').format(str(e))}")
+        raise RuntimeError(
+            _('Failed to generate module dependencies: {}').format(str(e)))
+
+    metadata_src = os.path.join(temp_dir, KERNEL_DPKG_METADATA_DIR)
+    if not os.path.isdir(metadata_src):
+        raise RuntimeError(_('Canonical kernel package metadata is missing'))
+    finalize_payload_metadata(
+        temp_dir, temp_squashfs_dir, system_modules_base,
+        original_kernel_version)
+    validate_embedded_support_tree(metadata_src, original_kernel_version)
+    metadata_dst = os.path.join(
+        temp_squashfs_dir, 'usr', 'share', 'minios', 'kernel-dpkg')
+    os.makedirs(os.path.dirname(metadata_dst), exist_ok=True)
+    shutil.copytree(metadata_src, metadata_dst)
+    if glob.glob(os.path.join(temp_squashfs_dir, '**', '*.deb'), recursive=True):
+        raise RuntimeError(_('Source package archives must not enter the kernel module'))
 
     # Include metadata alongside the module tree, not merely the module subtree.
     source_path = '.'
@@ -328,35 +382,6 @@ def create_squashfs_image(kernel_version: str, compression: str, output_dir: str
 
     # Get compression parameters
     comp_params = get_compression_params(compression, 'squashfs')
-
-    # Check mksquashfs version for -no-strip support and availability
-    try:
-        result = subprocess.run(['mksquashfs', '-version'],
-                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, check=True)
-        # Version info can be in stdout or stderr
-        version_output = result.stdout if result.stdout else result.stderr
-        version_lines = version_output.split('\n')
-        version_line = next((line for line in version_lines if 'version' in line.lower()), '')
-
-        if version_line:
-            # Extract version number - handle different formats
-            import re
-            version_match = re.search(r'version\s+(\d+)\.(\d+)', version_line.lower())
-            if version_match:
-                major, minor = int(version_match.group(1)), int(version_match.group(2))
-                use_no_strip = (major > 4) or (major == 4 and minor >= 5)
-                print(f"DEBUG: {_('mksquashfs version detected: {major}.{minor}, no-strip support: {use_no_strip}').format(major=major, minor=minor, use_no_strip=use_no_strip)}", flush=True)
-            else:
-                print(f"DEBUG: {_('Could not parse version from: {version_line}').format(version_line=version_line)}", flush=True)
-                use_no_strip = False
-        else:
-            print(f"DEBUG: {_('No version line found in output')}", flush=True)
-            use_no_strip = False
-    except (subprocess.CalledProcessError, ValueError, IndexError) as e:
-        print(f"DEBUG: {_('mksquashfs version check failed: {error}').format(error=str(e))}", flush=True)
-        use_no_strip = False
-    except FileNotFoundError:
-        raise RuntimeError(_("mksquashfs command not found. Please install squashfs-tools package."))
 
     # Build mksquashfs command
     cmd = [
@@ -372,9 +397,6 @@ def create_squashfs_image(kernel_version: str, compression: str, output_dir: str
         '-always-use-fragments',
         '-noappend'
     ])
-
-    if use_no_strip:
-        cmd.append('-no-strip')
 
     # Validate command arguments
     for i, arg in enumerate(cmd):
@@ -481,14 +503,42 @@ def generate_initramfs(kernel_version: str, output_dir: str, logger: Optional[Ca
             message += _('; refusing to replace the initrd because encrypted persistence would lose support')
         raise RuntimeError(message)
 
-    if builder == 'dracut':
-        initramfs = _generate_initramfs_dracut(kernel_version, build_version, output_image, modules_dir, temp_dir, custom_temp_dir, logger, crypto_capable)
-    else:  # livekit
-        initramfs = _generate_initramfs_livekit(kernel_version, build_version, output_image, modules_dir, temp_dir, custom_temp_dir, logger, crypto_capable)
+    config_target = os.path.join('/boot', 'config-' + build_version)
+    config_created = False
+    if temp_dir:
+        config_sources = (
+            os.path.join(temp_dir, 'boot', 'config-' + build_version),
+            os.path.join(temp_dir, 'usr', 'boot', 'config-' + build_version),
+        )
+        config_source = next(
+            (path for path in config_sources
+             if os.path.isfile(path) and not os.path.islink(path)), None)
+        if not config_source:
+            raise RuntimeError(
+                _('Extracted kernel configuration was not found for {}').format(
+                    build_version))
+        if os.path.lexists(config_target):
+            if (not os.path.isfile(config_target) or
+                    os.path.islink(config_target) or
+                    not filecmp.cmp(config_source, config_target, shallow=False)):
+                raise RuntimeError(
+                    _('Existing kernel configuration does not match {}').format(
+                        build_version))
+        else:
+            os.symlink(config_source, config_target)
+            config_created = True
+    try:
+        if builder == 'dracut':
+            initramfs = _generate_initramfs_dracut(kernel_version, build_version, output_image, modules_dir, temp_dir, custom_temp_dir, logger, crypto_capable)
+        else:  # livekit
+            initramfs = _generate_initramfs_livekit(kernel_version, build_version, output_image, modules_dir, temp_dir, custom_temp_dir, logger, crypto_capable)
 
-    if crypto_capable:
-        validate_crypto_initramfs(initramfs, builder)
-    return initramfs
+        if crypto_capable:
+            validate_crypto_initramfs(initramfs, builder)
+        return initramfs
+    finally:
+        if config_created and os.path.islink(config_target):
+            os.unlink(config_target)
 
 
 def _generate_initramfs_dracut(kernel_version: str, build_version: str, output_image: str,
@@ -516,7 +566,11 @@ def _generate_initramfs_dracut(kernel_version: str, build_version: str, output_i
                 extracted_modules_path = path
                 break
 
-        if extracted_modules_path and not os.path.exists(system_modules_path):
+        if extracted_modules_path and os.path.lexists(system_modules_path):
+            raise RuntimeError(
+                _('Cannot safely stage extracted modules because the kernel '
+                  'version already exists: {}').format(build_version))
+        if extracted_modules_path:
             # Create temporary symlink for dracut
             try:
                 os.makedirs(modules_dir, exist_ok=True)
@@ -524,19 +578,19 @@ def _generate_initramfs_dracut(kernel_version: str, build_version: str, output_i
                 temp_symlink_created = True
                 print(f"I: {_('Created temporary symlink: {} -> {}').format(system_modules_path, extracted_modules_path)}", flush=True)
 
-                # Generate modules.dep
-                try:
-                    print(f"I: {_('Generating modules.dep for {}').format(build_version)}", flush=True)
-                    depmod_result = subprocess.run(['depmod', '-b', temp_dir, build_version],
-                                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=30)
-                    if depmod_result.returncode == 0:
-                        print(f"I: {_('Successfully generated modules.dep')}", flush=True)
-                    else:
-                        print(f"W: {_('depmod warning: {}').format(depmod_result.stderr)}", flush=True)
-                except Exception as e:
-                    print(f"W: {_('Failed to run depmod: {}').format(e)}", flush=True)
-            except OSError as e:
-                print(f"W: {_('Failed to create symlink {}: {}').format(system_modules_path, e)}", flush=True)
+                print(f"I: {_('Generating modules.dep for {}').format(build_version)}", flush=True)
+                depmod_result = subprocess.run(
+                    ['depmod', build_version], stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE, universal_newlines=True, timeout=30)
+                if depmod_result.returncode != 0:
+                    raise RuntimeError(
+                        _('depmod failed for initramfs: {}').format(
+                            depmod_result.stderr.strip()))
+                print(f"I: {_('Successfully generated modules.dep')}", flush=True)
+            except Exception:
+                if temp_symlink_created and os.path.islink(system_modules_path):
+                    os.unlink(system_modules_path)
+                raise
 
     # Store symlink info for cleanup
     cleanup_symlink = system_modules_path if temp_symlink_created else None
@@ -631,46 +685,30 @@ def _generate_initramfs_livekit(kernel_version: str, build_version: str, output_
                 break
 
         if extracted_modules_path:
-            # Create or recreate temporary symlink for mkinitrfs
+            # Never substitute a running same-version module tree.
             try:
                 os.makedirs(modules_dir, exist_ok=True)
+                if os.path.lexists(system_modules_path):
+                    raise RuntimeError(
+                        _('Cannot safely stage extracted modules because the kernel '
+                          'version already exists: {}').format(build_version))
+                os.symlink(extracted_modules_path, system_modules_path)
+                temp_symlink_created = True
+                print(f"I: {_('Created temporary symlink: {system_path} -> {extracted_path}').format(system_path=system_modules_path, extracted_path=extracted_modules_path)}")
 
-                # Handle existing path
-                should_create_symlink = True
-
-                if os.path.islink(system_modules_path):
-                    # Remove existing symlink
-                    os.remove(system_modules_path)
-                    print(f"I: {_('Removed existing symlink: {}').format(system_modules_path)}")
-                elif os.path.exists(system_modules_path):
-                    # Path exists and it's not a symlink (probably a real directory)
-                    print(f"I: {_('Using existing modules directory: {}').format(system_modules_path)}")
-                    should_create_symlink = False
-                    temp_symlink_created = False
-
-                # Create symlink only if path is free
-                if should_create_symlink:
-                    os.symlink(extracted_modules_path, system_modules_path)
-                    temp_symlink_created = True
-                    print(f"I: {_('Created temporary symlink: {system_path} -> {extracted_path}').format(system_path=system_modules_path, extracted_path=extracted_modules_path)}")
-
-                    # Generate modules.dep for the symlinked modules before calling mkinitrfs
-                    try:
-                        print(f"I: {_('Generating module dependencies for initramfs')}")
-                        depmod_result = subprocess.run(['depmod', build_version],
-                                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=30)
-                        if depmod_result.returncode != 0:
-                            error_msg = depmod_result.stderr.strip()
-                            # Stop build on any ERROR, continue on WARNING
-                            if "ERROR:" in error_msg:
-                                raise RuntimeError(_('Critical depmod error: {}').format(error_msg))
-                            print(f"W: {_('depmod failed: {}').format(error_msg)}")
-                        else:
-                            print(f"I: {_('Module dependencies generated successfully')}")
-                    except (subprocess.TimeoutExpired, subprocess.CalledProcessError, OSError) as e:
-                        print(f"W: {_('Failed to generate module dependencies: {}').format(str(e))}")
-            except OSError as e:
-                print(f"Warning: Failed to create symlink {system_modules_path}: {e}")
+                print(f"I: {_('Generating module dependencies for initramfs')}")
+                depmod_result = subprocess.run(
+                    ['depmod', build_version], stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE, universal_newlines=True, timeout=30)
+                if depmod_result.returncode != 0:
+                    raise RuntimeError(
+                        _('depmod failed for initramfs: {}').format(
+                            depmod_result.stderr.strip()))
+                print(f"I: {_('Module dependencies generated successfully')}")
+            except Exception:
+                if temp_symlink_created and os.path.islink(system_modules_path):
+                    os.unlink(system_modules_path)
+                raise
 
     # Store symlink info for cleanup
     cleanup_symlink = system_modules_path if temp_symlink_created else None

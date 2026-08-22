@@ -167,13 +167,14 @@ class TestPackageKernelToRepository:
                 artifact.write(content)
         
         try:
-            result = package_kernel_to_repository(
-                temp_minios_dir,
-                "6.1.0-test",
-                sqfs_path,
-                vmlinuz_path,
-                initramfs_path
-            )
+            with patch('minios_utils.validate_kernel_bundle_artifacts'):
+                result = package_kernel_to_repository(
+                    temp_minios_dir,
+                    "6.1.0-test",
+                    sqfs_path,
+                    vmlinuz_path,
+                    initramfs_path
+                )
             
             assert result is True
             
@@ -343,6 +344,25 @@ class TestActivateKernel:
 
         assert activate_kernel(temp_minios_dir, 'new') is False
 
+    def test_manifest_preflight_fails_before_active_state_changes(self, temp_minios_dir):
+        from minios_utils import activate_kernel
+
+        marker = os.path.join(temp_minios_dir, 'boot', 'active-kernel')
+        with open(marker, 'w') as marker_file:
+            marker_file.write('old')
+        source = os.path.join(temp_minios_dir, 'kernels', 'new')
+        os.makedirs(source)
+        for name in ('01-kernel-new.sb', 'vmlinuz-new', 'initrfs-new.img'):
+            with open(os.path.join(source, name), 'wb') as artifact:
+                artifact.write(b'invalid')
+        with patch('minios_utils.is_kernel_currently_running', return_value=False), \
+             patch('minios_utils.validate_kernel_bundle_artifacts',
+                   side_effect=RuntimeError('payload mismatch')), \
+             patch('minios_utils.deactivate_current_kernel') as deactivate:
+            assert activate_kernel(temp_minios_dir, 'new') is False
+        deactivate.assert_not_called()
+        assert open(marker).read() == 'old'
+
     def test_marker_write_is_atomic_and_preserves_mode(self, temp_minios_dir):
         from minios_utils import activate_kernel
 
@@ -362,7 +382,8 @@ class TestActivateKernel:
             open(os.path.join(source_dir, name), 'w').close()
 
         with patch('minios_utils.is_kernel_currently_running', return_value=False), \
-             patch('minios_utils._update_bootloader_configs', return_value=True):
+             patch('minios_utils._update_bootloader_configs', return_value=True), \
+             patch('minios_utils.validate_kernel_bundle_artifacts'):
             assert activate_kernel(temp_minios_dir, 'new') is True
 
         assert open(marker).read() == 'new'
@@ -414,6 +435,7 @@ class TestActivateKernel:
 
         with patch('minios_utils.is_kernel_currently_running', return_value=False), \
              patch('minios_utils._update_bootloader_configs', side_effect=update_bootloader), \
+             patch('minios_utils.validate_kernel_bundle_artifacts'), \
              patch('minios_utils._atomic_write', side_effect=fail_new_marker):
             assert activate_kernel(temp_minios_dir, new) is False
 
@@ -446,7 +468,8 @@ class TestActivateKernel:
                 artifact.write(b'new')
 
         with patch('minios_utils.is_kernel_currently_running', return_value=False), \
-             patch('minios_utils._update_bootloader_configs', return_value=True):
+             patch('minios_utils._update_bootloader_configs', return_value=True), \
+             patch('minios_utils.validate_kernel_bundle_artifacts'):
             assert activate_kernel(temp_minios_dir, new) is True
             assert activate_kernel(temp_minios_dir, old) is True
 
@@ -486,6 +509,7 @@ class TestPrivatePackagingWorkspace:
     def test_custom_workspace_is_private_and_owned_by_backend_user(self, tmp_path):
         from minios_utils import get_temp_dir_with_space_check
 
+        os.chmod(str(tmp_path), 0o700)
         workspace = get_temp_dir_with_space_check(
             required_mb=0, custom_temp_dir=str(tmp_path))
         try:
@@ -545,7 +569,8 @@ class TestPrivatePackagingWorkspace:
             open(os.path.join(source_dir, name), 'w').close()
 
         with patch('minios_utils.is_kernel_currently_running', return_value=False), \
-             patch('minios_utils._update_bootloader_configs', return_value=False):
+             patch('minios_utils._update_bootloader_configs', return_value=False), \
+             patch('minios_utils.validate_kernel_bundle_artifacts'):
             assert activate_kernel(temp_minios_dir, new) is False
 
         assert all(os.path.exists(path) for path in old_files)

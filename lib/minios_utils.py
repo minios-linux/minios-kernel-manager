@@ -13,12 +13,16 @@ import tempfile
 import gettext
 import stat
 import uuid
+import hashlib
+import json
 from typing import Optional, List, Tuple
 
 try:
     from .bootloader_utils import update_bootloader_configs as _update_bootloader_configs_impl
+    from .kernel_acquisition import validate_embedded_support_tree
 except ImportError:
     from bootloader_utils import update_bootloader_configs as _update_bootloader_configs_impl
+    from kernel_acquisition import validate_embedded_support_tree
 
 # Initialize gettext
 gettext.bindtextdomain('minios-kernel-manager', '/usr/share/locale')
@@ -138,6 +142,138 @@ def _files_are_identical(first: str, second: str) -> bool:
                     return True
     except OSError:
         return False
+
+
+def _file_sha256(path: str) -> str:
+    digest = hashlib.sha256()
+    with open(path, 'rb') as source:
+        while True:
+            block = source.read(1024 * 1024)
+            if not block:
+                break
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def validate_kernel_bundle_artifacts(kernel_version: str, squashfs_file: str,
+                                     vmlinuz_file: str,
+                                     initramfs_file: str,
+                                     allow_legacy: bool = False) -> dict:
+    """Preflight a bundle manifest and every final payload hash."""
+    for path in (squashfs_file, vmlinuz_file, initramfs_file):
+        if not _regular_file(path) or os.path.getsize(path) == 0:
+            raise RuntimeError(
+                'Kernel artifact is not a nonempty regular file: {}'.format(path))
+    if not shutil.which('unsquashfs'):
+        raise RuntimeError('unsquashfs is required for kernel bundle preflight')
+    workspace = tempfile.mkdtemp(prefix='minios-kernel-preflight-')
+    try:
+        result = subprocess.run(
+            ['unsquashfs', '-no-progress', '-d', workspace, squashfs_file],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            universal_newlines=True, check=False)
+        if result.returncode != 0:
+            raise RuntimeError(
+                'Cannot inspect kernel module: {}'.format(result.stderr.strip()))
+        support = os.path.join(
+            workspace, 'usr', 'share', 'minios', 'kernel-dpkg')
+        manifest = validate_embedded_support_tree(
+            support, kernel_version, allow_legacy=allow_legacy)
+        owned_paths = set()
+        owned_records = {}
+        for package in manifest['packages']:
+            relative = package.get('payload_manifest')
+            if not relative:
+                continue
+            with open(os.path.join(support, relative), 'r',
+                      encoding='utf-8') as payload_file:
+                payload = json.load(payload_file)
+            if payload.get('dpkg_instance') != package['dpkg_instance']:
+                raise RuntimeError('Kernel payload manifest instance mismatch')
+            if set(payload) != {'format', 'dpkg_instance', 'files'} or payload.get('format') != 1:
+                raise RuntimeError('Kernel payload manifest is not canonical format 1')
+            for record in payload.get('files', []):
+                path = record.get('path', '')
+                entry_type = record.get('type')
+                expected_fields = ({'path', 'type', 'sha256'}
+                                   if entry_type == 'file' else {'path', 'type'})
+                if entry_type == 'symlink':
+                    expected_fields.add('target')
+                if (set(record) != expected_fields or
+                        entry_type not in ('file', 'directory', 'symlink') or
+                        not path.startswith('/') or '..' in path.split('/')):
+                    raise RuntimeError('Kernel payload record is invalid')
+                if path in owned_paths:
+                    raise RuntimeError('Kernel payload ownership is duplicated')
+                owned_paths.add(path)
+                owned_records[path] = entry_type
+                if path == '/boot/vmlinuz-{}'.format(kernel_version):
+                    materialized = vmlinuz_file
+                else:
+                    materialized = os.path.join(workspace, path.lstrip('/'))
+                entry_type = record.get('type')
+                valid = False
+                if entry_type == 'file':
+                    valid = (_regular_file(materialized) and
+                             _file_sha256(materialized) == record.get('sha256'))
+                elif entry_type == 'symlink':
+                    target = record.get('target', '')
+                    resolved = os.path.normpath(
+                        os.path.join(os.path.dirname(path), target))
+                    allowed_target = (
+                        resolved.startswith('/boot/') or
+                        resolved.startswith('/lib/modules/{}/'.format(kernel_version)) or
+                        resolved.startswith('/usr/lib/modules/{}/'.format(kernel_version))
+                    )
+                    valid = (target and '\x00' not in target and
+                             not os.path.isabs(target) and allowed_target and
+                             os.path.islink(materialized) and
+                             os.readlink(materialized) == target)
+                elif entry_type == 'directory':
+                    valid = (os.path.isdir(materialized) and
+                             not os.path.islink(materialized))
+                if not valid:
+                    raise RuntimeError(
+                        'Kernel payload hash mismatch: {}'.format(path))
+        legacy = set(manifest) == {'format', 'kernel_version', 'packages'}
+        if legacy:
+            module_roots = (
+                os.path.join(workspace, 'lib', 'modules', kernel_version),
+                os.path.join(workspace, 'usr', 'lib', 'modules', kernel_version),
+            )
+            has_module = False
+            for module_root in module_roots:
+                if not os.path.isdir(module_root) or os.path.islink(module_root):
+                    continue
+                for parent, _directories, filenames in os.walk(module_root):
+                    if any(filename.endswith(('.ko', '.ko.xz', '.ko.zst'))
+                           and _regular_file(os.path.join(parent, filename))
+                           for filename in filenames):
+                        has_module = True
+                        break
+                if has_module:
+                    break
+            if not has_module:
+                raise RuntimeError('Legacy kernel bundle has no loadable modules')
+        else:
+            required = {
+                '/boot/vmlinuz-' + kernel_version,
+                '/boot/config-' + kernel_version,
+                '/boot/System.map-' + kernel_version,
+            }
+            if any(owned_records.get(path) != 'file' for path in required):
+                raise RuntimeError('Kernel bundle lacks mandatory boot payload')
+            module_prefixes = (
+                '/lib/modules/{}/'.format(kernel_version),
+                '/usr/lib/modules/{}/'.format(kernel_version),
+            )
+            if not any(entry_type == 'file' and path.endswith('.ko') and
+                       path.startswith(module_prefixes)
+                       for path, entry_type in owned_records.items()):
+                raise RuntimeError('Kernel bundle has no loadable module payload')
+        return manifest
+    finally:
+        shutil.rmtree(workspace, ignore_errors=True)
 
 
 def _kernel_artifact_names(kernel_version: str) -> List[str]:
@@ -325,6 +461,8 @@ def package_kernel_to_repository(minios_path: str, kernel_version: str,
         ]
         if source_names != _kernel_artifact_names(kernel_version):
             raise RuntimeError('Kernel artifact names do not match the bundle version')
+        validate_kernel_bundle_artifacts(
+            kernel_version, squashfs_file, vmlinuz_file, initramfs_file)
 
         staging_path = tempfile.mkdtemp(prefix='.kernel-copy-', dir=kernel_repo_path)
         try:
@@ -582,9 +720,14 @@ def activate_kernel(minios_path: str, kernel_version: str) -> bool:
         else:
             # Deactivate current and use running kernel files
             try:
-                if not all(_regular_file(path) for path in
-                           _active_kernel_artifacts(minios_path, kernel_version)):
+                running_artifacts = _active_kernel_artifacts(
+                    minios_path, kernel_version)
+                if not all(_regular_file(path) for path in running_artifacts):
                     raise RuntimeError('Running kernel bundle is incomplete')
+                validate_kernel_bundle_artifacts(
+                    kernel_version, running_artifacts[0],
+                    running_artifacts[1], running_artifacts[2],
+                    allow_legacy=True)
                 previous_boot_files, marker_file, marker_state = \
                     _snapshot_activation_state(minios_path)
                 if not deactivate_current_kernel(minios_path):
@@ -630,6 +773,9 @@ def activate_kernel(minios_path: str, kernel_version: str) -> bool:
             raise FileNotFoundError(f"Kernel file not found: {vmlinuz_file}")
         if not _regular_file(initramfs_file):
             raise FileNotFoundError(f"Initramfs file not found: {initramfs_file}")
+        validate_kernel_bundle_artifacts(
+            kernel_version, squashfs_file, vmlinuz_file, initramfs_file,
+            allow_legacy=True)
 
         # Stage every input before changing the currently active kernel.
         previous_kernel = get_active_kernel(minios_path)

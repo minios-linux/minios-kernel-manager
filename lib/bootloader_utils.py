@@ -255,4 +255,39 @@ def update_bootloader_configs(minios_path: str, kernel_version: str) -> bool:
     if not update_syslinux_config(minios_path, kernel_version):
         success = False
     
+    if success and not verify_bootloader_postcondition(minios_path, kernel_version):
+        return False
     return success
+
+
+def verify_bootloader_postcondition(minios_path: str, kernel_version: str) -> bool:
+    """Require every concrete boot reference to select the exact new pair."""
+    expected_kernel = '/minios/boot/vmlinuz-{}'.format(kernel_version)
+    expected_initrd = '/minios/boot/initrfs-{}.img'.format(kernel_version)
+    references = []
+    config_files = find_grub_config_files(minios_path)
+    syslinux_dir = os.path.join(minios_path, 'boot', 'syslinux')
+    for path in (os.path.join(syslinux_dir, 'syslinux.cfg'),):
+        if os.path.exists(path):
+            config_files.append(path)
+    language_dir = os.path.join(syslinux_dir, 'lang')
+    if os.path.isdir(language_dir):
+        config_files.extend(os.path.join(language_dir, name)
+                            for name in os.listdir(language_dir)
+                            if name.endswith('.cfg'))
+    try:
+        for path in config_files:
+            if os.path.islink(path) or not os.path.isfile(path):
+                return False
+            with open(path, 'r', encoding='utf-8', errors='replace') as config:
+                content = config.read()
+            kernels = re.findall(r'/minios/boot/vmlinuz[^\s"\']*', content)
+            initrds = re.findall(r'/minios/boot/initrfs[^\s"\']*\.img', content)
+            references.extend(kernels + initrds)
+            if any(value != expected_kernel for value in kernels):
+                return False
+            if any(value != expected_initrd for value in initrds):
+                return False
+    except OSError:
+        return False
+    return (expected_kernel in references and expected_initrd in references)

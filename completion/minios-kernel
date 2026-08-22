@@ -39,7 +39,7 @@ _minios_kernel() {
                     # Get available kernel packages from repository
                     local kernel_packages
                     if command -v apt-cache >/dev/null 2>&1; then
-                        kernel_packages=$(apt-cache search --names-only "^linux-image-" 2>/dev/null | cut -d' ' -f1 | head -20)
+                        kernel_packages=$(apt-cache search --names-only "^linux-image-[0-9]" 2>/dev/null | cut -d' ' -f1 | grep -v -- '-dbg$' | head -20)
                     fi
                     COMPREPLY=($(compgen -W "${kernel_packages}" -- ${cur}))
                     ;;

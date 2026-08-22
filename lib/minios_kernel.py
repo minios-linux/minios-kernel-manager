@@ -71,7 +71,8 @@ try:
     from .minios_utils import (
         find_minios_directory, activate_kernel, list_all_kernels, get_active_kernel,
         get_temp_dir_with_space_check, is_kernel_currently_running,
-        package_kernel_to_repository, publish_kernel_artifacts
+        package_kernel_to_repository, publish_kernel_artifacts,
+        validate_kernel_bundle_artifacts
     )
 except ImportError:
     # Fall back to absolute imports (when run as main script)
@@ -83,7 +84,8 @@ except ImportError:
     from minios_utils import (
         find_minios_directory, activate_kernel, list_all_kernels, get_active_kernel,
         get_temp_dir_with_space_check, is_kernel_currently_running,
-        package_kernel_to_repository, publish_kernel_artifacts
+        package_kernel_to_repository, publish_kernel_artifacts,
+        validate_kernel_bundle_artifacts
     )
 
 
@@ -172,7 +174,8 @@ def package_kernel(args):
 
         if args.repo:
             progress_print(10, _("Downloading kernel package {}").format(args.repo))
-            kernel_version = download_kernel_package(args.repo, temp_dir, args.force_update)
+            kernel_version = download_kernel_package(
+                args.repo, temp_dir, args.force_update)
         else: # args.deb
             progress_print(10, _("Processing manual package(s)"))
             kernel_version = process_manual_packages(args.deb, temp_dir)
@@ -238,6 +241,9 @@ def package_kernel(args):
         if not all(os.path.isfile(path) and not os.path.islink(path)
                    for path in artifact_files):
             raise RuntimeError(_('Packaging did not produce a complete regular-file bundle'))
+        validate_kernel_bundle_artifacts(
+            kernel_version, artifact_files[0], artifact_files[1],
+            artifact_files[2])
 
         # Publication happens only after all artifacts have completed in the
         # private workspace. Existing files and symlinks are never overwritten.
