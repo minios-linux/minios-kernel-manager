@@ -244,7 +244,6 @@ def check_minios_status_cli():
 # ──────────────────────────────────────────────────────────────────────────────
 APPLICATION_ID   = 'dev.minios.kernel-manager'
 APP_NAME         = 'minios-kernel-manager'
-APP_TITLE        = 'MiniOS Kernel Manager'
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 script_dir = os.path.dirname(os.path.abspath(__file__))
 CSS_FILE_PATH = '/usr/share/minios-kernel-manager/style.css'
@@ -334,7 +333,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
 
     def _build_header_bar(self):
         """Build the header bar"""
-        self.set_titlebar(new_header_bar(_(APP_TITLE)))
+        self.set_titlebar(new_header_bar(_('MiniOS Kernel Manager')))
 
     def _build_system_status_info(self):
         """Build system status information panel."""
