@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: minios-kernel-manager 1.0.0\n"
 "Report-Msgid-Bugs-To: support@minios.dev\n"
 "POT-Creation-Date: 2026-08-30 23:03+0300\n"
-"PO-Revision-Date: 2026-08-30 20:03+0000\n"
+"PO-Revision-Date: 2026-09-01 10:42+0000\n"
 "Last-Translator: crims0n <crims0n@minios.dev>\n"
 "Language-Team: none\n"
 "Language: it\n"
@@ -521,7 +521,7 @@ msgstr "Questo strumento richiede privilegi di root. Eseguire con sudo o tramite
 
 #: lib/minios_kernel.py:624
 msgid "MiniOS Kernel Manager CLI"
-msgstr "CLI di MiniOS Kernel Manager"
+msgstr "Gestore kernel MiniOS CLI"
 
 #: lib/minios_kernel.py:625 lib/minios_kernel.py:629
 msgid "Output in JSON format"
@@ -598,7 +598,7 @@ msgstr "È necessario specificare un comando"
 #: lib/minios_kernel_manager.py:336
 #: share/applications/minios-kernel-manager.desktop:2
 msgid "MiniOS Kernel Manager"
-msgstr "Gestore Kernel MiniOS"
+msgstr "Gestore kernel MiniOS"
 
 #: lib/minios_kernel_manager.py:342
 msgid "MiniOS directory is writable"

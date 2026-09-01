@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: minios-kernel-manager 1.0.0\n"
 "Report-Msgid-Bugs-To: support@minios.dev\n"
 "POT-Creation-Date: 2026-08-30 23:03+0300\n"
-"PO-Revision-Date: 2026-08-30 20:03+0000\n"
+"PO-Revision-Date: 2026-09-01 10:42+0000\n"
 "Last-Translator: crims0n <crims0n@minios.dev>\n"
 "Language-Team: none\n"
 "Language: es\n"
@@ -598,7 +598,7 @@ msgstr "Se requiere un comando"
 #: lib/minios_kernel_manager.py:336
 #: share/applications/minios-kernel-manager.desktop:2
 msgid "MiniOS Kernel Manager"
-msgstr "Gestor de Kernels de MiniOS"
+msgstr "Gestor de kernels de MiniOS"
 
 #: lib/minios_kernel_manager.py:342
 msgid "MiniOS directory is writable"
