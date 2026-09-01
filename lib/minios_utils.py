@@ -166,7 +166,8 @@ def validate_kernel_bundle_artifacts(kernel_version: str, squashfs_file: str,
                 'Kernel artifact is not a nonempty regular file: {}'.format(path))
     if not shutil.which('unsquashfs'):
         raise RuntimeError('unsquashfs is required for kernel bundle preflight')
-    workspace = tempfile.mkdtemp(prefix='minios-kernel-preflight-')
+    workspace_parent = tempfile.mkdtemp(prefix='minios-kernel-preflight-')
+    workspace = os.path.join(workspace_parent, 'root')
     try:
         result = subprocess.run(
             ['unsquashfs', '-no-progress', '-d', workspace, squashfs_file],
@@ -273,7 +274,7 @@ def validate_kernel_bundle_artifacts(kernel_version: str, squashfs_file: str,
                 raise RuntimeError('Kernel bundle has no loadable module payload')
         return manifest
     finally:
-        shutil.rmtree(workspace, ignore_errors=True)
+        shutil.rmtree(workspace_parent, ignore_errors=True)
 
 
 def _kernel_artifact_names(kernel_version: str) -> List[str]:

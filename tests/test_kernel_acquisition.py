@@ -323,10 +323,12 @@ def test_real_squashfs_preflight_rejects_changed_external_kernel(tmp_path):
     assert (staged / 'boot' / ('config-' + version)).is_file()
     assert (staged / 'boot' / ('System.map-' + version)).is_file()
     squashfs = tmp_path / ('01-kernel-' + version + '.sb')
-    subprocess.run([
-        'mksquashfs', str(staged), str(squashfs), '-noappend', '-quiet',
-        '-processors', '1'], check=True, stdout=subprocess.PIPE,
+    squash_result = subprocess.run([
+        'mksquashfs', str(staged), str(squashfs), '-noappend',
+        '-processors', '1'], check=False, stdout=subprocess.PIPE,
         stderr=subprocess.PIPE)
+    assert squash_result.returncode == 0, squash_result.stderr.decode(
+        'utf-8', errors='replace')
     vmlinuz = extraction / 'boot' / ('vmlinuz-' + version)
     initrd = tmp_path / ('initrfs-' + version + '.img')
     initrd.write_bytes(b'initrd')

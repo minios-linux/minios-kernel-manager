@@ -1,8 +1,11 @@
 minios-kernel-manager (1.2.5) unstable; urgency=medium
 
   * Refresh translations
+  * Isolate repeated pytest runs in shared Bionic build environments
+  * Avoid the unsupported quiet option in the Bionic SquashFS fixture
+  * Extract bundle preflight data into a fresh Bionic-compatible destination
 
- -- crims0n <crims0n@minios.dev>  Tue, 01 Sep 2026 18:15:44 +0300
+ -- crims0n <crims0n@minios.dev>  Tue, 01 Sep 2026 18:41:30 +0300
 
 minios-kernel-manager (1.2.4) unstable; urgency=medium
 

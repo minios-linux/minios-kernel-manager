@@ -19,7 +19,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'lib'))
 @pytest.fixture
 def tmp_path(tmpdir):
     """Provide pathlib-based temporary paths on Bionic's pytest 3.3."""
-    return Path(str(tmpdir))
+    path = Path(str(tmpdir))
+    shutil.rmtree(str(path), ignore_errors=True)
+    path.mkdir()
+    yield path
+    shutil.rmtree(str(path), ignore_errors=True)
 
 
 @pytest.fixture
