@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: minios-kernel-manager 1.0.0\n"
 "Report-Msgid-Bugs-To: support@minios.dev\n"
-"POT-Creation-Date: 2026-08-30 23:03+0300\n"
-"PO-Revision-Date: 2026-08-30 20:03+0000\n"
+"POT-Creation-Date: 2026-09-02 14:13+0300\n"
+"PO-Revision-Date: 2026-09-02 10:43+0000\n"
 "Last-Translator: crims0n <crims0n@minios.dev>\n"
 "Language-Team: none\n"
 "Language: fr\n"
@@ -879,74 +879,74 @@ msgstr "_Activer le noyau"
 msgid "_Delete Kernel"
 msgstr "_Supprimer le noyau"
 
-#: lib/minios_utils.py:1112
+#: lib/minios_utils.py:1113
 msgid "Temporary directory is symlinked or untrusted: {}"
 msgstr "Le répertoire temporaire est un lien symbolique ou n’est pas fiable : {}"
 
-#: lib/minios_utils.py:1122
+#: lib/minios_utils.py:1123
 msgid "Temporary directory is not owned by root: {}"
 msgstr "Le répertoire temporaire n’est pas détenu par root : {}"
 
-#: lib/minios_utils.py:1125
+#: lib/minios_utils.py:1126
 msgid "Temporary directory is writable by other users: {}"
 msgstr "Le répertoire temporaire est accessible en écriture par d’autres utilisateurs : {}"
 
-#: lib/minios_utils.py:1136
+#: lib/minios_utils.py:1137
 msgid "Could not create a private root-owned packaging workspace"
 msgstr "Impossible de créer un espace de travail de packaging privé et détenu par root"
 
-#: lib/minios_utils.py:1142
+#: lib/minios_utils.py:1143
 msgid "Custom temporary directory does not exist: {}"
 msgstr "Le répertoire temporaire personnalisé n'existe pas : {}"
 
-#: lib/minios_utils.py:1145
+#: lib/minios_utils.py:1146
 msgid "Custom temporary directory is not writable: {}"
 msgstr "Le répertoire temporaire personnalisé n'est pas inscriptible : {}"
 
-#: lib/minios_utils.py:1152
+#: lib/minios_utils.py:1153
 #, python-brace-format
 msgid "Using custom temporary directory for {operation} ({available:.1f}MB available, {needed:.1f}MB needed)"
 msgstr "Utilisation du répertoire temporaire personnalisé pour {operation} ({available:.1f} Mo disponibles, {needed:.1f} Mo nécessaires)"
 
-#: lib/minios_utils.py:1156
+#: lib/minios_utils.py:1157
 msgid "Insufficient space in custom temporary directory '{}' for {}: {:.1f}MB available, {:.1f}MB needed"
 msgstr "Espace insuffisant dans le répertoire temporaire personnalisé '{}' pour {}: {:.1f} Mo disponibles, {:.1f} Mo nécessaires"
 
-#: lib/minios_utils.py:1159
+#: lib/minios_utils.py:1160
 msgid "Cannot check space in custom temporary directory '{}': {}"
 msgstr "Impossible de vérifier l'espace dans le répertoire temporaire personnalisé '{}' : {}"
 
-#: lib/minios_utils.py:1171
+#: lib/minios_utils.py:1172
 #, python-brace-format
 msgid "Using /tmp for {operation} ({available:.1f}MB available, {needed:.1f}MB needed)"
 msgstr "Utilisation de /tmp pour {operation} ({available:.1f} Mo disponibles, {needed:.1f} Mo nécessaires)"
 
-#: lib/minios_utils.py:1175
+#: lib/minios_utils.py:1176
 #, python-brace-format
 msgid "Insufficient space in /tmp for {operation} ({available:.1f}MB available, {needed:.1f}MB needed)"
 msgstr "Espace insuffisant dans /tmp pour {operation} ({available:.1f} Mo disponibles, {needed:.1f} Mo nécessaires)"
 
-#: lib/minios_utils.py:1191
+#: lib/minios_utils.py:1192
 msgid "No live system changes directory found, using /tmp anyway"
 msgstr "Aucun répertoire de modifications du système en direct trouvé, utilisation de /tmp de toute façon"
 
-#: lib/minios_utils.py:1194
+#: lib/minios_utils.py:1195
 msgid "Detected {} filesystem, using alternative: {}"
 msgstr "Système de fichiers {} détecté, utilisation de l'alternative : {}"
 
-#: lib/minios_utils.py:1200
+#: lib/minios_utils.py:1201
 msgid "Created alternative temporary directory: {}"
 msgstr "Répertoire temporaire alternatif créé : {}"
 
-#: lib/minios_utils.py:1207
+#: lib/minios_utils.py:1208
 msgid "Using alternative temporary directory: {} ({:.1f}MB available)"
 msgstr "Utilisation du répertoire temporaire alternatif : {} ({:.1f} Mo disponibles)"
 
-#: lib/minios_utils.py:1213
+#: lib/minios_utils.py:1214
 msgid "Insufficient disk space for operation. Need {:.1f}MB, but only {:.1f}MB available in /tmp and {:.1f}MB in {}"
 msgstr "Espace disque insuffisant pour l'opération. Besoin de {:.1f} Mo, mais seulement {:.1f} Mo disponibles dans /tmp et {:.1f} Mo dans {}"
 
-#: lib/minios_utils.py:1223
+#: lib/minios_utils.py:1224
 msgid "Could not check disk space: {}. Using default temporary directory."
 msgstr "Impossible de vérifier l'espace disque : {}. Utilisation du répertoire temporaire par défaut."
 
@@ -957,3 +957,11 @@ msgstr "Gérer les modules du noyau pour MiniOS"
 #: share/applications/minios-kernel-manager.desktop:25
 msgid "kernel;modules;squashfs;initramfs;minios;"
 msgstr "noyau;modules;squashfs;initramfs;minios;"
+
+#: share/polkit/dev.minios.kernel-manager.policy:11
+msgid "Run MiniOS Kernel Manager CLI operations"
+msgstr "Exécuter les opérations CLI du Gestionnaire de noyaux MiniOS"
+
+#: share/polkit/dev.minios.kernel-manager.policy:20
+msgid "Authentication is required to perform kernel operations"
+msgstr "Une authentification est requise pour effectuer des opérations sur le noyau"

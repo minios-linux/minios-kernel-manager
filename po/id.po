@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: minios-kernel-manager 1.0.0\n"
 "Report-Msgid-Bugs-To: support@minios.dev\n"
-"POT-Creation-Date: 2026-08-30 23:03+0300\n"
-"PO-Revision-Date: 2026-09-01 10:42+0000\n"
+"POT-Creation-Date: 2026-09-02 14:13+0300\n"
+"PO-Revision-Date: 2026-09-02 10:43+0000\n"
 "Last-Translator: crims0n <crims0n@minios.dev>\n"
 "Language-Team: none\n"
 "Language: id\n"
@@ -878,74 +878,74 @@ msgstr "_Aktifkan Kernel"
 msgid "_Delete Kernel"
 msgstr "_Hapus Kernel"
 
-#: lib/minios_utils.py:1112
+#: lib/minios_utils.py:1113
 msgid "Temporary directory is symlinked or untrusted: {}"
 msgstr "Direktori sementara merupakan symlink atau tidak tepercaya: {}"
 
-#: lib/minios_utils.py:1122
+#: lib/minios_utils.py:1123
 msgid "Temporary directory is not owned by root: {}"
 msgstr "Direktori sementara tidak dimiliki oleh root: {}"
 
-#: lib/minios_utils.py:1125
+#: lib/minios_utils.py:1126
 msgid "Temporary directory is writable by other users: {}"
 msgstr "Direktori sementara dapat ditulis oleh pengguna lain: {}"
 
-#: lib/minios_utils.py:1136
+#: lib/minios_utils.py:1137
 msgid "Could not create a private root-owned packaging workspace"
 msgstr "Tidak dapat membuat workspace packaging privat yang dimiliki root"
 
-#: lib/minios_utils.py:1142
+#: lib/minios_utils.py:1143
 msgid "Custom temporary directory does not exist: {}"
 msgstr "Direktori sementara khusus tidak ada: {}"
 
-#: lib/minios_utils.py:1145
+#: lib/minios_utils.py:1146
 msgid "Custom temporary directory is not writable: {}"
 msgstr "Direktori sementara khusus tidak dapat ditulis: {}"
 
-#: lib/minios_utils.py:1152
+#: lib/minios_utils.py:1153
 #, python-brace-format
 msgid "Using custom temporary directory for {operation} ({available:.1f}MB available, {needed:.1f}MB needed)"
 msgstr "Menggunakan direktori sementara khusus untuk {operation} ({available:.1f}MB tersedia, {needed:.1f}MB dibutuhkan)"
 
-#: lib/minios_utils.py:1156
+#: lib/minios_utils.py:1157
 msgid "Insufficient space in custom temporary directory '{}' for {}: {:.1f}MB available, {:.1f}MB needed"
 msgstr "Ruang tidak cukup di direktori sementara khusus '{}' untuk {}: {:.1f}MB tersedia, {:.1f}MB dibutuhkan"
 
-#: lib/minios_utils.py:1159
+#: lib/minios_utils.py:1160
 msgid "Cannot check space in custom temporary directory '{}': {}"
 msgstr "Tidak dapat memeriksa ruang di direktori sementara khusus '{}': {}"
 
-#: lib/minios_utils.py:1171
+#: lib/minios_utils.py:1172
 #, python-brace-format
 msgid "Using /tmp for {operation} ({available:.1f}MB available, {needed:.1f}MB needed)"
 msgstr "Menggunakan /tmp untuk {operation} ({available:.1f}MB tersedia, {needed:.1f}MB dibutuhkan)"
 
-#: lib/minios_utils.py:1175
+#: lib/minios_utils.py:1176
 #, python-brace-format
 msgid "Insufficient space in /tmp for {operation} ({available:.1f}MB available, {needed:.1f}MB needed)"
 msgstr "Ruang tidak cukup di /tmp untuk {operation} ({available:.1f}MB tersedia, {needed:.1f}MB dibutuhkan)"
 
-#: lib/minios_utils.py:1191
+#: lib/minios_utils.py:1192
 msgid "No live system changes directory found, using /tmp anyway"
 msgstr "Tidak ada direktori perubahan sistem langsung yang ditemukan, menggunakan /tmp saja"
 
-#: lib/minios_utils.py:1194
+#: lib/minios_utils.py:1195
 msgid "Detected {} filesystem, using alternative: {}"
 msgstr "Terdeteksi sistem berkas {}, menggunakan alternatif: {}"
 
-#: lib/minios_utils.py:1200
+#: lib/minios_utils.py:1201
 msgid "Created alternative temporary directory: {}"
 msgstr "Direktori sementara alternatif dibuat: {}"
 
-#: lib/minios_utils.py:1207
+#: lib/minios_utils.py:1208
 msgid "Using alternative temporary directory: {} ({:.1f}MB available)"
 msgstr "Menggunakan direktori sementara alternatif: {} ({:.1f}MB tersedia)"
 
-#: lib/minios_utils.py:1213
+#: lib/minios_utils.py:1214
 msgid "Insufficient disk space for operation. Need {:.1f}MB, but only {:.1f}MB available in /tmp and {:.1f}MB in {}"
 msgstr "Ruang disk tidak cukup untuk operasi. Dibutuhkan {:.1f}MB, tetapi hanya {:.1f}MB tersedia di /tmp dan {:.1f}MB di {}"
 
-#: lib/minios_utils.py:1223
+#: lib/minios_utils.py:1224
 msgid "Could not check disk space: {}. Using default temporary directory."
 msgstr "Tidak dapat memeriksa ruang disk: {}. Menggunakan direktori sementara default."
 
@@ -956,3 +956,11 @@ msgstr "Kelola modul kernel untuk MiniOS"
 #: share/applications/minios-kernel-manager.desktop:25
 msgid "kernel;modules;squashfs;initramfs;minios;"
 msgstr "kernel;modul;squashfs;initramfs;minios;"
+
+#: share/polkit/dev.minios.kernel-manager.policy:11
+msgid "Run MiniOS Kernel Manager CLI operations"
+msgstr "Jalankan operasi CLI Manajer Kernel MiniOS"
+
+#: share/polkit/dev.minios.kernel-manager.policy:20
+msgid "Authentication is required to perform kernel operations"
+msgstr "Otentikasi diperlukan untuk menjalankan operasi kernel"
