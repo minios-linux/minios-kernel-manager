@@ -1,0 +1,4 @@
+usr/bin/minios-kernel-manager
+usr/lib/minios-kernel-manager/minios_kernel_manager.py
+usr/share/applications/minios-kernel-manager.desktop
+usr/share/minios-kernel-manager/style.css

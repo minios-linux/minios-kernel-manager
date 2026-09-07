@@ -29,6 +29,7 @@ tar-ignore=debian/files
 tar-ignore=debian/*.substvars
 tar-ignore=debian/*.debhelper
 tar-ignore=debian/*.log
+tar-ignore=debian/minios-kernel
 tar-ignore=debian/minios-kernel-manager
 tar-ignore=debian/tmp
 

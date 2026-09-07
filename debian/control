@@ -6,9 +6,31 @@ Build-Depends: debhelper (>= 11), gettext, python3, python3-minios-gui (>= 1.4.0
 Standards-Version: 4.1.3
 Homepage: https://minios.dev
 
+Package: minios-kernel
+Architecture: all
+Depends: ${misc:Depends},
+         python3 (>= 3.6),
+         squashfs-tools,
+         kmod,
+         apt,
+         dpkg-dev,
+         zstd,
+         mount
+Recommends: lz4, lzop, xz-utils, bzip2,
+            polkitd | policykit-1,
+            pkexec | policykit-1
+Breaks: minios-kernel-manager (<< 1.4.0)
+Replaces: minios-kernel-manager (<< 1.4.0)
+Description: command-line kernel management backend for MiniOS
+ minios-kernel packages, installs, activates, lists, and removes MiniOS kernel
+ bundles from the command line. It provides the non-graphical kernel management
+ backend used by MiniOS Kernel Manager and can also be used directly from a
+ terminal or automation.
+
 Package: minios-kernel-manager
 Architecture: all
 Depends: ${misc:Depends},
+         minios-kernel (= ${binary:Version}),
          polkitd | policykit-1,
          pkexec | policykit-1,
          python3 (>= 3.6),
@@ -17,16 +39,9 @@ Depends: ${misc:Depends},
          gir1.2-gio-2.0,
          gir1.2-gdk-3.0,
          gir1.2-pango-1.0,
-         python3-minios-gui (>= 1.4.0),
-         squashfs-tools,
-         kmod,
-         apt,
-         dpkg-dev,
-         zstd,
-         mount
-Recommends: lz4, lzop, xz-utils, bzip2
-Description: Graphical and command-line tools for managing MiniOS kernels.
- This package provides a GTK3 graphical user interface and a command-line
- utility to package, install, and manage Linux kernels for the MiniOS.
- It allows creating SquashFS images of kernels, generating initramfs,
- and managing active and inactive kernels in the /minios/kernels repository.
+         python3-minios-gui (>= 1.4.0)
+Description: graphical kernel manager for MiniOS
+ MiniOS Kernel Manager is the GTK3 frontend for the minios-kernel command-line
+ backend. It provides graphical workflows for browsing, packaging, activating,
+ and removing MiniOS kernel bundles while keeping privileged kernel operations
+ behind the standalone CLI interface.

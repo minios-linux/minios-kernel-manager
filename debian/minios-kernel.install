@@ -1,0 +1,12 @@
+usr/bin/minios-kernel
+usr/lib/minios-kernel-manager/__init__.py
+usr/lib/minios-kernel-manager/bootloader_utils.py
+usr/lib/minios-kernel-manager/build_utils.py
+usr/lib/minios-kernel-manager/compression_utils.py
+usr/lib/minios-kernel-manager/kernel_acquisition.py
+usr/lib/minios-kernel-manager/kernel_utils.py
+usr/lib/minios-kernel-manager/minios_kernel.py
+usr/lib/minios-kernel-manager/minios_utils.py
+usr/share/bash-completion/completions/minios-kernel
+usr/share/locale/*/LC_MESSAGES/minios-kernel-manager.mo
+usr/share/polkit-1/actions/dev.minios.kernel-manager.policy

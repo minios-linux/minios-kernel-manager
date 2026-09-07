@@ -21,6 +21,21 @@ def test_release_metadata_is_synchronized():
         assert 'MiniOS Kernel Manager {}"'.format(version) in first_line
 
 
+def test_split_packages_have_disjoint_payloads_and_exact_backend_dependency():
+    backend = set((ROOT / "debian/minios-kernel.install").read_text(
+        encoding="utf-8").splitlines())
+    frontend = set((ROOT / "debian/minios-kernel-manager.install").read_text(
+        encoding="utf-8").splitlines())
+    control = (ROOT / "debian/control").read_text(encoding="utf-8")
+
+    assert backend.isdisjoint(frontend)
+    assert "usr/bin/minios-kernel" in backend
+    assert "usr/bin/minios-kernel-manager" in frontend
+    assert "minios-kernel (= ${binary:Version})" in control
+    assert "Breaks: minios-kernel-manager (<< 1.4.0)" in control
+    assert "Replaces: minios-kernel-manager (<< 1.4.0)" in control
+
+
 def kernel_status_branch():
     start = SOURCE.index("# Add CSS classes based on kernel status")
     end = SOURCE.index("main_box = Gtk.Box", start)
