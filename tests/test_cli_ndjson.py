@@ -154,7 +154,9 @@ def test_package_progress_and_result_are_ndjson_and_logs_are_stderr(tmp_path):
          patch('minios_kernel.generate_initramfs', side_effect=generate_initramfs), \
          patch('minios_kernel.validate_kernel_bundle_artifacts'), \
          patch('minios_kernel.get_last_kernel_versions',
-               return_value={'actual_version': 'test'}), \
+                return_value={'actual_version': 'test'}), \
+         patch('minios_utils.os.statvfs', return_value=SimpleNamespace(
+             f_bavail=2 * 1024 * 1024 * 1024, f_frsize=1)), \
          patch('minios_kernel.find_minios_directory', return_value=None):
         minios_kernel.package_kernel(args)
 

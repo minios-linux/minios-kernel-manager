@@ -35,25 +35,23 @@ import tempfile
 import shutil
 import time
 import subprocess
-import fcntl
 import json
 import re
-import signal
 
 # Use only system installed modules
 try:
     # Try relative imports first (when imported as module)
     from .minios_utils import (
-        find_minios_directory, get_kernel_info,
-        get_currently_running_kernel, is_kernel_currently_running, get_system_type
+        find_minios_directory, get_currently_running_kernel,
+        is_kernel_currently_running, get_system_type
     )
     from .kernel_utils import get_repository_kernels, get_manual_packages, _format_size
     from .compression_utils import get_available_compressions
 except ImportError:
     # Fall back to absolute imports (when run as main script)
     from minios_utils import (
-        find_minios_directory, get_kernel_info,
-        get_currently_running_kernel, is_kernel_currently_running, get_system_type
+        find_minios_directory, get_currently_running_kernel,
+        is_kernel_currently_running, get_system_type
     )
     from kernel_utils import get_repository_kernels, get_manual_packages, _format_size
     from compression_utils import get_available_compressions
@@ -61,8 +59,10 @@ except ImportError:
 gi.require_version('Gtk', '3.0')
 gi.require_version('Gio', '2.0')
 from gi.repository import Gtk, GLib, Gio, Pango
-from minios_gui import (LogView, StatusBanner, apply_minios_css, ask_confirmation,
-                        new_header_bar, new_icon, show_error_dialog, show_info_dialog)
+from minios_gui import (CommandRunner, LogView, OperationView, StatePlaceholder,
+                        StatusBanner, apply_minios_css, ask_confirmation,
+                        choose_open_files, format_bytes, new_header_bar, new_icon,
+                        show_error_dialog, show_info_dialog)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # CLI Interface Functions
@@ -293,7 +293,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         self.minios_path = None
         self.minios_writable = False
         self.system_type = get_system_type()
-        self.active_pid = None
+        self.command_runner = None
         self.repository_fetch_generation = 0
         self._build_finalized = False
 
@@ -316,6 +316,8 @@ class KernelPackWindow(Gtk.ApplicationWindow):
 
     def _on_destroy(self, widget):
         # widget parameter is not used
+        if self.command_runner is not None and self.command_runner.running:
+            self.command_runner.cancel()
         self.get_application().quit()
 
     def _detect_minios_directory(self):
@@ -425,12 +427,11 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         
         # Packaged kernels list
         self.packaged_kernel_list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.SINGLE)
-        self.packaged_kernel_list.get_style_context().add_class('minios-selectable')
+        self.packaged_kernel_list.get_style_context().add_class('minios-list')
         self.packaged_kernel_list.connect("row-selected", self._on_packaged_kernel_selected)
         self.packaged_kernel_list.connect("button-press-event", self._on_list_button_press)
         
         sw = Gtk.ScrolledWindow()
-        sw.get_style_context().add_class("manager-list-card")
         sw.set_min_content_width(400)
         sw.set_min_content_height(200)
         sw.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
@@ -581,17 +582,39 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         kernel_list_label = Gtk.Label(label=_("Available Kernels:"), xalign=0)
         self.repo_selection_box.pack_start(kernel_list_label, False, False, 0)
 
+        self.kernel_search_entry = Gtk.SearchEntry()
+        self.kernel_search_entry.set_placeholder_text(_("Search kernels…"))
+        self.kernel_search_entry.set_tooltip_text(
+            _("Filter repository kernels by name"))
+        self.kernel_search_entry.connect(
+            "search-changed", self._on_kernel_search_changed)
+        self.repo_selection_box.pack_start(
+            self.kernel_search_entry, False, False, 0)
+
         self.kernel_list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.SINGLE)
-        self.kernel_list.get_style_context().add_class('minios-selectable')
+        self.kernel_list.get_style_context().add_class('minios-list')
+        self.kernel_list.set_filter_func(
+            self._filter_repository_kernel_row)
         self.kernel_list.connect("row-selected", self._on_kernel_selected)
 
         sw = Gtk.ScrolledWindow()
-        sw.get_style_context().add_class("manager-list-card")
         sw.set_min_content_width(650)
         sw.set_min_content_height(200)
         sw.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         sw.add(self.kernel_list)
-        self.repo_selection_box.pack_start(sw, True, True, 0)
+
+        kernel_overlay = Gtk.Overlay()
+        kernel_overlay.add(sw)
+        self.kernel_loading_box = OperationView(
+            status=_("Fetching kernel list from repository..."),
+            cancellable=False)
+        self.kernel_loading_box.set_halign(Gtk.Align.CENTER)
+        self.kernel_loading_box.set_valign(Gtk.Align.CENTER)
+        self.kernel_loading_box.get_style_context().add_class('loading-overlay')
+        self.kernel_loading_box.set_no_show_all(True)
+        self.kernel_loading_box.set_visible(False)
+        kernel_overlay.add_overlay(self.kernel_loading_box)
+        self.repo_selection_box.pack_start(kernel_overlay, True, True, 0)
         
         kernel_selection_box.pack_start(self.repo_selection_box, True, True, 0)
         self.repo_selection_box.hide()  # Hidden by default (Manual Package is selected)
@@ -602,7 +625,6 @@ class KernelPackWindow(Gtk.ApplicationWindow):
 
         # Bottom buttons
         button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        button_box.get_style_context().add_class("manager-footer")
         button_box.set_halign(Gtk.Align.END)
         button_box.set_margin_top(12)
         container.pack_start(button_box, False, False, 0)
@@ -652,6 +674,21 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             else:
                 tooltip = _("Package kernel and add to repository")
             self.build_button.set_tooltip_text(tooltip)
+
+    def _filter_repository_kernel_row(self, row):
+        """Return whether a repository row matches the current name filter."""
+        query = self.kernel_search_entry.get_text().strip().casefold()
+        searchable_name = getattr(row, 'kernel_search_name', None)
+        return not query or searchable_name is None or query in searchable_name
+
+    def _on_kernel_search_changed(self, _entry):
+        self.kernel_list.invalidate_filter()
+        selected_row = self.kernel_list.get_selected_row()
+        if (selected_row is not None and
+                not self._filter_repository_kernel_row(selected_row)):
+            self.kernel_list.unselect_all()
+            self.selected_kernel = None
+            self._update_buttons_state()
 
     def _populate_packaged_kernels(self):
         """Populate list of packaged kernels"""
@@ -709,6 +746,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
                 }
 
                 row = Gtk.ListBoxRow()
+                row.get_style_context().add_class('kernel-row')
                 
                 # Add CSS classes based on kernel status
                 if kernel_info.get('is_active'):
@@ -720,6 +758,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
                 
                 main_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=15)
                 main_box.get_style_context().add_class('manager-state-row-content')
+                main_box.get_style_context().add_class('kernel-row-content')
                 
                 # Use the new icon from kernel_info
                 img = new_icon(
@@ -754,12 +793,13 @@ class KernelPackWindow(Gtk.ApplicationWindow):
                 
                 # Primary status badge
                 status_label = Gtk.Label()
-                status_label.get_style_context().add_class('badge')
                 if kernel_info.get('is_active'):
                     status_text = _('ACTIVE')
+                    status_label.get_style_context().add_class('badge')
                     status_label.get_style_context().add_class('badge-success')
                 else:
                     status_text = _('AVAILABLE')
+                    status_label.get_style_context().add_class('row-meta')
                 
                 status_label.set_markup(f'<span size="small" weight="bold">{GLib.markup_escape_text(status_text)}</span>')
                 status_label.set_halign(Gtk.Align.CENTER)
@@ -779,6 +819,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
                 
                 row.add(main_box)
                 row.kernel_version = kernel
+                row.kernel_info = kernel_info
                 self.packaged_kernel_list.add(row)
         
         self.packaged_kernel_list.show_all()
@@ -788,9 +829,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         if row and hasattr(row, 'kernel_version'):
             self.selected_packaged_kernel = row.kernel_version
             
-            kernel_info = get_kernel_info(self.minios_path, self.selected_packaged_kernel)
-            if not kernel_info:
-                return
+            kernel_info = row.kernel_info
 
             # Sensitivity is based on backend booleans, never translated or
             # presentation status text.
@@ -896,59 +935,27 @@ class KernelPackWindow(Gtk.ApplicationWindow):
 
     def _on_browse_clicked(self, button):
         """Handle browse button click for manual package selection"""
-        dialog = Gtk.FileChooserDialog(
-            title=_("Select Kernel Package"),
-            parent=self,
-            action=Gtk.FileChooserAction.OPEN
-        )
-        dialog.set_select_multiple(True)
-        
-        cancel_button = dialog.add_button(_("Cancel"), Gtk.ResponseType.CANCEL)
-        open_button = dialog.add_button(_("Open"), Gtk.ResponseType.OK)
-        open_button.get_style_context().add_class('suggested-action')
-        
-        open_button.set_can_default(True)
-        open_button.grab_default()
-        
-        dialog.set_default_size(650, 450)
-        dialog.set_modal(True)
-        
         downloads_dir = os.path.expanduser("~/Downloads")
-        if os.path.exists(downloads_dir):
-            dialog.set_current_folder(downloads_dir)
+        selected_files = choose_open_files(
+            self, _("Select Kernel Package"),
+            filters=((_("Debian Package Files (*.deb)"), ("*.deb",)),
+                     (_("All Files"), ("*",))),
+            current_folder=(downloads_dir if os.path.exists(downloads_dir)
+                            else os.path.expanduser("~")),
+            accept_label=_("Open"))
+        if not selected_files:
+            return
+        selected_files = sorted(selected_files)
+        self.selected_deb_files = selected_files
+        self.selected_kernel = selected_files[0]
+
+        if len(selected_files) == 1:
+            self.selected_file_label.set_text(os.path.basename(selected_files[0]))
         else:
-            dialog.set_current_folder(os.path.expanduser("~"))
-        
-        filter_deb = Gtk.FileFilter()
-        filter_deb.set_name(_("Debian Package Files (*.deb)"))
-        filter_deb.add_pattern("*.deb")
-        dialog.add_filter(filter_deb)
-        
-        filter_all = Gtk.FileFilter()
-        filter_all.set_name(_("All Files"))
-        filter_all.add_pattern("*" )
-        dialog.add_filter(filter_all)
-        
-        response = dialog.run()
-        
-        if response == Gtk.ResponseType.OK:
-            selected_files = dialog.get_filenames()
-            if selected_files:
-                selected_files = sorted(selected_files)
-                self.selected_deb_files = selected_files
-                self.selected_kernel = selected_files[0]
+            self.selected_file_label.set_text(_("{} files selected").format(len(selected_files)))
 
-                if len(selected_files) == 1:
-                    self.selected_file_label.set_text(os.path.basename(selected_files[0]))
-                else:
-                    self.selected_file_label.set_text(_("{} files selected").format(len(selected_files)))
-
-                self._update_buttons_state()  # Use centralized button state update
-
-                # Show package information
-                self._show_package_info(selected_files)
-        
-        dialog.destroy()
+        self._update_buttons_state()
+        self._show_package_info(selected_files)
 
     def _show_package_info(self, package_paths):
         """Show information about selected package(s)"""
@@ -966,7 +973,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
 
             info_lines = [
                 f"<b>{_('Files')}:</b> {len(package_paths)}",
-                f"<b>{_('Total size')}:</b> {self._format_file_size(total_size)}",
+                f"<b>{_('Total size')}:</b> {format_bytes(total_size)}",
             ]
 
             if len(package_paths) > 1:
@@ -981,7 +988,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             # Get basic file info
             file_stat = os.stat(package_path)
             file_size = file_stat.st_size
-            file_size_text = self._format_file_size(file_size)
+            file_size_text = format_bytes(file_size)
             
             # Try to get package info using dpkg-deb
             info_lines.append(f"<b>File:</b> {GLib.markup_escape_text(os.path.basename(package_path))}")
@@ -1056,14 +1063,6 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             self.package_info_label.set_markup(f"<i>Error reading package: {GLib.markup_escape_text(str(e))}</i>")
             self.package_info_box.show_all()
 
-    def _format_file_size(self, size_bytes):
-        """Format file size in human readable format"""
-        for unit in ['B', 'KB', 'MB', 'GB']:
-            if size_bytes < 1024.0:
-                return f"{size_bytes:.1f} {unit}"
-            size_bytes /= 1024.0
-        return f"{size_bytes:.1f} TB"
-
     def _populate_kernels(self):
         """Populate kernel list for manual packages (quick operation)"""
         try:
@@ -1075,36 +1074,29 @@ class KernelPackWindow(Gtk.ApplicationWindow):
 
     def _show_kernel_loading(self):
         """Show loading indicator in kernel list"""
-        # Clear existing kernels
-        for child in self.kernel_list.get_children():
-            self.kernel_list.remove(child)
-        
-        loading_row = Gtk.ListBoxRow()
-        loading_row.set_sensitive(False)
-        
-        main_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        main_box.set_halign(Gtk.Align.CENTER)
-        
-        spinner = Gtk.Spinner()
-        spinner.start()
-        main_box.pack_start(spinner, False, False, 0)
-        
-        info_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        
         if self.repo_radio.get_active():
             status_text = _("Fetching kernel list from repository...")
         else:
             status_text = _("Scanning for manual packages...")
-        
-        status_label = Gtk.Label()
-        status_label.set_markup(f'<b>{GLib.markup_escape_text(status_text)}</b>')
-        status_label.set_halign(Gtk.Align.START)
-        info_box.pack_start(status_label, False, False, 0)
-        
-        main_box.pack_start(info_box, False, False, 0)
-        
-        loading_row.add(main_box)
-        self.kernel_list.add(loading_row)
+        for child in self.kernel_list.get_children():
+            self.kernel_list.remove(child)
+        self.kernel_loading_box.set_status(status_text)
+        self.kernel_loading_box.set_visible(True)
+        self.kernel_loading_box.set_state('running')
+
+    def _hide_kernel_loading(self):
+        self.kernel_loading_box.set_visible(False)
+        self.kernel_loading_box.set_state('idle')
+
+    def _show_kernel_placeholder(self, title, description='',
+                                 icon_name='dialog-information-symbolic'):
+        self._hide_kernel_loading()
+        for child in self.kernel_list.get_children():
+            self.kernel_list.remove(child)
+        row = Gtk.ListBoxRow()
+        row.set_sensitive(False)
+        row.add(StatePlaceholder(title, description, icon_name=icon_name))
+        self.kernel_list.add(row)
         self.kernel_list.show_all()
 
     def _fetch_repository_kernels_threaded(self, generation):
@@ -1125,6 +1117,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         """Populate kernel list with pre-fetched data"""
         if source_type == 'repository' and (generation != self.repository_fetch_generation or not self.repo_radio.get_active()):
             return False
+        self._hide_kernel_loading()
         for child in self.kernel_list.get_children():
             self.kernel_list.remove(child)
         
@@ -1144,9 +1137,11 @@ class KernelPackWindow(Gtk.ApplicationWindow):
                 kernel_info = None
                 
             row = Gtk.ListBoxRow()
+            row.get_style_context().add_class('kernel-row')
             
             main_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=15)
             main_box.get_style_context().add_class('manager-state-row-content')
+            main_box.get_style_context().add_class('kernel-row-content')
             
             # Use unified icon for all kernels
             icon_name = "package-x-generic"
@@ -1215,7 +1210,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             # Repository kernels are always available for download
             status_label = Gtk.Label()
             status_text = _('AVAILABLE')
-            status_label.get_style_context().add_class('badge')
+            status_label.get_style_context().add_class('row-meta')
             status_label.set_markup(f'<span size="small" weight="bold">{GLib.markup_escape_text(status_text)}</span>')
             status_label.set_halign(Gtk.Align.CENTER)
             status_box.pack_start(status_label, False, False, 0)
@@ -1225,6 +1220,8 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             row.add(main_box)
             row.kernel_version = kernel_name
             row.kernel_info = kernel_info
+            row.kernel_search_name = "{} {}".format(
+                kernel_name, display_name).casefold()
             self.kernel_list.add(row)
             
         self.kernel_list.show_all()
@@ -1233,58 +1230,21 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         """Show dialog when package cache appears to be outdated"""
         if generation != self.repository_fetch_generation or not self.repo_radio.get_active():
             return False
-        dialog = Gtk.MessageDialog(
-            transient_for=self,
-            modal=True,
-            message_type=Gtk.MessageType.QUESTION,
-            buttons=Gtk.ButtonsType.NONE,
-            text=_("Package database outdated")
-        )
-        dialog.format_secondary_text(_("The repository kernel list is empty. This may indicate an outdated package database. Update package lists now?"))
-        dialog.add_button(_("Cancel"), Gtk.ResponseType.CANCEL)
-        update_button = dialog.add_button(
-            _("Update Package Lists"), Gtk.ResponseType.OK)
-        update_button.get_style_context().add_class('suggested-action')
-        dialog.set_default_response(Gtk.ResponseType.CANCEL)
-        
-        def on_response(dialog, response_id):
-            dialog.destroy()
-            if response_id == Gtk.ResponseType.OK:
-                self._update_package_lists_with_progress()
-            else:
-                # Show empty list message
-                self._show_no_kernels_found()
-        
-        dialog.connect('response', on_response)
-        dialog.show()
+        if ask_confirmation(
+                self,
+                _("Package database outdated"),
+                _("The repository kernel list is empty. This may indicate an "
+                  "outdated package database. Update package lists now?"),
+                confirm_label=_("Update Package Lists")):
+            self._update_package_lists_with_progress()
+        else:
+            self._show_no_kernels_found()
+        return False
 
     def _update_package_lists_with_progress(self):
         """Update package lists with progress indication"""
-        # Show loading message
-        for child in self.kernel_list.get_children():
-            self.kernel_list.remove(child)
-        
-        loading_row = Gtk.ListBoxRow()
-        loading_row.set_sensitive(False)
-        
-        main_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        main_box.set_halign(Gtk.Align.CENTER)
-        
-        spinner = Gtk.Spinner()
-        spinner.start()
-        main_box.pack_start(spinner, False, False, 0)
-        
-        info_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        
-        title_label = Gtk.Label()
-        title_label.set_markup(f'<b>{GLib.markup_escape_text(_("Updating package lists..."))}</b>')
-        title_label.set_halign(Gtk.Align.START)
-        info_box.pack_start(title_label, False, False, 0)
-        
-        main_box.pack_start(info_box, True, True, 0)
-        loading_row.add(main_box)
-        self.kernel_list.add(loading_row)
-        self.kernel_list.show_all()
+        self._show_kernel_loading()
+        self.kernel_loading_box.set_status(_("Updating package lists..."))
         
         # Run update in background thread
         def update_thread():
@@ -1313,63 +1273,19 @@ class KernelPackWindow(Gtk.ApplicationWindow):
 
     def _show_no_kernels_found(self):
         """Show message when no kernels are found"""
-        no_kernels_row = Gtk.ListBoxRow()
-        no_kernels_row.set_sensitive(False)
-        
-        main_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        main_box.set_halign(Gtk.Align.CENTER)
-        
-        icon = new_icon("dialog-warning", Gtk.IconSize.DND)
-        main_box.pack_start(icon, False, False, 0)
-        
-        info_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        
         if self.kernel_source == "repository":
             title_text = _("No repository kernels found")
         else:
             title_text = _("No manual packages found")
-        
-        title_label = Gtk.Label()
-        title_label.set_markup(f'<b>{GLib.markup_escape_text(title_text)}</b>')
-        title_label.set_halign(Gtk.Align.START)
-        info_box.pack_start(title_label, False, False, 0)
-        
-        main_box.pack_start(info_box, False, False, 0)
-        
-        no_kernels_row.add(main_box)
-        self.kernel_list.add(no_kernels_row)
-        self.kernel_list.show_all()
+        self._show_kernel_placeholder(title_text, icon_name='dialog-warning')
 
     def _show_kernel_fetch_error(self, error_msg, generation=None):
         """Show error when kernel fetching fails"""
         if generation is not None and (generation != self.repository_fetch_generation or not self.repo_radio.get_active()):
             return False
-        error_row = Gtk.ListBoxRow()
-        error_row.set_sensitive(False)
-        
-        main_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        main_box.set_halign(Gtk.Align.CENTER)
-        
-        icon = new_icon("dialog-error", Gtk.IconSize.DND)
-        main_box.pack_start(icon, False, False, 0)
-        
-        info_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        
-        title_label = Gtk.Label()
-        title_label.set_markup(f'<b>{GLib.markup_escape_text(_("Failed to fetch repository kernels"))}</b>')
-        title_label.set_halign(Gtk.Align.START)
-        info_box.pack_start(title_label, False, False, 0)
-        
-        detail_label = Gtk.Label()
-        detail_label.set_markup(f'<span size="small" color="#666666">{GLib.markup_escape_text(error_msg)}</span>')
-        detail_label.set_halign(Gtk.Align.START)
-        info_box.pack_start(detail_label, False, False, 0)
-        
-        main_box.pack_start(info_box, False, False, 0)
-        
-        error_row.add(main_box)
-        self.kernel_list.add(error_row)
-        self.kernel_list.show_all()
+        self._show_kernel_placeholder(
+            _("Failed to fetch repository kernels"), error_msg,
+            icon_name='dialog-error')
 
     def _on_kernel_source_changed(self, radio_button):
         """Handle kernel source change"""
@@ -1471,9 +1387,6 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             # Build pkexec command
             cmd = ['pkexec', 'minios-kernel'] + cmd_args
 
-            # Log the command being executed
-            self._log_message(_("Executing command: {}").format(" ".join(cmd)))
-            
             # Set environment for unbuffered output
             env = os.environ.copy()
             env['PYTHONUNBUFFERED'] = '1'
@@ -1482,23 +1395,13 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             # Use stdbuf to disable all buffering, then run our CLI command
             stdbuf_cmd = ['stdbuf', '-oL', '-eL'] + cmd  # Line buffered for stdout/stderr
             
-            self.process = subprocess.Popen(
-                stdbuf_cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                universal_newlines=True,
-                bufsize=1,  # Line buffered
-                env=env,
-                start_new_session=True,
-            )
-            self.active_pid = self.process.pid
-            self._partial_line = ''
-            
-            # Set up a timer to read output periodically
-            GLib.timeout_add(10, self._read_cli_output)  # Check every 10ms for responsiveness
-            
-            # Watch for process exit using polling
-            GLib.timeout_add(500, self._check_process_exit)  # Check every 500ms
+            self.command_runner = CommandRunner(
+                stdbuf_cmd, self._on_package_stdout, self._on_cli_exit,
+                env=env, state_callback=self._on_package_runner_state,
+                display_argv=cmd, stderr_callback=self._on_package_stderr)
+            self._log_message(_("Executing command: {}").format(
+                self.command_runner.formatted_command))
+            self.command_runner.start()
 
         except Exception as e:
             # Log detailed error information
@@ -1508,110 +1411,35 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             
             # Show user-friendly error message
             self._show_error(_("Failed to start packaging process. Please check the log for detailed error information.") + f"\n\nError: {str(e)}")
+            if hasattr(self, 'temp_output_dir'):
+                shutil.rmtree(self.temp_output_dir, ignore_errors=True)
             self._build_finished()
 
-    def _on_cli_output(self, source, condition):
-        """Callback to handle CLI output in real-time."""
-        if condition == GLib.IO_IN:
-            # Read all available data, not just one line
-            try:
-                data = source.read(1024)  # Read up to 1KB at a time
-                if data:
-                    # Split into lines and process each
-                    lines = data.split('\n')
-                    
-                    # Handle partial line from previous read
-                    if hasattr(self, '_partial_line'):
-                        lines[0] = self._partial_line + lines[0]
-                    
-                    # Save incomplete last line
-                    if not data.endswith('\n'):
-                        self._partial_line = lines.pop()
-                    else:
-                        self._partial_line = ''
-                    
-                    # Process complete lines
-                    for line in lines:
-                        line_text = line.strip()
-                        if line_text:  # Skip empty lines
-                            # Try to update progress based on JSON output
-                            is_json_processed = self._update_progress_from_cli_output(line_text)
-                            
-                            # Only log non-JSON messages to keep log readable
-                            if not is_json_processed:
-                                # Remove log prefixes (I:, E:, W:) for cleaner output
-                                clean_message = line_text
-                                for prefix in ['I: ', 'E: ', 'W: ']:
-                                    if clean_message.startswith(prefix):
-                                        clean_message = clean_message[len(prefix):]
-                                        break
-                                self._log_message(clean_message)
-                    
-                    return True
-            except Exception as e:
-                print(f"Error reading CLI output: {e}", flush=True)
-        return False
+    def _on_package_stdout(self, text):
+        """Consume one or more streamed CLI stdout records."""
+        for line in text.splitlines():
+            line_text = line.strip()
+            if not line_text:
+                continue
+            if not self._update_progress_from_cli_output(line_text):
+                self._log_cli_text(line_text)
 
-    def _read_cli_output(self):
-        """Read CLI output in real-time using subprocess"""
-        if not hasattr(self, 'process') or self.process is None:
-            return False
-        
-        try:
-            # Try to read a line without blocking using poll
-            import os
-            import fcntl
-            
-            # Set stdout to non-blocking
-            fd = self.process.stdout.fileno()
-            fl = fcntl.fcntl(fd, fcntl.F_GETFL)
-            fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
-            
-            try:
-                line = self.process.stdout.readline()
-                if line:
-                    line_text = line.strip()
-                    if line_text:
-                        # Update progress based on CLI output (JSON format)
-                        self._update_progress_from_cli_output(line_text)
-                        
-                        # Only log non-JSON messages to keep log readable
-                        if not (line_text.strip().startswith('{') and line_text.strip().endswith('}')):
-                            # Remove log prefixes (I:, E:, W:) for cleaner output
-                            clean_message = line_text
-                            for prefix in ['I: ', 'E: ', 'W: ']:
-                                if clean_message.startswith(prefix):
-                                    clean_message = clean_message[len(prefix):]
-                                    break
-                            self._log_message(clean_message)
-                        
-                        # Force GUI update
-                        while Gtk.events_pending():
-                            Gtk.main_iteration()
-                        
-                        return True
-            except IOError:
-                # No data available, that's okay
-                pass
-            
-            return True  # Continue timer
-            
-        except Exception as e:
-            print(f"Error reading CLI output: {e}", flush=True)
-            return True  # Continue trying
-    
-    def _check_process_exit(self):
-        """Check if process has exited"""
-        if not hasattr(self, 'process') or self.process is None:
-            return False
-        
-        poll = self.process.poll()
-        if poll is not None:
-            # Process has exited
-            self._on_cli_exit(self.active_pid, poll)
-            return False  # Stop timer
-        
-        return True  # Continue timer
+    def _on_package_stderr(self, text):
+        """Keep diagnostics visible without feeding them to the NDJSON parser."""
+        for line in text.splitlines():
+            if line.strip():
+                self._log_cli_text(line.strip())
+
+    def _log_cli_text(self, text):
+        for prefix in ('I: ', 'E: ', 'W: '):
+            if text.startswith(prefix):
+                text = text[len(prefix):]
+                break
+        self._log_message(text)
+
+    def _on_package_runner_state(self, state):
+        if state == 'cancelling':
+            self._show_cancel_overlay()
 
     def _update_progress_from_cli_output(self, line_text):
         """Update progress bar based on CLI output. Returns True if line was processed as JSON."""
@@ -1644,19 +1472,15 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         
         return False
 
-    def _on_cli_exit(self, pid, status):
+    def _on_cli_exit(self, status, cancelled):
         """Callback for when the CLI process finishes."""
         if self._build_finalized:
             return
-        if hasattr(self, 'process') and self.process:
-            # Using subprocess.Popen
-            self.process = None
-        else:
-            # Using GLib.spawn_async (fallback)
-            GLib.spawn_close_pid(pid)
-        self.active_pid = None
+        self.command_runner = None
 
-        if status == 0:
+        if cancelled:
+            self.cancel_requested = True
+        elif status == 0:
             
             # Pre-define translatable messages
             MSG_CLI_SUCCESS = _("CLI tool finished successfully, installing to repository...")
@@ -1679,10 +1503,10 @@ class KernelPackWindow(Gtk.ApplicationWindow):
                 self._log_message(f"Kernel {kernel_version} packaged successfully to {self.temp_output_dir}")
                 
                 self._update_progress(1.0, MSG_COMPLETED)
-                GLib.idle_add(self._populate_packaged_kernels)
-                GLib.idle_add(self._show_completion_message)
+                self._populate_packaged_kernels()
+                self._show_completion_message()
             except Exception as e:
-                GLib.idle_add(self._show_error, f"Failed to process package output: {str(e)}")
+                self._show_error(f"Failed to process package output: {str(e)}")
         else:
             
             # Log the error with exit status
@@ -1834,51 +1658,15 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             self.cancel_button.set_sensitive(False)
         
         self.cancel_requested = True
-        self.is_building = False
         self._log_message(_("Cancelling packaging..."))
-        
-        # Signal the complete process group from a worker so GTK remains responsive.
-        def handle_cancellation():
-            if self.active_pid:
-                try:
-                    os.killpg(self.active_pid, signal.SIGTERM)
-                    time.sleep(2)
-                    try:
-                        os.killpg(self.active_pid, signal.SIGKILL)
-                    except ProcessLookupError:
-                        pass
-                except ProcessLookupError:
-                    pass
-            if getattr(self, 'process', None) is not None:
-                try:
-                    self.process.wait(timeout=1)
-                except subprocess.TimeoutExpired:
-                    pass
-                else:
-                    self.process = None
-                    self.active_pid = None
-            
-            # CLI handles all cleanup when it receives termination signal
-            
-            GLib.idle_add(self._finish_cancellation)
-        
-        threading.Thread(target=handle_cancellation, daemon=True).start()
-
-    def _finish_cancellation(self):
-        """Finish cancellation on the GTK main thread."""
-        self._hide_cancel_overlay()
-        self._build_finished()
-        return False
+        if self.command_runner is not None:
+            self.command_runner.cancel()
 
     def _show_cancel_overlay(self):
         """Show cancellation overlay with spinner"""
         if hasattr(self, 'cancel_loading_box'):
             self.cancel_loading_box.set_visible(True)
             self.cancel_loading_spinner.start()
-            
-            # Force GUI update
-            while Gtk.events_pending():
-                Gtk.main_iteration()
 
     def _hide_cancel_overlay(self):
         """Hide cancellation overlay"""
@@ -2020,8 +1808,9 @@ class KernelPackWindow(Gtk.ApplicationWindow):
                 else:
                     return True  # Skip if menu items are not available
                 
-                # Get kernel info to check status
-                kernel_info = get_kernel_info(self.minios_path, row.kernel_version)
+                # The privileged list operation supplied this authoritative
+                # state; direct reads may be inaccessible to the desktop user.
+                kernel_info = getattr(row, 'kernel_info', None)
                 
                 if kernel_info:
                     is_active = kernel_info.get('is_active', False)

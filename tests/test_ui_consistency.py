@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
@@ -6,6 +7,18 @@ from unittest.mock import Mock, patch
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = (ROOT / "lib/minios_kernel_manager.py").read_text(encoding="utf-8")
 CSS = (ROOT / "share/styles/style.css").read_text(encoding="utf-8")
+
+
+def test_release_metadata_is_synchronized():
+    changelog = (ROOT / "debian/changelog").read_text(encoding="utf-8")
+    version = re.search(
+        r'^minios-kernel-manager \(([^)]+)\)', changelog).group(1)
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert readme.startswith("# MiniOS Kernel Manager {}\n".format(version))
+    for name in ("minios-kernel.1", "minios-kernel-manager.1"):
+        first_line = (ROOT / "debian" / name).read_text(
+            encoding="utf-8").splitlines()[0]
+        assert 'MiniOS Kernel Manager {}"'.format(version) in first_line
 
 
 def kernel_status_branch():
@@ -16,6 +29,8 @@ def kernel_status_branch():
 
 def test_kernel_rows_use_shared_content_and_status_classes():
     assert SOURCE.count("add_class('manager-state-row-content')") == 2
+    assert SOURCE.count("add_class('kernel-row-content')") == 2
+    assert SOURCE.count("add_class('kernel-row')") == 2
     for status in ("active", "running", "available"):
         assert f"add_class('row-status-{status}')" in kernel_status_branch()
 
@@ -24,6 +39,105 @@ def test_kernel_rows_use_shared_content_and_status_classes():
     assert "min-height: 80px" not in CSS
     assert "padding: 12px 16px" not in CSS
     assert "border-left" not in CSS
+    assert '.minios-list row.kernel-row' in CSS
+    assert 'min-height: 0' in CSS
+
+
+def test_available_status_is_plain_text_not_a_button_like_badge():
+    repository_status = SOURCE.index("# Repository kernels are always available for download")
+    repository_end = SOURCE.index("main_box.pack_start(status_box", repository_status)
+    repository_branch = SOURCE[repository_status:repository_end]
+    assert "add_class('row-meta')" in repository_branch
+    assert "add_class('badge')" not in repository_branch
+
+    packaged_available = SOURCE.index("status_text = _('AVAILABLE')", SOURCE.index("# Primary status badge"))
+    packaged_end = SOURCE.index('status_label.set_markup', packaged_available)
+    packaged_branch = SOURCE[packaged_available:packaged_end]
+    assert "add_class('badge')" not in packaged_branch
+    assert "add_class('row-meta')" in packaged_branch
+
+
+def test_lists_use_shared_semantic_classes_without_button_backdrop():
+    assert SOURCE.count("add_class('minios-list')") == 2
+    assert 'add_class("minios-footer")' not in SOURCE
+    assert 'listbox {' not in CSS
+    assert 'listbox row' not in CSS
+    assert '.content-card' not in CSS
+
+
+def test_repository_kernel_search_filters_names_and_clears_hidden_selection():
+    assert 'self.kernel_search_entry = Gtk.SearchEntry()' in SOURCE
+    assert 'self.kernel_list.set_filter_func(' in SOURCE
+    assert 'def _filter_repository_kernel_row(self, row):' in SOURCE
+    assert 'query in searchable_name' in SOURCE
+    assert 'row.kernel_search_name = "{} {}".format(' in SOURCE
+    assert 'self.kernel_list.unselect_all()' in SOURCE
+
+
+def test_repository_kernel_filter_is_case_insensitive():
+    from minios_kernel_manager import KernelPackWindow
+
+    window = SimpleNamespace(
+        kernel_search_entry=SimpleNamespace(get_text=lambda: 'CLOUD-AMD64'))
+    matching = SimpleNamespace(
+        kernel_search_name='linux-image-6.12-cloud-amd64 6.12-cloud-amd64')
+    other = SimpleNamespace(
+        kernel_search_name='linux-image-6.12-rt-amd64 6.12-rt-amd64')
+    placeholder = SimpleNamespace()
+
+    assert KernelPackWindow._filter_repository_kernel_row(window, matching)
+    assert not KernelPackWindow._filter_repository_kernel_row(window, other)
+    assert KernelPackWindow._filter_repository_kernel_row(window, placeholder)
+
+
+def test_repository_search_clears_filtered_selection():
+    from minios_kernel_manager import KernelPackWindow
+
+    selected = SimpleNamespace(kernel_search_name='linux-image-rt')
+    kernel_list = Mock()
+    kernel_list.get_selected_row.return_value = selected
+    window = SimpleNamespace(
+        kernel_search_entry=SimpleNamespace(get_text=lambda: 'cloud'),
+        kernel_list=kernel_list,
+        selected_kernel='linux-image-rt',
+        _update_buttons_state=Mock(),
+    )
+    window._filter_repository_kernel_row = lambda row: (
+        KernelPackWindow._filter_repository_kernel_row(window, row))
+
+    KernelPackWindow._on_kernel_search_changed(window, None)
+
+    kernel_list.invalidate_filter.assert_called_once_with()
+    kernel_list.unselect_all.assert_called_once_with()
+    assert window.selected_kernel is None
+    window._update_buttons_state.assert_called_once_with()
+
+
+def test_standard_presentation_helpers_are_shared():
+    assert 'format_bytes(total_size)' in SOURCE
+    assert 'def _format_file_size' not in SOURCE
+    assert 'Gtk.MessageDialog' not in SOURCE
+
+
+def test_packaging_uses_shared_command_lifecycle_and_choosers():
+    assert 'CommandRunner(' in SOURCE
+    assert 'stderr_callback=self._on_package_stderr' in SOURCE
+    assert 'choose_open_files(' in SOURCE
+    assert 'Gtk.FileChooserDialog' not in SOURCE
+    assert 'Gtk.main_iteration()' not in SOURCE
+    assert 'subprocess.Popen(' not in SOURCE
+    assert 'GLib.timeout_add(' not in SOURCE
+
+
+def test_kernel_list_states_use_shared_placeholder():
+    assert 'StatePlaceholder(' in SOURCE
+
+
+def test_kernel_list_loading_uses_shared_operation_overlay():
+    assert 'self.kernel_loading_box = OperationView(' in SOURCE
+    assert "self.kernel_loading_box.set_state('running')" in SOURCE
+    assert "self.kernel_loading_box.set_state('idle')" in SOURCE
+    assert "icon_name='view-refresh-symbolic'" not in SOURCE
 
 
 def test_active_kernel_status_has_precedence_over_running():
@@ -50,18 +164,22 @@ def test_action_sensitivity_uses_backend_booleans_not_status_text():
         activate_kernel_button=Mock(),
         delete_kernel_button=Mock(),
     )
-    row = SimpleNamespace(kernel_version='test')
-    kernel_info = {
+    row = SimpleNamespace(kernel_version='test', kernel_info={
         'status': 'Active & Running',
         'is_active': True,
         'is_running': True,
-    }
-    with patch('minios_kernel_manager.get_kernel_info',
-               return_value=kernel_info):
-        KernelPackWindow._on_packaged_kernel_selected(window, None, row)
+    })
+    KernelPackWindow._on_packaged_kernel_selected(window, None, row)
 
     window.activate_kernel_button.set_sensitive.assert_called_once_with(False)
     window.delete_kernel_button.set_sensitive.assert_called_once_with(False)
+
+
+def test_packaged_actions_reuse_privileged_list_status():
+    assert 'row.kernel_info = kernel_info' in SOURCE
+    assert 'kernel_info = row.kernel_info' in SOURCE
+    assert "kernel_info = getattr(row, 'kernel_info', None)" in SOURCE
+    assert 'get_kernel_info(' not in SOURCE
 
 
 def test_running_only_kernel_can_activate_but_cannot_delete():
@@ -74,12 +192,12 @@ def test_running_only_kernel_can_activate_but_cannot_delete():
         activate_kernel_button=Mock(),
         delete_kernel_button=Mock(),
     )
-    row = SimpleNamespace(kernel_version='test')
-    with patch('minios_kernel_manager.get_kernel_info', return_value={
-            'status': 'Running Available',
-            'is_active': False,
-            'is_running': True}):
-        KernelPackWindow._on_packaged_kernel_selected(window, None, row)
+    row = SimpleNamespace(kernel_version='test', kernel_info={
+        'status': 'Running Available',
+        'is_active': False,
+        'is_running': True,
+    })
+    KernelPackWindow._on_packaged_kernel_selected(window, None, row)
 
     window.activate_kernel_button.set_sensitive.assert_called_once_with(True)
     window.delete_kernel_button.set_sensitive.assert_called_once_with(False)

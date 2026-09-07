@@ -1,4 +1,4 @@
-# MiniOS Kernel Manager 1.2.2
+# MiniOS Kernel Manager 1.3.0
 
 GTK3 and command-line tools for packaging, inspecting, activating, and removing
 Linux kernels in MiniOS.
@@ -26,6 +26,14 @@ minios-kernel status
 
 All non-help CLI commands require root privileges. Add `--json` for structured
 output.
+
+The GUI separates installed-kernel management from packaging. Repository
+kernels can be filtered by package name or displayed kernel version, and a
+selection hidden by the filter is cleared before packaging can start. Kernel
+state and action availability come from the privileged backend listing, so the
+desktop process does not need direct access to protected repository metadata.
+Packaging runs outside the GTK main loop with streamed output and responsive
+cancellation.
 
 ## Packaging
 
@@ -96,6 +104,8 @@ sudo make install
 # Staged installation
 make install DESTDIR=/tmp/minios-kernel-manager
 ```
+
+Runtime and test integration requires `python3-minios-gui >= 1.4.0`.
 
 ## License
 

@@ -10,39 +10,15 @@
 .manager-notebook { margin-top: 2px; }
 .manager-page { background-color: transparent; }
 
-.manager-list-card,
-.content-card {
-    border: 1px solid alpha(@borders, 0.65);
-    border-radius: 6px;
-    background-color: transparent;
-    padding: 3px;
+/* Kernel rows contain at most three short text lines. Keep the shared manager
+ * row vocabulary, but avoid its roomy dashboard metrics in these dense lists. */
+.minios-list row.kernel-row {
+    padding: 4px 8px;
 }
 
-.manager-footer {
-    padding-top: 8px;
-}
-
-/* ==================== List Styles ==================== */
-listbox {
-    background-color: alpha(@theme_base_color, 0.35);
-    border: none;
-    border-radius: 2px;
-}
-
-listbox row {
-    border-radius: 0;
-    margin: 0;
-    padding: 0;
-    transition: all 0.15s ease-out;
-    border-bottom: 1px solid alpha(@borders, 0.45);
-}
-
-listbox row:last-child {
-    border-bottom: none;
-}
-
-listbox row:hover {
-    background-color: alpha(@theme_fg_color, 0.06);
+.kernel-row-content {
+    min-height: 0;
+    padding: 4px 8px;
 }
 
 /* Context menus and frames come from the shared stylesheet (theme-native), so
