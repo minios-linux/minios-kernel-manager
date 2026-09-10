@@ -845,9 +845,9 @@ msgstr "Pengemasan kernel gagal dengan kode keluar: {}. Silakan periksa log di a
 msgid "Starting packaging process..."
 msgstr "Memulai proses pengemasan..."
 
-#: lib/minios_kernel_manager.py:1543
-msgid "Packaging Log"
-msgstr "Log Pengemasan"
+#: lib/minios_kernel_manager.py:1567
+msgid "Show Details"
+msgstr "Tampilkan Detail"
 
 #: lib/minios_kernel_manager.py:1549
 msgid "Cancelling and cleaning up..."

@@ -1,3 +1,5 @@
+import ast
+import configparser
 from pathlib import Path
 import re
 from types import SimpleNamespace
@@ -144,6 +146,17 @@ def test_packaging_uses_shared_command_lifecycle_and_choosers():
     assert 'GLib.timeout_add(' not in SOURCE
 
 
+def test_packaging_log_matches_installer_details_layout():
+    start = SOURCE.index('    def _build_progress_ui(self):')
+    end = SOURCE.index('    def _save_ui_state(self):', start)
+    progress_ui = SOURCE[start:end]
+
+    assert 'Gtk.Expander(label=_("Show Details"))' in progress_ui
+    assert 'details_frame = Gtk.Frame()' in progress_ui
+    assert 'self.log_view.set_size_request(-1, 220)' in progress_ui
+    assert 'log_frame.set_label(_("Packaging Log"))' not in progress_ui
+
+
 def test_kernel_list_states_use_shared_placeholder():
     assert 'StatePlaceholder(' in SOURCE
 
@@ -216,3 +229,17 @@ def test_running_only_kernel_can_activate_but_cannot_delete():
 
     window.activate_kernel_button.set_sensitive.assert_called_once_with(True)
     window.delete_kernel_button.set_sensitive.assert_called_once_with(False)
+
+
+def test_window_icon_matches_the_desktop_launcher():
+    desktop = configparser.ConfigParser(interpolation=None)
+    desktop.read(str(ROOT / "share/applications/minios-kernel-manager.desktop"))
+    for node in ast.parse(SOURCE).body:
+        if isinstance(node, ast.Assign) and any(
+                isinstance(target, ast.Name) and target.id == 'ICON_WINDOW'
+                for target in node.targets):
+            assert ast.literal_eval(node.value) == desktop['Desktop Entry']['Icon']
+            break
+    else:
+        raise AssertionError('Window icon is not defined')
+    assert 'self.set_icon_name(ICON_WINDOW)' in SOURCE

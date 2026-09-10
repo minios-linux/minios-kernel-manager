@@ -1,3 +1,11 @@
+minios-kernel-manager (1.4.1) unstable; urgency=medium
+
+  * Use the desktop launcher icon for application windows.
+  * Keep packaging logs collapsed until needed, while expanding details during
+    cancellation and preserving a readable log area.
+
+ -- crims0n <crims0n@minios.dev>  Thu, 10 Sep 2026 19:17:26 +0300
+
 minios-kernel-manager (1.4.0) unstable; urgency=medium
 
   * Split the command-line kernel backend into the minios-kernel package.

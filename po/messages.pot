@@ -846,8 +846,8 @@ msgstr ""
 msgid "Starting packaging process..."
 msgstr ""
 
-#: lib/minios_kernel_manager.py:1543
-msgid "Packaging Log"
+#: lib/minios_kernel_manager.py:1567
+msgid "Show Details"
 msgstr ""
 
 #: lib/minios_kernel_manager.py:1549

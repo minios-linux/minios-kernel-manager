@@ -846,9 +846,9 @@ msgstr "L'empaquetage du noyau a échoué avec le code de sortie : {}. Veuillez 
 msgid "Starting packaging process..."
 msgstr "Démarrage du processus d'empaquetage..."
 
-#: lib/minios_kernel_manager.py:1543
-msgid "Packaging Log"
-msgstr "Journal d'empaquetage"
+#: lib/minios_kernel_manager.py:1567
+msgid "Show Details"
+msgstr "Afficher les détails"
 
 #: lib/minios_kernel_manager.py:1549
 msgid "Cancelling and cleaning up..."

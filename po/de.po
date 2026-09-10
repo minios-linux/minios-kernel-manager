@@ -846,9 +846,9 @@ msgstr "Kernel-Paketierung fehlgeschlagen mit Exit-Code: {}. Bitte überprüfen 
 msgid "Starting packaging process..."
 msgstr "Paketierungsprozess wird gestartet..."
 
-#: lib/minios_kernel_manager.py:1543
-msgid "Packaging Log"
-msgstr "Paketierungsprotokoll"
+#: lib/minios_kernel_manager.py:1567
+msgid "Show Details"
+msgstr "Details anzeigen"
 
 #: lib/minios_kernel_manager.py:1549
 msgid "Cancelling and cleaning up..."

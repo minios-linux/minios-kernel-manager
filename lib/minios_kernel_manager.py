@@ -249,7 +249,7 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 CSS_FILE_PATH = '/usr/share/minios-kernel-manager/style.css'
 
 # Icons
-ICON_WINDOW = 'system-software-install'
+ICON_WINDOW = 'package-x-generic'
 ICON_BUILD = 'document-send'
 ICON_CANCEL = 'process-stop'
 
@@ -1539,11 +1539,11 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         self.main_vbox.pack_start(self.progress_bar, False, False, 0)
 
         # Log output
-        log_frame = Gtk.Frame()
-        log_frame.set_label(_("Packaging Log"))
-        
         self.log_view = LogView(maximum_characters=2 * 1024 * 1024)
-        
+        if hasattr(self.log_view, "set_min_content_height"):
+            self.log_view.set_min_content_height(220)
+        self.log_view.set_size_request(-1, 220)
+
         # Create cancellation overlay components
         self.cancel_loading_spinner = Gtk.Spinner()
         self.cancel_loading_label = Gtk.Label(label=_("Cancelling and cleaning up..."))
@@ -1553,15 +1553,22 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         self.cancel_loading_box.set_halign(Gtk.Align.CENTER)
         self.cancel_loading_box.set_valign(Gtk.Align.CENTER)
         self.cancel_loading_box.get_style_context().add_class('loading-overlay')
-        
-        # Create overlay for log area
+
+        # Create collapsible details area matching the installer.
         log_overlay = Gtk.Overlay()
         log_overlay.add(self.log_view)
         log_overlay.add_overlay(self.cancel_loading_box)
-        self.cancel_loading_box.set_visible(False)  # Initially hidden
-        
-        log_frame.add(log_overlay)
-        self.main_vbox.pack_start(log_frame, True, True, 0)
+        self.cancel_loading_box.set_visible(False)
+
+        details_frame = Gtk.Frame()
+        details_frame.set_hexpand(True)
+        details_frame.set_vexpand(True)
+        details_frame.add(log_overlay)
+        self.details_expander = Gtk.Expander(label=_("Show Details"))
+        self.details_expander.set_hexpand(True)
+        self.details_expander.set_vexpand(True)
+        self.details_expander.add(details_frame)
+        self.main_vbox.pack_start(self.details_expander, True, True, 0)
 
         # Bottom buttons
         button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
@@ -1664,6 +1671,8 @@ class KernelPackWindow(Gtk.ApplicationWindow):
 
     def _show_cancel_overlay(self):
         """Show cancellation overlay with spinner"""
+        if hasattr(self, 'details_expander'):
+            self.details_expander.set_expanded(True)
         if hasattr(self, 'cancel_loading_box'):
             self.cancel_loading_box.set_visible(True)
             self.cancel_loading_spinner.start()

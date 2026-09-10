@@ -846,9 +846,9 @@ msgstr "El empaquetado del kernel falló con el código de salida: {}. Por favor
 msgid "Starting packaging process..."
 msgstr "Iniciando proceso de empaquetado..."
 
-#: lib/minios_kernel_manager.py:1543
-msgid "Packaging Log"
-msgstr "Registro de Empaquetado"
+#: lib/minios_kernel_manager.py:1567
+msgid "Show Details"
+msgstr "Mostrar detalles"
 
 #: lib/minios_kernel_manager.py:1549
 msgid "Cancelling and cleaning up..."

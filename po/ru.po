@@ -846,9 +846,9 @@ msgstr "Упаковка ядра завершилась с ошибкой: ко
 msgid "Starting packaging process..."
 msgstr "Запуск процесса упаковки..."
 
-#: lib/minios_kernel_manager.py:1543
-msgid "Packaging Log"
-msgstr "Журнал упаковки"
+#: lib/minios_kernel_manager.py:1567
+msgid "Show Details"
+msgstr "Показать детали"
 
 #: lib/minios_kernel_manager.py:1549
 msgid "Cancelling and cleaning up..."
