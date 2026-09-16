@@ -67,10 +67,17 @@ from minios_gui import (CommandRunner, LogView, OperationView, StatePlaceholder,
 # ──────────────────────────────────────────────────────────────────────────────
 # CLI Interface Functions
 # ──────────────────────────────────────────────────────────────────────────────
+def _privileged_command(command):
+    """Use polkit only when the current process is not already privileged."""
+    command = list(command)
+    if os.geteuid() == 0:
+        return command
+    return ['pkexec'] + command
+
+
 def run_minios_kernel(args):
-    """Execute minios-kernel command with pkexec for administrative privileges"""
-    # Always use pkexec for kernel operations to ensure proper privileges
-    cmd = ['pkexec', 'minios-kernel'] + args
+    """Execute minios-kernel with administrative privileges."""
+    cmd = _privileged_command(['minios-kernel'] + args)
     
     return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
 
@@ -171,11 +178,12 @@ def list_kernels_cli():
         return [], None
 
 def update_package_lists_gui():
-    """Update package lists directly via pkexec apt update"""
+    """Update package lists with administrative privileges."""
     try:
-        result = subprocess.run([
-            'pkexec', 'apt', 'update'
-        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        result = subprocess.run(
+            _privileged_command(['apt', 'update']),
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            universal_newlines=True)
         
         return result.returncode == 0, result.stderr if result.returncode != 0 else "Package lists updated"
     except Exception as e:
@@ -1384,8 +1392,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
                 '--sqfs-comp', self.sqfs_compression
             ])
 
-            # Build pkexec command
-            cmd = ['pkexec', 'minios-kernel'] + cmd_args
+            cmd = _privileged_command(['minios-kernel'] + cmd_args)
 
             # Set environment for unbuffered output
             env = os.environ.copy()

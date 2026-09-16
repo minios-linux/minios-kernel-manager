@@ -136,6 +136,17 @@ def test_standard_presentation_helpers_are_shared():
     assert 'Gtk.MessageDialog' not in SOURCE
 
 
+def test_privileged_commands_skip_pkexec_for_root():
+    from minios_kernel_manager import _privileged_command
+
+    with patch('minios_kernel_manager.os.geteuid', return_value=0):
+        assert _privileged_command(['minios-kernel', 'list']) == [
+            'minios-kernel', 'list']
+    with patch('minios_kernel_manager.os.geteuid', return_value=1000):
+        assert _privileged_command(['minios-kernel', 'list']) == [
+            'pkexec', 'minios-kernel', 'list']
+
+
 def test_packaging_uses_shared_command_lifecycle_and_choosers():
     assert 'CommandRunner(' in SOURCE
     assert 'stderr_callback=self._on_package_stderr' in SOURCE

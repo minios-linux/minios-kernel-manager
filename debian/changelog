@@ -1,3 +1,10 @@
+minios-kernel-manager (1.4.2) unstable; urgency=medium
+
+  * Run privileged kernel operations directly when already root, while keeping
+    pkexec elevation for unprivileged invocations.
+
+ -- crims0n <crims0n@minios.dev>  Wed, 16 Sep 2026 20:40:22 +0300
+
 minios-kernel-manager (1.4.1) unstable; urgency=medium
 
   * Use the desktop launcher icon for application windows.
