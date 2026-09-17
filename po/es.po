@@ -5,9 +5,9 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: minios-kernel-manager 1.3.0\n"
+"Project-Id-Version: minios-kernel-manager 1.4.3\n"
 "Report-Msgid-Bugs-To: support@minios.dev\n"
-"POT-Creation-Date: 2026-09-07 02:27+0300\n"
+"POT-Creation-Date: 2026-09-17 21:19+0300\n"
 "PO-Revision-Date: 2026-09-06 17:04+0000\n"
 "Last-Translator: crims0n <crims0n@minios.dev>\n"
 "Language-Team: none\n"
@@ -390,8 +390,8 @@ msgstr "Instalando en el repositorio de kernels"
 msgid "Finalizing installation"
 msgstr "Finalizando instalación"
 
-#: lib/minios_kernel.py:263 lib/minios_kernel_manager.py:1463
-#: lib/minios_kernel_manager.py:1488 lib/minios_kernel_manager.py:1735
+#: lib/minios_kernel.py:263 lib/minios_kernel_manager.py:1470
+#: lib/minios_kernel_manager.py:1495 lib/minios_kernel_manager.py:1751
 msgid "Kernel packaging completed successfully!"
 msgstr "¡Empaquetado del kernel completado exitosamente!"
 
@@ -399,7 +399,7 @@ msgstr "¡Empaquetado del kernel completado exitosamente!"
 #: lib/minios_kernel.py:345 lib/minios_kernel.py:346 lib/minios_kernel.py:349
 #: lib/minios_kernel.py:428 lib/minios_kernel.py:429 lib/minios_kernel.py:432
 #: lib/minios_kernel.py:489 lib/minios_kernel.py:571
-#: lib/minios_kernel_manager.py:349 lib/minios_kernel_manager.py:667
+#: lib/minios_kernel_manager.py:357 lib/minios_kernel_manager.py:675
 msgid "MiniOS directory not found"
 msgstr "Directorio de MiniOS no encontrado"
 
@@ -595,294 +595,294 @@ msgstr "Versión del kernel a eliminar"
 msgid "A command is required"
 msgstr "Se requiere un comando"
 
-#: lib/minios_kernel_manager.py:338
+#: lib/minios_kernel_manager.py:346
 #: share/applications/minios-kernel-manager.desktop:2
 msgid "MiniOS Kernel Manager"
 msgstr "Gestor de kernels de MiniOS"
 
-#: lib/minios_kernel_manager.py:344
+#: lib/minios_kernel_manager.py:352
 msgid "MiniOS directory is writable"
 msgstr "El directorio de MiniOS es escribible"
 
-#: lib/minios_kernel_manager.py:348 lib/minios_kernel_manager.py:669
+#: lib/minios_kernel_manager.py:356 lib/minios_kernel_manager.py:677
 msgid "MiniOS directory is read-only"
 msgstr "El directorio de MiniOS es de solo lectura"
 
-#: lib/minios_kernel_manager.py:380
+#: lib/minios_kernel_manager.py:388
 msgid "Manage Kernels"
 msgstr "Administrar Kernels"
 
-#: lib/minios_kernel_manager.py:385 lib/minios_kernel_manager.py:632
+#: lib/minios_kernel_manager.py:393 lib/minios_kernel_manager.py:640
 msgid "Package Kernel"
 msgstr "Empaquetar Kernel"
 
-#: lib/minios_kernel_manager.py:424
+#: lib/minios_kernel_manager.py:432
 msgid "Select a packaged kernel to activate or delete:"
 msgstr "Seleccione un kernel empaquetado para activar o eliminar:"
 
-#: lib/minios_kernel_manager.py:442 lib/minios_kernel_manager.py:1754
+#: lib/minios_kernel_manager.py:450 lib/minios_kernel_manager.py:1770
 msgid "Activating kernel..."
 msgstr "Activando kernel..."
 
-#: lib/minios_kernel_manager.py:460 lib/minios_kernel_manager.py:919
+#: lib/minios_kernel_manager.py:468 lib/minios_kernel_manager.py:927
 msgid "Delete Kernel"
 msgstr "Eliminar Kernel"
 
-#: lib/minios_kernel_manager.py:466 lib/minios_kernel_manager.py:862
+#: lib/minios_kernel_manager.py:474 lib/minios_kernel_manager.py:870
 msgid "Activate Kernel"
 msgstr "Activar Kernel"
 
-#: lib/minios_kernel_manager.py:488
+#: lib/minios_kernel_manager.py:496
 msgid "Manual Package"
 msgstr "Paquete Manual"
 
-#: lib/minios_kernel_manager.py:493
+#: lib/minios_kernel_manager.py:501
 msgid "Repository"
 msgstr "Repositorio"
 
-#: lib/minios_kernel_manager.py:512
+#: lib/minios_kernel_manager.py:520
 msgid "SquashFS Compression:"
 msgstr "Compresión SquashFS:"
 
-#: lib/minios_kernel_manager.py:531 lib/minios_kernel_manager.py:1314
+#: lib/minios_kernel_manager.py:539 lib/minios_kernel_manager.py:1322
 msgid "No file selected"
 msgstr "Ningún archivo seleccionado"
 
-#: lib/minios_kernel_manager.py:536
+#: lib/minios_kernel_manager.py:544
 msgid "Browse…"
 msgstr "Examinar…"
 
-#: lib/minios_kernel_manager.py:551 lib/minios_kernel_manager.py:552
+#: lib/minios_kernel_manager.py:559 lib/minios_kernel_manager.py:560
 msgid "Package Information:"
 msgstr "Información del Paquete:"
 
-#: lib/minios_kernel_manager.py:582
+#: lib/minios_kernel_manager.py:590
 msgid "Available Kernels:"
 msgstr "Kernels Disponibles:"
 
-#: lib/minios_kernel_manager.py:586
+#: lib/minios_kernel_manager.py:594
 msgid "Search kernels…"
 msgstr "Buscar kernels…"
 
-#: lib/minios_kernel_manager.py:588
+#: lib/minios_kernel_manager.py:596
 msgid "Filter repository kernels by name"
 msgstr "Filtrar kernels del repositorio por nombre"
 
-#: lib/minios_kernel_manager.py:609 lib/minios_kernel_manager.py:1078
+#: lib/minios_kernel_manager.py:617 lib/minios_kernel_manager.py:1086
 msgid "Fetching kernel list from repository..."
 msgstr "Obteniendo lista de kernels del repositorio..."
 
-#: lib/minios_kernel_manager.py:633 lib/minios_kernel_manager.py:675
+#: lib/minios_kernel_manager.py:641 lib/minios_kernel_manager.py:683
 msgid "Package kernel and add to repository"
 msgstr "Empaquetar kernel y añadir al repositorio"
 
-#: lib/minios_kernel_manager.py:671 lib/minios_kernel_manager.py:1339
-#: lib/minios_kernel_manager.py:1343
+#: lib/minios_kernel_manager.py:679 lib/minios_kernel_manager.py:1347
+#: lib/minios_kernel_manager.py:1351
 msgid "Please select a kernel first"
 msgstr "Por favor, seleccione un kernel primero"
 
-#: lib/minios_kernel_manager.py:673
+#: lib/minios_kernel_manager.py:681
 msgid "Build in progress..."
 msgstr "Construcción en progreso..."
 
-#: lib/minios_kernel_manager.py:720
+#: lib/minios_kernel_manager.py:728
 msgid "No kernels packaged"
 msgstr "No hay kernels empaquetados"
 
-#: lib/minios_kernel_manager.py:725
+#: lib/minios_kernel_manager.py:733
 msgid "Package a kernel first using the Package Kernel tab"
 msgstr "Empaquete un kernel primero usando la pestaña Empaquetar Kernel"
 
-#: lib/minios_kernel_manager.py:797
+#: lib/minios_kernel_manager.py:805
 msgid "ACTIVE"
 msgstr "ACTIVO"
 
-#: lib/minios_kernel_manager.py:801 lib/minios_kernel_manager.py:1212
+#: lib/minios_kernel_manager.py:809 lib/minios_kernel_manager.py:1220
 msgid "AVAILABLE"
 msgstr "DISPONIBLE"
 
-#: lib/minios_kernel_manager.py:811
+#: lib/minios_kernel_manager.py:819
 msgid "RUNNING"
 msgstr "EN EJECUCIÓN"
 
-#: lib/minios_kernel_manager.py:850
+#: lib/minios_kernel_manager.py:858
 msgid "Please select a kernel to activate"
 msgstr "Por favor, seleccione un kernel para activar"
 
-#: lib/minios_kernel_manager.py:854 lib/minios_kernel_manager.py:911
-#: lib/minios_kernel_manager.py:1347
+#: lib/minios_kernel_manager.py:862 lib/minios_kernel_manager.py:919
+#: lib/minios_kernel_manager.py:1355
 msgid "MiniOS directory is not writable"
 msgstr "El directorio de MiniOS no es escribible"
 
-#: lib/minios_kernel_manager.py:859
+#: lib/minios_kernel_manager.py:867
 msgid "Activate kernel {}?"
 msgstr "¿Activar el kernel {}?"
 
-#: lib/minios_kernel_manager.py:860
+#: lib/minios_kernel_manager.py:868
 msgid "The current kernel will be deactivated and the bootloader configuration will be updated."
 msgstr "El kernel actual se desactivará y se actualizará la configuración del gestor de arranque."
 
-#: lib/minios_kernel_manager.py:869
+#: lib/minios_kernel_manager.py:877
 msgid "Activating kernel, please wait..."
 msgstr "Activando kernel, por favor espere..."
 
-#: lib/minios_kernel_manager.py:907
+#: lib/minios_kernel_manager.py:915
 msgid "Please select a kernel to delete"
 msgstr "Por favor, seleccione un kernel para eliminar"
 
-#: lib/minios_kernel_manager.py:916
+#: lib/minios_kernel_manager.py:924
 msgid "Delete kernel '{}'?"
 msgstr "¿Eliminar el kernel '{}'?"
 
-#: lib/minios_kernel_manager.py:917
+#: lib/minios_kernel_manager.py:925
 msgid "This action cannot be undone."
 msgstr "Esta acción no se puede deshacer."
 
-#: lib/minios_kernel_manager.py:940
+#: lib/minios_kernel_manager.py:948
 msgid "Select Kernel Package"
 msgstr "Seleccionar Paquete de Kernel"
 
-#: lib/minios_kernel_manager.py:941
+#: lib/minios_kernel_manager.py:949
 msgid "Debian Package Files (*.deb)"
 msgstr "Archivos de paquete Debian (*.deb)"
 
-#: lib/minios_kernel_manager.py:942
+#: lib/minios_kernel_manager.py:950
 msgid "All Files"
 msgstr "Todos los Archivos"
 
-#: lib/minios_kernel_manager.py:945
+#: lib/minios_kernel_manager.py:953
 msgid "Open"
 msgstr "Abrir"
 
-#: lib/minios_kernel_manager.py:955 lib/minios_kernel_manager.py:1621
+#: lib/minios_kernel_manager.py:963 lib/minios_kernel_manager.py:1635
 msgid "{} files selected"
 msgstr "{} archivos seleccionados"
 
-#: lib/minios_kernel_manager.py:975
+#: lib/minios_kernel_manager.py:983
 msgid "Files"
 msgstr "Archivos"
 
-#: lib/minios_kernel_manager.py:976
+#: lib/minios_kernel_manager.py:984
 msgid "Total size"
 msgstr "Tamaño total"
 
-#: lib/minios_kernel_manager.py:980
+#: lib/minios_kernel_manager.py:988
 msgid "Selected files"
 msgstr "Archivos seleccionados"
 
-#: lib/minios_kernel_manager.py:1080
+#: lib/minios_kernel_manager.py:1088
 msgid "Scanning for manual packages..."
 msgstr "Escaneando paquetes manuales..."
 
-#: lib/minios_kernel_manager.py:1174
+#: lib/minios_kernel_manager.py:1182
 msgid "Manual package"
 msgstr "Paquete manual"
 
-#: lib/minios_kernel_manager.py:1174
+#: lib/minios_kernel_manager.py:1182
 msgid "Repository kernel"
 msgstr "Kernel del repositorio"
 
-#: lib/minios_kernel_manager.py:1235
+#: lib/minios_kernel_manager.py:1243
 msgid "Package database outdated"
 msgstr "Base de datos de paquetes desactualizada"
 
-#: lib/minios_kernel_manager.py:1236
+#: lib/minios_kernel_manager.py:1244
 msgid "The repository kernel list is empty. This may indicate an outdated package database. Update package lists now?"
 msgstr "La lista de kernels del repositorio está vacía. Esto puede indicar una base de datos de paquetes desactualizada. ¿Actualizar listas de paquetes ahora?"
 
-#: lib/minios_kernel_manager.py:1238
+#: lib/minios_kernel_manager.py:1246
 msgid "Update Package Lists"
 msgstr "Actualizar listas de paquetes"
 
-#: lib/minios_kernel_manager.py:1247
+#: lib/minios_kernel_manager.py:1255
 msgid "Updating package lists..."
 msgstr "Actualizando listas de paquetes..."
 
-#: lib/minios_kernel_manager.py:1270
+#: lib/minios_kernel_manager.py:1278
 msgid "Failed to update package lists"
 msgstr "Error al actualizar las listas de paquetes"
 
-#: lib/minios_kernel_manager.py:1277
+#: lib/minios_kernel_manager.py:1285
 msgid "No repository kernels found"
 msgstr "No se encontraron kernels en el repositorio"
 
-#: lib/minios_kernel_manager.py:1279
+#: lib/minios_kernel_manager.py:1287
 msgid "No manual packages found"
 msgstr "No se encontraron paquetes manuales"
 
-#: lib/minios_kernel_manager.py:1287
+#: lib/minios_kernel_manager.py:1295
 msgid "Failed to fetch repository kernels"
 msgstr "Fallo al obtener kernels del repositorio"
 
-#: lib/minios_kernel_manager.py:1402
+#: lib/minios_kernel_manager.py:1409
 msgid "Executing command: {}"
 msgstr "Ejecutando comando: {}"
 
-#: lib/minios_kernel_manager.py:1413
+#: lib/minios_kernel_manager.py:1420
 msgid "Failed to start packaging process. Please check the log for detailed error information."
 msgstr "No se pudo iniciar el proceso de empaquetado. Por favor, revise el registro para obtener información detallada del error."
 
-#: lib/minios_kernel_manager.py:1486
+#: lib/minios_kernel_manager.py:1493
 msgid "CLI tool finished successfully, installing to repository..."
 msgstr "Herramienta CLI finalizada con éxito, instalando en el repositorio..."
 
-#: lib/minios_kernel_manager.py:1487
+#: lib/minios_kernel_manager.py:1494
 msgid "Installing kernel to repository..."
 msgstr "Instalando kernel en el repositorio..."
 
-#: lib/minios_kernel_manager.py:1491
+#: lib/minios_kernel_manager.py:1498
 msgid "CLI tool finished successfully."
 msgstr "Herramienta CLI finalizada con éxito."
 
-#: lib/minios_kernel_manager.py:1513
+#: lib/minios_kernel_manager.py:1520
 msgid "Kernel packaging failed with exit code: {}"
 msgstr "El empaquetado del kernel falló con el código de salida: {}"
 
-#: lib/minios_kernel_manager.py:1517
+#: lib/minios_kernel_manager.py:1524
 msgid "Kernel packaging failed with exit code: {}. Please check the log above for detailed error information."
 msgstr "El empaquetado del kernel falló con el código de salida: {}. Por favor, revise el registro anterior para obtener información detallada del error."
 
-#: lib/minios_kernel_manager.py:1532
+#: lib/minios_kernel_manager.py:1539
 msgid "Starting packaging process..."
 msgstr "Iniciando proceso de empaquetado..."
 
-#: lib/minios_kernel_manager.py:1567
-msgid "Show Details"
-msgstr "Mostrar detalles"
-
-#: lib/minios_kernel_manager.py:1549
+#: lib/minios_kernel_manager.py:1556
 msgid "Cancelling and cleaning up..."
 msgstr "Cancelando y limpiando..."
 
-#: lib/minios_kernel_manager.py:1571 lib/minios_kernel_manager.py:1703
+#: lib/minios_kernel_manager.py:1574
+msgid "Show Details"
+msgstr "Mostrar detalles"
+
+#: lib/minios_kernel_manager.py:1585 lib/minios_kernel_manager.py:1719
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: lib/minios_kernel_manager.py:1638 lib/minios_kernel_manager.py:1695
+#: lib/minios_kernel_manager.py:1652 lib/minios_kernel_manager.py:1711
 msgid "Back to Selection"
 msgstr "Volver a la Selección"
 
-#: lib/minios_kernel_manager.py:1661
+#: lib/minios_kernel_manager.py:1675
 msgid "Cancelling packaging..."
 msgstr "Cancelando empaquetado..."
 
-#: lib/minios_kernel_manager.py:1730
+#: lib/minios_kernel_manager.py:1746
 msgid "Error"
 msgstr "Error"
 
-#: lib/minios_kernel_manager.py:1736
+#: lib/minios_kernel_manager.py:1752
 msgid "The new kernel is now available in the 'Manage Kernels' tab."
 msgstr "El nuevo kernel ya está disponible en la pestaña 'Administrar Kernels'."
 
-#: lib/minios_kernel_manager.py:1738
+#: lib/minios_kernel_manager.py:1754
 msgid "Packaging Complete"
 msgstr "Empaquetado Completo"
 
-#: lib/minios_kernel_manager.py:1775
+#: lib/minios_kernel_manager.py:1791
 msgid "_Activate Kernel"
 msgstr "_Activar kernel"
 
-#: lib/minios_kernel_manager.py:1785
+#: lib/minios_kernel_manager.py:1801
 msgid "_Delete Kernel"
 msgstr "_Eliminar kernel"
 

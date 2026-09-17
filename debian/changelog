@@ -1,3 +1,9 @@
+minios-kernel-manager (1.4.3) unstable; urgency=medium
+
+  * Refresh user documentation and translations.
+
+ -- crims0n <crims0n@minios.dev>  Thu, 17 Sep 2026 21:48:04 +0300
+
 minios-kernel-manager (1.4.2) unstable; urgency=medium
 
   * Run privileged kernel operations directly when already root, while keeping
