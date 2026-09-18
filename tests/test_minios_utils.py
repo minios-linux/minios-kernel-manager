@@ -477,6 +477,102 @@ class TestActivateKernel:
         assert set(os.listdir(new_repository)) == {
             '01-kernel-new.sb', 'vmlinuz-new', 'initrfs-new.img'}
 
+    def test_accepts_active_kernel_already_retained_by_early_boot(
+            self, temp_minios_dir):
+        from minios_utils import deactivate_current_kernel
+
+        version = 'active'
+        marker = os.path.join(temp_minios_dir, 'boot', 'active-kernel')
+        with open(marker, 'w') as marker_file:
+            marker_file.write(version)
+        repository = os.path.join(temp_minios_dir, 'kernels', version)
+        os.makedirs(repository)
+        for name in (
+                '01-kernel-active.sb', 'vmlinuz-active',
+                'initrfs-active.img'):
+            with open(os.path.join(repository, name), 'wb') as artifact:
+                artifact.write(b'active')
+
+        with patch('minios_utils.is_kernel_currently_running',
+                   return_value=False):
+            assert deactivate_current_kernel(temp_minios_dir) is True
+
+        assert set(os.listdir(repository)) == {
+            '01-kernel-active.sb', 'vmlinuz-active',
+            'initrfs-active.img'}
+
+    def test_switches_from_active_kernel_already_retained_by_early_boot(
+            self, temp_minios_dir):
+        from minios_utils import activate_kernel
+
+        old = 'old'
+        new = 'new'
+        marker = os.path.join(temp_minios_dir, 'boot', 'active-kernel')
+        with open(marker, 'w') as marker_file:
+            marker_file.write(old)
+        for version in (old, new):
+            repository = os.path.join(temp_minios_dir, 'kernels', version)
+            os.makedirs(repository)
+            for name in (
+                    '01-kernel-{}.sb'.format(version),
+                    'vmlinuz-{}'.format(version),
+                    'initrfs-{}.img'.format(version)):
+                with open(os.path.join(repository, name), 'wb') as artifact:
+                    artifact.write(version.encode())
+
+        with patch('minios_utils.is_kernel_currently_running',
+                   return_value=False), \
+                patch('minios_utils._update_bootloader_configs',
+                      return_value=True), \
+                patch('minios_utils.validate_kernel_bundle_artifacts'):
+            assert activate_kernel(temp_minios_dir, new) is True
+
+        assert open(marker).read() == new
+        assert all(os.path.isfile(path) for path in (
+            os.path.join(temp_minios_dir, '01-kernel-new.sb'),
+            os.path.join(temp_minios_dir, 'boot', 'vmlinuz-new'),
+            os.path.join(temp_minios_dir, 'boot', 'initrfs-new.img')))
+        assert not any(os.path.lexists(path) for path in (
+            os.path.join(temp_minios_dir, '01-kernel-old.sb'),
+            os.path.join(temp_minios_dir, 'boot', 'vmlinuz-old'),
+            os.path.join(temp_minios_dir, 'boot', 'initrfs-old.img')))
+
+    def test_failed_switch_does_not_materialize_previously_displaced_active_kernel(
+            self, temp_minios_dir):
+        from minios_utils import activate_kernel
+
+        old = 'old'
+        new = 'new'
+        marker = os.path.join(temp_minios_dir, 'boot', 'active-kernel')
+        with open(marker, 'w') as marker_file:
+            marker_file.write(old)
+        for version in (old, new):
+            repository = os.path.join(temp_minios_dir, 'kernels', version)
+            os.makedirs(repository)
+            for name in (
+                    '01-kernel-{}.sb'.format(version),
+                    'vmlinuz-{}'.format(version),
+                    'initrfs-{}.img'.format(version)):
+                with open(os.path.join(repository, name), 'wb') as artifact:
+                    artifact.write(version.encode())
+
+        with patch('minios_utils.is_kernel_currently_running',
+                   return_value=False), \
+                patch('minios_utils._update_bootloader_configs',
+                      return_value=False), \
+                patch('minios_utils.validate_kernel_bundle_artifacts'):
+            assert activate_kernel(temp_minios_dir, new) is False
+
+        assert open(marker).read() == old
+        assert not any(os.path.lexists(path) for path in (
+            os.path.join(temp_minios_dir, '01-kernel-old.sb'),
+            os.path.join(temp_minios_dir, 'boot', 'vmlinuz-old'),
+            os.path.join(temp_minios_dir, 'boot', 'initrfs-old.img')))
+        assert not any(os.path.lexists(path) for path in (
+            os.path.join(temp_minios_dir, '01-kernel-new.sb'),
+            os.path.join(temp_minios_dir, 'boot', 'vmlinuz-new'),
+            os.path.join(temp_minios_dir, 'boot', 'initrfs-new.img')))
+
     @pytest.mark.parametrize('retained_state', ['incomplete', 'different'])
     def test_rejects_bad_retained_repository_copy(self, temp_minios_dir, retained_state):
         from minios_utils import deactivate_current_kernel

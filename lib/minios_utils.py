@@ -601,11 +601,28 @@ def deactivate_current_kernel(minios_path: str) -> bool:
     try:
         active_files = _active_kernel_artifacts(
             minios_path, active_kernel_version)
-        if not all(_regular_file(path) for path in active_files):
-            raise RuntimeError(
-                'Active kernel bundle is incomplete or contains non-regular files')
-
+        active_regular = [_regular_file(path) for path in active_files]
         expected_names = _kernel_artifact_names(active_kernel_version)
+        if not all(active_regular):
+            if any(os.path.lexists(path) for path in active_files):
+                raise RuntimeError(
+                    'Active kernel bundle is incomplete or contains non-regular files')
+            if not os.path.lexists(kernel_version_path):
+                raise RuntimeError(
+                    'Active kernel bundle is missing and no retained repository copy exists')
+            repository_files = [
+                os.path.join(kernel_version_path, name)
+                for name in expected_names
+            ]
+            if (set(os.listdir(kernel_version_path)) != set(expected_names) or
+                    not all(_regular_file(path) for path in repository_files)):
+                raise RuntimeError(
+                    'Retained repository copy is incomplete or has unexpected files')
+            print(
+                f"Active kernel {active_kernel_version} files are already retained "
+                "in the repository")
+            return True
+
         if os.path.lexists(kernel_version_path):
             if set(os.listdir(kernel_version_path)) != set(expected_names):
                 raise RuntimeError(
@@ -731,6 +748,10 @@ def activate_kernel(minios_path: str, kernel_version: str) -> bool:
                     allow_legacy=True)
                 previous_boot_files, marker_file, marker_state = \
                     _snapshot_activation_state(minios_path)
+                previous_active_complete = bool(
+                    current_active and all(
+                        _regular_file(path) for path in
+                        _active_kernel_artifacts(minios_path, current_active)))
                 if not deactivate_current_kernel(minios_path):
                     return False
                 try:
@@ -740,7 +761,7 @@ def activate_kernel(minios_path: str, kernel_version: str) -> bool:
                     # active files and bootloader configuration.
                     _atomic_write(marker_file, kernel_version)
                 except Exception:
-                    if current_active:
+                    if current_active and previous_active_complete:
                         _restore_active_files(minios_path, current_active)
                     _restore_activation_state(
                         previous_boot_files, marker_file, marker_state)
@@ -782,6 +803,10 @@ def activate_kernel(minios_path: str, kernel_version: str) -> bool:
         previous_kernel = get_active_kernel(minios_path)
         previous_boot_files, marker_file, marker_state = \
             _snapshot_activation_state(minios_path)
+        previous_active_complete = bool(
+            previous_kernel and all(
+                _regular_file(path) for path in
+                _active_kernel_artifacts(minios_path, previous_kernel)))
         stage_dir = tempfile.mkdtemp(prefix='.kernel-activate-', dir=minios_path)
         try:
             staged_files = []
@@ -810,7 +835,8 @@ def activate_kernel(minios_path: str, kernel_version: str) -> bool:
                     if os.path.exists(destination):
                         os.unlink(destination)
                 # Restore files moved by deactivation before reporting failure.
-                if previous_kernel and not is_kernel_currently_running(previous_kernel):
+                if (previous_kernel and previous_active_complete and
+                        not is_kernel_currently_running(previous_kernel)):
                     _restore_active_files(minios_path, previous_kernel)
                 _restore_activation_state(
                     previous_boot_files, marker_file, marker_state)

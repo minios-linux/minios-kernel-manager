@@ -1,3 +1,10 @@
+minios-kernel-manager (1.4.4) unstable; urgency=medium
+
+  * Allow kernel activation when early boot has already retained the active
+    kernel bundle in the repository.
+
+ -- crims0n <crims0n@minios.dev>  Fri, 18 Sep 2026 18:41:43 +0300
+
 minios-kernel-manager (1.4.3) unstable; urgency=medium
 
   * Refresh user documentation and translations.
