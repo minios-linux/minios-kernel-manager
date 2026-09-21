@@ -300,11 +300,12 @@ def create_squashfs_image(kernel_version: str, compression: str, output_dir: str
     system_modules_base = get_system_modules_base()
     print(f"I: {_('Using system modules base: {base}').format(base=system_modules_base)}")
 
-    # Create temporary structure with proper paths for SquashFS
-    # Keep all staging below the root-owned private packaging workspace.
+    # Create temporary structure with proper paths for SquashFS. The parent
+    # packaging workspace stays private (0700), but this directory becomes the
+    # root inode of the SquashFS image and must remain traversable at runtime.
     temp_squashfs_dir = tempfile.mkdtemp(
         prefix=f".squashfs-{kernel_version}-", dir=temp_dir)
-    os.chmod(temp_squashfs_dir, 0o700)
+    os.chmod(temp_squashfs_dir, 0o755)
     target_modules_dir = os.path.join(temp_squashfs_dir, system_modules_base)
     os.makedirs(target_modules_dir, exist_ok=True)
 

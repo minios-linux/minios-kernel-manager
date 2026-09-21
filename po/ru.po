@@ -5,9 +5,9 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: minios-kernel-manager 1.4.4\n"
+"Project-Id-Version: minios-kernel-manager 1.4.5\n"
 "Report-Msgid-Bugs-To: support@minios.dev\n"
-"POT-Creation-Date: 2026-09-17 21:19+0300\n"
+"POT-Creation-Date: 2026-09-21 18:56+0300\n"
 "PO-Revision-Date: 2026-09-06 17:04+0000\n"
 "Last-Translator: crims0n <crims0n@minios.dev>\n"
 "Language-Team: none\n"
@@ -111,185 +111,185 @@ msgstr "Модули ядра не найдены в извлеченном deb-
 msgid "Using system modules base: {base}"
 msgstr "Использование базы системных модулей: {base}"
 
-#: lib/build_utils.py:336
+#: lib/build_utils.py:337
 msgid "Cannot decompress staged kernel module: {}"
 msgstr "Не удалось распаковать подготовленный модуль ядра: {}"
 
-#: lib/build_utils.py:345
+#: lib/build_utils.py:346
 msgid "Generating module dependencies for SquashFS"
 msgstr "Генерация зависимостей модулей для SquashFS"
 
-#: lib/build_utils.py:358
+#: lib/build_utils.py:359
 msgid "depmod failed for staged kernel: {}"
 msgstr "depmod завершился с ошибкой для подготовленного ядра: {}"
 
-#: lib/build_utils.py:360 lib/build_utils.py:707
+#: lib/build_utils.py:361 lib/build_utils.py:708
 msgid "Module dependencies generated successfully"
 msgstr "Зависимости модулей успешно сгенерированы"
 
-#: lib/build_utils.py:363
+#: lib/build_utils.py:364
 msgid "Failed to generate module dependencies: {}"
 msgstr "Не удалось сгенерировать зависимости модулей: {}"
 
-#: lib/build_utils.py:367
+#: lib/build_utils.py:368
 msgid "Canonical kernel package metadata is missing"
 msgstr "Отсутствуют метаданные пакета ядра Canonical"
 
-#: lib/build_utils.py:377
+#: lib/build_utils.py:378
 msgid "Source package archives must not enter the kernel module"
 msgstr "Исходные архивы пакетов не должны попадать в модуль ядра"
 
-#: lib/build_utils.py:381
+#: lib/build_utils.py:382
 #, python-brace-format
 msgid "Using extracted deb modules with structure: {path}"
 msgstr "Использование извлеченных deb-модулей со структурой: {path}"
 
-#: lib/build_utils.py:407
+#: lib/build_utils.py:408
 #, python-brace-format
 msgid "Starting SquashFS compression with {compression}..."
 msgstr "Запуск сжатия SquashFS с {compression}..."
 
-#: lib/build_utils.py:410
+#: lib/build_utils.py:411
 #, python-brace-format
 msgid "mksquashfs command: {command}"
 msgstr "Команда mksquashfs: {command}"
 
-#: lib/build_utils.py:462
+#: lib/build_utils.py:463
 msgid "Failed to create SquashFS image"
 msgstr "Не удалось создать образ SquashFS"
 
-#: lib/build_utils.py:470
+#: lib/build_utils.py:471
 #, python-brace-format
 msgid "SquashFS image completed: {path}"
 msgstr "Образ SquashFS создан: {path}"
 
-#: lib/build_utils.py:489
+#: lib/build_utils.py:490
 msgid "Failed to detect initramfs builder: {}"
 msgstr "Не удалось обнаружить сборщик initramfs: {}"
 
-#: lib/build_utils.py:491
+#: lib/build_utils.py:492
 msgid "Using initramfs builder: {}"
 msgstr "Используется сборщик initramfs: {}"
 
-#: lib/build_utils.py:499
+#: lib/build_utils.py:500
 msgid "Encrypted persistence is active, but the running initrd does not declare crypto capability"
 msgstr "Включено зашифрованное постоянное хранилище, но запущенный initrd не заявляет о поддержке шифрования"
 
-#: lib/build_utils.py:501
+#: lib/build_utils.py:502
 msgid "Replacement kernel {} does not support dm-crypt"
 msgstr "Замещающее ядро {} не поддерживает dm-crypt"
 
-#: lib/build_utils.py:503
+#: lib/build_utils.py:504
 msgid "; refusing to replace the initrd because encrypted persistence would lose support"
 msgstr "; отказ замены initrd, так как будет потеряна поддержка зашифрованного постоянного хранилища"
 
-#: lib/build_utils.py:518
+#: lib/build_utils.py:519
 msgid "Extracted kernel configuration was not found for {}"
 msgstr "Извлечённая конфигурация ядра не найдена для {}"
 
-#: lib/build_utils.py:525
+#: lib/build_utils.py:526
 msgid "Existing kernel configuration does not match {}"
 msgstr "Существующая конфигурация ядра не соответствует {}"
 
-#: lib/build_utils.py:550
+#: lib/build_utils.py:551
 msgid "mkdracut not found - this tool requires MiniOS live environment"
 msgstr "mkdracut не найден — для этого инструмента требуется среда MiniOS live"
 
-#: lib/build_utils.py:571 lib/build_utils.py:693
+#: lib/build_utils.py:572 lib/build_utils.py:694
 msgid "Cannot safely stage extracted modules because the kernel version already exists: {}"
 msgstr "Невозможно безопасно подготовить извлечённые модули, так как версия ядра уже существует: {}"
 
-#: lib/build_utils.py:579
+#: lib/build_utils.py:580
 msgid "Created temporary symlink: {} -> {}"
 msgstr "Создана временная символическая ссылка: {} -> {}"
 
-#: lib/build_utils.py:581
+#: lib/build_utils.py:582
 msgid "Generating modules.dep for {}"
 msgstr "Генерация modules.dep для {}"
 
-#: lib/build_utils.py:587 lib/build_utils.py:705
+#: lib/build_utils.py:588 lib/build_utils.py:706
 msgid "depmod failed for initramfs: {}"
 msgstr "depmod завершился с ошибкой для initramfs: {}"
 
-#: lib/build_utils.py:589
+#: lib/build_utils.py:590
 msgid "Successfully generated modules.dep"
 msgstr "modules.dep успешно сгенерирован"
 
-#: lib/build_utils.py:607 lib/build_utils.py:731
+#: lib/build_utils.py:608 lib/build_utils.py:732
 msgid "Using custom temporary directory for initramfs: {}"
 msgstr "Использование настраиваемого временного каталога для initramfs: {}"
 
-#: lib/build_utils.py:610
+#: lib/build_utils.py:611
 msgid "Starting dracut initramfs generation..."
 msgstr "Начало генерации initramfs с помощью dracut..."
 
-#: lib/build_utils.py:639
+#: lib/build_utils.py:640
 #, python-brace-format
 msgid "mkdracut failed with return code {code}"
 msgstr "mkdracut завершился с ошибкой: код возврата {code}"
 
-#: lib/build_utils.py:644
+#: lib/build_utils.py:645
 msgid "Failed to generate initramfs with dracut: {}"
 msgstr "Не удалось сгенерировать initramfs с помощью dracut: {}"
 
-#: lib/build_utils.py:650
+#: lib/build_utils.py:651
 msgid "Removed temporary symlink: {}"
 msgstr "Удалена временная символическая ссылка: {}"
 
-#: lib/build_utils.py:655
+#: lib/build_utils.py:656
 msgid "Dracut succeeded but output file not found: {}"
 msgstr "Dracut успешно завершил работу, но выходной файл не найден: {}"
 
-#: lib/build_utils.py:657
+#: lib/build_utils.py:658
 msgid "Successfully generated initramfs: {}"
 msgstr "initramfs успешно сгенерирован: {}"
 
-#: lib/build_utils.py:668
+#: lib/build_utils.py:669
 msgid "mkinitrfs not found - this tool requires MiniOS live environment"
 msgstr "mkinitrfs не найден - этот инструмент требует живой среды MiniOS"
 
-#: lib/build_utils.py:697
+#: lib/build_utils.py:698
 #, python-brace-format
 msgid "Created temporary symlink: {system_path} -> {extracted_path}"
 msgstr "Создана временная символическая ссылка: {system_path} -> {extracted_path}"
 
-#: lib/build_utils.py:699
+#: lib/build_utils.py:700
 msgid "Generating module dependencies for initramfs"
 msgstr "Генерация зависимостей модулей для initramfs"
 
-#: lib/build_utils.py:734
+#: lib/build_utils.py:735
 msgid "Starting initramfs generation..."
 msgstr "Запуск генерации initramfs..."
 
-#: lib/build_utils.py:768
+#: lib/build_utils.py:769
 #, python-brace-format
 msgid "mkinitrfs failed with return code {code}"
 msgstr "mkinitrfs завершился с ошибкой: код возврата {code}"
 
-#: lib/build_utils.py:774
+#: lib/build_utils.py:775
 #, python-brace-format
 msgid "mkinitrfs failed: {error}"
 msgstr "mkinitrfs завершился с ошибкой: {error}"
 
-#: lib/build_utils.py:776
+#: lib/build_utils.py:777
 #, python-brace-format
 msgid "mkinitrfs error: {error}"
 msgstr "Ошибка mkinitrfs: {error}"
 
-#: lib/build_utils.py:805
+#: lib/build_utils.py:806
 msgid "mkinitrfs output was:"
 msgstr "Вывод mkinitrfs был:"
 
-#: lib/build_utils.py:808
+#: lib/build_utils.py:809
 msgid "mkinitrfs did not return valid initramfs path"
 msgstr "mkinitrfs не вернул действительный путь к initramfs"
 
-#: lib/build_utils.py:811
+#: lib/build_utils.py:812
 #, python-brace-format
 msgid "Copying initramfs from {path}"
 msgstr "Копирование initramfs из {path}"
 
-#: lib/build_utils.py:813
+#: lib/build_utils.py:814
 #, python-brace-format
 msgid "Initramfs created: {path}"
 msgstr "Initramfs создан: {path}"
@@ -886,74 +886,74 @@ msgstr "_Активировать ядро"
 msgid "_Delete Kernel"
 msgstr "_Удалить ядро"
 
-#: lib/minios_utils.py:1113
+#: lib/minios_utils.py:1139
 msgid "Temporary directory is symlinked or untrusted: {}"
 msgstr "Временный каталог является символьной ссылкой или ненадёжен: {}"
 
-#: lib/minios_utils.py:1123
+#: lib/minios_utils.py:1149
 msgid "Temporary directory is not owned by root: {}"
 msgstr "Временный каталог не принадлежит root: {}"
 
-#: lib/minios_utils.py:1126
+#: lib/minios_utils.py:1152
 msgid "Temporary directory is writable by other users: {}"
 msgstr "Временный каталог доступен для записи другим пользователям: {}"
 
-#: lib/minios_utils.py:1137
+#: lib/minios_utils.py:1163
 msgid "Could not create a private root-owned packaging workspace"
 msgstr "Не удалось создать приватное рабочее пространство для упаковки, принадлежащее root"
 
-#: lib/minios_utils.py:1143
+#: lib/minios_utils.py:1169
 msgid "Custom temporary directory does not exist: {}"
 msgstr "Настраиваемый временный каталог не существует: {}"
 
-#: lib/minios_utils.py:1146
+#: lib/minios_utils.py:1172
 msgid "Custom temporary directory is not writable: {}"
 msgstr "Настраиваемый временный каталог недоступен для записи: {}"
 
-#: lib/minios_utils.py:1153
+#: lib/minios_utils.py:1179
 #, python-brace-format
 msgid "Using custom temporary directory for {operation} ({available:.1f}MB available, {needed:.1f}MB needed)"
 msgstr "Используется настраиваемый временный каталог для {operation} ({available:.1f}МБ доступно, {needed:.1f}МБ требуется)"
 
-#: lib/minios_utils.py:1157
+#: lib/minios_utils.py:1183
 msgid "Insufficient space in custom temporary directory '{}' for {}: {:.1f}MB available, {:.1f}MB needed"
 msgstr "Недостаточно места в настраиваемом временном каталоге '{}' для {}: {:.1f}МБ доступно, {:.1f}МБ требуется"
 
-#: lib/minios_utils.py:1160
+#: lib/minios_utils.py:1186
 msgid "Cannot check space in custom temporary directory '{}': {}"
 msgstr "Невозможно проверить место в настраиваемом временном каталоге '{}': {}"
 
-#: lib/minios_utils.py:1172
+#: lib/minios_utils.py:1198
 #, python-brace-format
 msgid "Using /tmp for {operation} ({available:.1f}MB available, {needed:.1f}MB needed)"
 msgstr "Используется /tmp для {operation} ({available:.1f}МБ доступно, {needed:.1f}МБ требуется)"
 
-#: lib/minios_utils.py:1176
+#: lib/minios_utils.py:1202
 #, python-brace-format
 msgid "Insufficient space in /tmp for {operation} ({available:.1f}MB available, {needed:.1f}MB needed)"
 msgstr "Недостаточно места в /tmp для {operation} ({available:.1f}МБ доступно, {needed:.1f}МБ требуется)"
 
-#: lib/minios_utils.py:1192
+#: lib/minios_utils.py:1218
 msgid "No live system changes directory found, using /tmp anyway"
 msgstr "Не найден каталог изменений живой системы, используется /tmp"
 
-#: lib/minios_utils.py:1195
+#: lib/minios_utils.py:1221
 msgid "Detected {} filesystem, using alternative: {}"
 msgstr "Обнаружена файловая система {}, используется альтернативная: {}"
 
-#: lib/minios_utils.py:1201
+#: lib/minios_utils.py:1227
 msgid "Created alternative temporary directory: {}"
 msgstr "Создан альтернативный временный каталог: {}"
 
-#: lib/minios_utils.py:1208
+#: lib/minios_utils.py:1234
 msgid "Using alternative temporary directory: {} ({:.1f}MB available)"
 msgstr "Используется альтернативный временный каталог: {} ({:.1f}МБ доступно)"
 
-#: lib/minios_utils.py:1214
+#: lib/minios_utils.py:1240
 msgid "Insufficient disk space for operation. Need {:.1f}MB, but only {:.1f}MB available in /tmp and {:.1f}MB in {}"
 msgstr "Недостаточно места на диске для операции. Требуется {:.1f}МБ, но доступно только {:.1f}МБ в /tmp и {:.1f}МБ в {}"
 
-#: lib/minios_utils.py:1224
+#: lib/minios_utils.py:1250
 msgid "Could not check disk space: {}. Using default temporary directory."
 msgstr "Не удалось проверить место на диске: {}. Используется временный каталог по умолчанию."
 

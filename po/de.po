@@ -5,9 +5,9 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: minios-kernel-manager 1.4.4\n"
+"Project-Id-Version: minios-kernel-manager 1.4.5\n"
 "Report-Msgid-Bugs-To: support@minios.dev\n"
-"POT-Creation-Date: 2026-09-17 21:19+0300\n"
+"POT-Creation-Date: 2026-09-21 18:56+0300\n"
 "PO-Revision-Date: 2026-09-06 17:04+0000\n"
 "Last-Translator: crims0n <crims0n@minios.dev>\n"
 "Language-Team: none\n"
@@ -111,185 +111,185 @@ msgstr "Kernel-Module im extrahierten Deb-Paket für Kernel {kernel_version} nic
 msgid "Using system modules base: {base}"
 msgstr "Systemmodulbasis wird verwendet: {base}"
 
-#: lib/build_utils.py:336
+#: lib/build_utils.py:337
 msgid "Cannot decompress staged kernel module: {}"
 msgstr "Staged Kernel-Modul kann nicht dekomprimiert werden: {}"
 
-#: lib/build_utils.py:345
+#: lib/build_utils.py:346
 msgid "Generating module dependencies for SquashFS"
 msgstr "Modulabhängigkeiten für SquashFS werden erstellt"
 
-#: lib/build_utils.py:358
+#: lib/build_utils.py:359
 msgid "depmod failed for staged kernel: {}"
 msgstr "depmod für das staged Kernel ist fehlgeschlagen: {}"
 
-#: lib/build_utils.py:360 lib/build_utils.py:707
+#: lib/build_utils.py:361 lib/build_utils.py:708
 msgid "Module dependencies generated successfully"
 msgstr "Modulabhängigkeiten erfolgreich erstellt"
 
-#: lib/build_utils.py:363
+#: lib/build_utils.py:364
 msgid "Failed to generate module dependencies: {}"
 msgstr "Fehler beim Erstellen der Modulabhängigkeiten: {}"
 
-#: lib/build_utils.py:367
+#: lib/build_utils.py:368
 msgid "Canonical kernel package metadata is missing"
 msgstr "Metadaten des Canonical-Kernel-Pakets fehlen"
 
-#: lib/build_utils.py:377
+#: lib/build_utils.py:378
 msgid "Source package archives must not enter the kernel module"
 msgstr "Quellpaket-Archive dürfen nicht ins Kernel-Modul gelangen"
 
-#: lib/build_utils.py:381
+#: lib/build_utils.py:382
 #, python-brace-format
 msgid "Using extracted deb modules with structure: {path}"
 msgstr "Extrahierte Deb-Module mit Struktur werden verwendet: {path}"
 
-#: lib/build_utils.py:407
+#: lib/build_utils.py:408
 #, python-brace-format
 msgid "Starting SquashFS compression with {compression}..."
 msgstr "SquashFS-Komprimierung mit {compression} wird gestartet..."
 
-#: lib/build_utils.py:410
+#: lib/build_utils.py:411
 #, python-brace-format
 msgid "mksquashfs command: {command}"
 msgstr "mksquashfs-Befehl: {command}"
 
-#: lib/build_utils.py:462
+#: lib/build_utils.py:463
 msgid "Failed to create SquashFS image"
 msgstr "Fehler beim Erstellen des SquashFS-Images"
 
-#: lib/build_utils.py:470
+#: lib/build_utils.py:471
 #, python-brace-format
 msgid "SquashFS image completed: {path}"
 msgstr "SquashFS-Image abgeschlossen: {path}"
 
-#: lib/build_utils.py:489
+#: lib/build_utils.py:490
 msgid "Failed to detect initramfs builder: {}"
 msgstr "Fehler beim Erkennen des Initramfs-Builders: {}"
 
-#: lib/build_utils.py:491
+#: lib/build_utils.py:492
 msgid "Using initramfs builder: {}"
 msgstr "Verwende initramfs-Builder: {}"
 
-#: lib/build_utils.py:499
+#: lib/build_utils.py:500
 msgid "Encrypted persistence is active, but the running initrd does not declare crypto capability"
 msgstr "Verschlüsselte Persistenz ist aktiv, aber das laufende Initrd deklariert keine Kryptofähigkeit"
 
-#: lib/build_utils.py:501
+#: lib/build_utils.py:502
 msgid "Replacement kernel {} does not support dm-crypt"
 msgstr "Der Ersatzkernel {} unterstützt dm-crypt nicht"
 
-#: lib/build_utils.py:503
+#: lib/build_utils.py:504
 msgid "; refusing to replace the initrd because encrypted persistence would lose support"
 msgstr "; Initrd wird nicht ersetzt, da sonst die Unterstützung für verschlüsselte Persistenz verloren gehen würde"
 
-#: lib/build_utils.py:518
+#: lib/build_utils.py:519
 msgid "Extracted kernel configuration was not found for {}"
 msgstr "Extrahierte Kernel-Konfiguration wurde für {} nicht gefunden"
 
-#: lib/build_utils.py:525
+#: lib/build_utils.py:526
 msgid "Existing kernel configuration does not match {}"
 msgstr "Vorhandene Kernel-Konfiguration stimmt nicht mit {} überein"
 
-#: lib/build_utils.py:550
+#: lib/build_utils.py:551
 msgid "mkdracut not found - this tool requires MiniOS live environment"
 msgstr "mkdracut nicht gefunden - dieses Tool erfordert die MiniOS-Live-Umgebung"
 
-#: lib/build_utils.py:571 lib/build_utils.py:693
+#: lib/build_utils.py:572 lib/build_utils.py:694
 msgid "Cannot safely stage extracted modules because the kernel version already exists: {}"
 msgstr "Extrahierte Module können nicht sicher bereitgestellt werden, da die Kernel-Version bereits existiert: {}"
 
-#: lib/build_utils.py:579
+#: lib/build_utils.py:580
 msgid "Created temporary symlink: {} -> {}"
 msgstr "Temporärer Symlink erstellt: {} -> {}"
 
-#: lib/build_utils.py:581
+#: lib/build_utils.py:582
 msgid "Generating modules.dep for {}"
 msgstr "Generiere modules.dep für {}"
 
-#: lib/build_utils.py:587 lib/build_utils.py:705
+#: lib/build_utils.py:588 lib/build_utils.py:706
 msgid "depmod failed for initramfs: {}"
 msgstr "depmod für initramfs ist fehlgeschlagen: {}"
 
-#: lib/build_utils.py:589
+#: lib/build_utils.py:590
 msgid "Successfully generated modules.dep"
 msgstr "modules.dep erfolgreich generiert"
 
-#: lib/build_utils.py:607 lib/build_utils.py:731
+#: lib/build_utils.py:608 lib/build_utils.py:732
 msgid "Using custom temporary directory for initramfs: {}"
 msgstr "Benutzerdefiniertes temporäres Verzeichnis für Initramfs wird verwendet: {}"
 
-#: lib/build_utils.py:610
+#: lib/build_utils.py:611
 msgid "Starting dracut initramfs generation..."
 msgstr "Starte dracut-initramfs-Erstellung..."
 
-#: lib/build_utils.py:639
+#: lib/build_utils.py:640
 #, python-brace-format
 msgid "mkdracut failed with return code {code}"
 msgstr "mkdracut fehlgeschlagen mit Rückgabecode {code}"
 
-#: lib/build_utils.py:644
+#: lib/build_utils.py:645
 msgid "Failed to generate initramfs with dracut: {}"
 msgstr "Fehler beim Generieren des Initramfs mit dracut: {}"
 
-#: lib/build_utils.py:650
+#: lib/build_utils.py:651
 msgid "Removed temporary symlink: {}"
 msgstr "Temporärer Symlink entfernt: {}"
 
-#: lib/build_utils.py:655
+#: lib/build_utils.py:656
 msgid "Dracut succeeded but output file not found: {}"
 msgstr "Dracut erfolgreich, aber Ausgabedatei nicht gefunden: {}"
 
-#: lib/build_utils.py:657
+#: lib/build_utils.py:658
 msgid "Successfully generated initramfs: {}"
 msgstr "initramfs erfolgreich generiert: {}"
 
-#: lib/build_utils.py:668
+#: lib/build_utils.py:669
 msgid "mkinitrfs not found - this tool requires MiniOS live environment"
 msgstr "mkinitrfs nicht gefunden - dieses Tool benötigt die MiniOS Live-Umgebung"
 
-#: lib/build_utils.py:697
+#: lib/build_utils.py:698
 #, python-brace-format
 msgid "Created temporary symlink: {system_path} -> {extracted_path}"
 msgstr "Temporärer Symlink erstellt: {system_path} -> {extracted_path}"
 
-#: lib/build_utils.py:699
+#: lib/build_utils.py:700
 msgid "Generating module dependencies for initramfs"
 msgstr "Modulabhängigkeiten für Initramfs werden erstellt"
 
-#: lib/build_utils.py:734
+#: lib/build_utils.py:735
 msgid "Starting initramfs generation..."
 msgstr "Initramfs-Generierung wird gestartet..."
 
-#: lib/build_utils.py:768
+#: lib/build_utils.py:769
 #, python-brace-format
 msgid "mkinitrfs failed with return code {code}"
 msgstr "mkinitrfs fehlgeschlagen mit Rückgabecode {code}"
 
-#: lib/build_utils.py:774
+#: lib/build_utils.py:775
 #, python-brace-format
 msgid "mkinitrfs failed: {error}"
 msgstr "mkinitrfs fehlgeschlagen: {error}"
 
-#: lib/build_utils.py:776
+#: lib/build_utils.py:777
 #, python-brace-format
 msgid "mkinitrfs error: {error}"
 msgstr "mkinitrfs Fehler: {error}"
 
-#: lib/build_utils.py:805
+#: lib/build_utils.py:806
 msgid "mkinitrfs output was:"
 msgstr "mkinitrfs-Ausgabe war:"
 
-#: lib/build_utils.py:808
+#: lib/build_utils.py:809
 msgid "mkinitrfs did not return valid initramfs path"
 msgstr "mkinitrfs hat keinen gültigen Initramfs-Pfad zurückgegeben"
 
-#: lib/build_utils.py:811
+#: lib/build_utils.py:812
 #, python-brace-format
 msgid "Copying initramfs from {path}"
 msgstr "Initramfs wird von {path} kopiert"
 
-#: lib/build_utils.py:813
+#: lib/build_utils.py:814
 #, python-brace-format
 msgid "Initramfs created: {path}"
 msgstr "Initramfs erstellt: {path}"
@@ -886,74 +886,74 @@ msgstr "_Kernel aktivieren"
 msgid "_Delete Kernel"
 msgstr "_Kernel löschen"
 
-#: lib/minios_utils.py:1113
+#: lib/minios_utils.py:1139
 msgid "Temporary directory is symlinked or untrusted: {}"
 msgstr "Temporäres Verzeichnis ist ein Symlink oder nicht vertrauenswürdig: {}"
 
-#: lib/minios_utils.py:1123
+#: lib/minios_utils.py:1149
 msgid "Temporary directory is not owned by root: {}"
 msgstr "Temporäres Verzeichnis ist nicht im Besitz von root: {}"
 
-#: lib/minios_utils.py:1126
+#: lib/minios_utils.py:1152
 msgid "Temporary directory is writable by other users: {}"
 msgstr "Temporäres Verzeichnis ist für andere Benutzer beschreibbar: {}"
 
-#: lib/minios_utils.py:1137
+#: lib/minios_utils.py:1163
 msgid "Could not create a private root-owned packaging workspace"
 msgstr "Privates, root-eigenes Packaging-Arbeitsverzeichnis konnte nicht erstellt werden"
 
-#: lib/minios_utils.py:1143
+#: lib/minios_utils.py:1169
 msgid "Custom temporary directory does not exist: {}"
 msgstr "Benutzerdefiniertes temporäres Verzeichnis existiert nicht: {}"
 
-#: lib/minios_utils.py:1146
+#: lib/minios_utils.py:1172
 msgid "Custom temporary directory is not writable: {}"
 msgstr "Benutzerdefiniertes temporäres Verzeichnis ist nicht beschreibbar: {}"
 
-#: lib/minios_utils.py:1153
+#: lib/minios_utils.py:1179
 #, python-brace-format
 msgid "Using custom temporary directory for {operation} ({available:.1f}MB available, {needed:.1f}MB needed)"
 msgstr "Verwende benutzerdefiniertes temporäres Verzeichnis für {operation} ({available:.1f}MB verfügbar, {needed:.1f}MB benötigt)"
 
-#: lib/minios_utils.py:1157
+#: lib/minios_utils.py:1183
 msgid "Insufficient space in custom temporary directory '{}' for {}: {:.1f}MB available, {:.1f}MB needed"
 msgstr "Nicht genügend Speicherplatz im benutzerdefinierten temporären Verzeichnis '{}' für {}: {:.1f}MB verfügbar, {:.1f}MB benötigt"
 
-#: lib/minios_utils.py:1160
+#: lib/minios_utils.py:1186
 msgid "Cannot check space in custom temporary directory '{}': {}"
 msgstr "Speicherplatz im benutzerdefinierten temporären Verzeichnis '{}' kann nicht überprüft werden: {}"
 
-#: lib/minios_utils.py:1172
+#: lib/minios_utils.py:1198
 #, python-brace-format
 msgid "Using /tmp for {operation} ({available:.1f}MB available, {needed:.1f}MB needed)"
 msgstr "Verwende /tmp für {operation} ({available:.1f}MB verfügbar, {needed:.1f}MB benötigt)"
 
-#: lib/minios_utils.py:1176
+#: lib/minios_utils.py:1202
 #, python-brace-format
 msgid "Insufficient space in /tmp for {operation} ({available:.1f}MB available, {needed:.1f}MB needed)"
 msgstr "Nicht genügend Speicherplatz in /tmp für {operation} ({available:.1f}MB verfügbar, {needed:.1f}MB benötigt)"
 
-#: lib/minios_utils.py:1192
+#: lib/minios_utils.py:1218
 msgid "No live system changes directory found, using /tmp anyway"
 msgstr "Kein Verzeichnis für Änderungen des Live-Systems gefunden, verwende trotzdem /tmp"
 
-#: lib/minios_utils.py:1195
+#: lib/minios_utils.py:1221
 msgid "Detected {} filesystem, using alternative: {}"
 msgstr "Dateisystem {} erkannt, verwende Alternative: {}"
 
-#: lib/minios_utils.py:1201
+#: lib/minios_utils.py:1227
 msgid "Created alternative temporary directory: {}"
 msgstr "Alternatives temporäres Verzeichnis erstellt: {}"
 
-#: lib/minios_utils.py:1208
+#: lib/minios_utils.py:1234
 msgid "Using alternative temporary directory: {} ({:.1f}MB available)"
 msgstr "Verwende alternatives temporäres Verzeichnis: {} ({:.1f}MB verfügbar)"
 
-#: lib/minios_utils.py:1214
+#: lib/minios_utils.py:1240
 msgid "Insufficient disk space for operation. Need {:.1f}MB, but only {:.1f}MB available in /tmp and {:.1f}MB in {}"
 msgstr "Nicht genügend Speicherplatz für den Vorgang. Benötigt {:.1f}MB, aber nur {:.1f}MB in /tmp und {:.1f}MB in {} verfügbar"
 
-#: lib/minios_utils.py:1224
+#: lib/minios_utils.py:1250
 msgid "Could not check disk space: {}. Using default temporary directory."
 msgstr "Speicherplatz konnte nicht überprüft werden: {}. Verwende Standard-Temporärverzeichnis."
 

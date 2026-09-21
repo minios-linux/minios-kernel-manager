@@ -4,6 +4,7 @@
 import ast
 import inspect
 import os
+import stat
 import sys
 from unittest.mock import MagicMock, patch
 
@@ -21,6 +22,31 @@ def test_squashfs_builder_does_not_shadow_gettext():
                    isinstance(node.ctx, ast.Store)]
     assert '_' not in [node.id for node in assignments]
     assert '-no-strip' not in inspect.getsource(create_squashfs_image)
+
+
+def test_squashfs_staging_root_is_runtime_traversable(tmp_path):
+    from build_utils import create_squashfs_image
+
+    modules = tmp_path / 'usr/lib/modules/test'
+    modules.mkdir(parents=True)
+    output_dir = tmp_path / 'artifacts'
+    output_dir.mkdir()
+
+    class StagingInspected(Exception):
+        pass
+
+    def inspect_staging(_source, destination, **_kwargs):
+        staging_root = os.path.dirname(
+            os.path.dirname(os.path.dirname(os.path.dirname(destination))))
+        assert stat.S_IMODE(os.stat(staging_root).st_mode) == 0o755
+        raise StagingInspected
+
+    with patch('build_utils.validate_squashfs_compatibility'), \
+         patch('build_utils.get_system_modules_base', return_value='usr/lib/modules'), \
+         patch('build_utils.shutil.copytree', side_effect=inspect_staging):
+        with pytest.raises(StagingInspected):
+            create_squashfs_image(
+                'test', 'zstd', str(output_dir), temp_dir=str(tmp_path))
 
 
 class TestCryptoCapability:
