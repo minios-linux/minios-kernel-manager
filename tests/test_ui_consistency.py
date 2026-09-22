@@ -179,6 +179,55 @@ def test_kernel_list_loading_uses_shared_operation_overlay():
     assert "icon_name='view-refresh-symbolic'" not in SOURCE
 
 
+def test_healthy_status_banner_is_hidden_but_errors_remain_visible():
+    from minios_kernel_manager import KernelPackWindow
+
+    for writable, expected_visible in ((True, False), (False, True)):
+        window = SimpleNamespace(
+            minios_path='/minios', minios_writable=writable,
+            main_vbox=Mock())
+        banner = Mock()
+        banner.label = Mock()
+        with patch('minios_kernel_manager.StatusBanner', return_value=banner):
+            KernelPackWindow._build_system_status_info(window)
+
+        banner.set_no_show_all.assert_called_once_with(True)
+        banner.set_visible.assert_called_once_with(expected_visible)
+
+
+def test_loading_overlays_disable_bottom_actions():
+    assert "is_loading = getattr(self, '_kernel_loading_visible', False)" in SOURCE
+    assert "not bool(is_loading)" in SOURCE
+    assert "self.activate_kernel_button.set_sensitive(False)" in SOURCE
+    assert "self.delete_kernel_button.set_sensitive(False)" in SOURCE
+    assert "'_activation_loading_visible', False" in SOURCE
+
+    build_window = SimpleNamespace(
+        selected_kernel='linux-image-test', selected_deb_files=[],
+        minios_path='/minios', minios_writable=True, is_building=False,
+        _kernel_loading_visible=True, build_button=Mock(),
+        repo_radio=SimpleNamespace(get_active=lambda: True),
+    )
+    from minios_kernel_manager import KernelPackWindow
+    KernelPackWindow._update_buttons_state(build_window)
+    build_window.build_button.set_sensitive.assert_called_once_with(False)
+
+    activation_window = SimpleNamespace(
+        selected_packaged_kernel=None, minios_writable=True,
+        _activation_loading_visible=True,
+        activate_kernel_button=Mock(), delete_kernel_button=Mock(),
+    )
+    row = SimpleNamespace(kernel_version='test', kernel_info={
+        'is_active': False, 'is_running': False,
+    })
+    KernelPackWindow._on_packaged_kernel_selected(
+        activation_window, None, row)
+    activation_window.activate_kernel_button.set_sensitive.assert_called_once_with(
+        False)
+    activation_window.delete_kernel_button.set_sensitive.assert_called_once_with(
+        False)
+
+
 def test_active_kernel_status_has_precedence_over_running():
     branch = kernel_status_branch()
 

@@ -304,6 +304,8 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         self.command_runner = None
         self.repository_fetch_generation = 0
         self._build_finalized = False
+        self._kernel_loading_visible = False
+        self._activation_loading_visible = False
 
         # UI components
         self.main_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
@@ -358,6 +360,8 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         banner = StatusBanner(status_text, intent=intent)
         banner.label.set_markup(
             '<b>{}</b>'.format(GLib.markup_escape_text(status_text)))
+        banner.set_no_show_all(True)
+        banner.set_visible(intent != 'success')
         self.main_vbox.pack_start(banner, False, False, 0)
 
     def _build_main_ui(self):
@@ -658,6 +662,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             minios_path = getattr(self, 'minios_path', None)
             minios_writable = getattr(self, 'minios_writable', False)
             is_building = getattr(self, 'is_building', False)
+            is_loading = getattr(self, '_kernel_loading_visible', False)
 
             if self.repo_radio.get_active():
                 has_selection = bool(selected_kernel)
@@ -667,7 +672,8 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             can_build = (has_selection and
                         bool(minios_path) and 
                         bool(minios_writable) and 
-                        not bool(is_building))
+                        not bool(is_building) and
+                        not bool(is_loading))
             self.build_button.set_sensitive(can_build)
             
             # Update tooltip
@@ -677,6 +683,8 @@ class KernelPackWindow(Gtk.ApplicationWindow):
                 tooltip = _("MiniOS directory is read-only")
             elif not has_selection:
                 tooltip = _("Please select a kernel first")
+            elif is_loading:
+                tooltip = _("Fetching kernel list from repository...")
             elif is_building:
                 tooltip = _("Build in progress...")
             else:
@@ -843,10 +851,13 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             # presentation status text.
             is_active = bool(kernel_info.get('is_active', False))
             is_running = bool(kernel_info.get('is_running', False))
+            available = not getattr(
+                self, '_activation_loading_visible', False)
             self.activate_kernel_button.set_sensitive(
-                not is_active and self.minios_writable)
+                available and not is_active and self.minios_writable)
             self.delete_kernel_button.set_sensitive(
-                not is_active and not is_running and self.minios_writable)
+                available and not is_active and not is_running and
+                self.minios_writable)
         else:
             self.selected_packaged_kernel = None
             self.activate_kernel_button.set_sensitive(False)
@@ -1082,6 +1093,8 @@ class KernelPackWindow(Gtk.ApplicationWindow):
 
     def _show_kernel_loading(self):
         """Show loading indicator in kernel list"""
+        self._kernel_loading_visible = True
+        self._update_buttons_state()
         if self.repo_radio.get_active():
             status_text = _("Fetching kernel list from repository...")
         else:
@@ -1095,6 +1108,8 @@ class KernelPackWindow(Gtk.ApplicationWindow):
     def _hide_kernel_loading(self):
         self.kernel_loading_box.set_visible(False)
         self.kernel_loading_box.set_state('idle')
+        self._kernel_loading_visible = False
+        self._update_buttons_state()
 
     def _show_kernel_placeholder(self, title, description='',
                                  icon_name='dialog-information-symbolic'):
@@ -1314,6 +1329,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             thread.daemon = True
             thread.start()
         elif self.local_radio.get_active():
+            self._hide_kernel_loading()
             # Show manual selection, hide repository kernel list
             self.manual_selection_box.show()
             self.repo_selection_box.hide()
@@ -1756,6 +1772,9 @@ class KernelPackWindow(Gtk.ApplicationWindow):
     def _show_activate_loading(self, show, text=None):
         """Show or hide kernel activation loading indicator"""
         if show:
+            self._activation_loading_visible = True
+            self.activate_kernel_button.set_sensitive(False)
+            self.delete_kernel_button.set_sensitive(False)
             if text:
                 self.activate_loading_label.set_text(text)
             # Ensure CSS class is applied every time we show the loading overlay
@@ -1768,7 +1787,9 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             self.activate_loading_spinner.stop()
             # Reset to default text
             self.activate_loading_label.set_text(_("Activating kernel..."))
-            # No buttons to re-enable - using context menu only
+            self._activation_loading_visible = False
+            row = self.packaged_kernel_list.get_selected_row()
+            self._on_packaged_kernel_selected(self.packaged_kernel_list, row)
     
     def _initialize_loading_overlays(self):
         """Initialize loading overlays visibility after show_all()"""

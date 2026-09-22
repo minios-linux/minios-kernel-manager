@@ -1,3 +1,12 @@
+minios-kernel-manager (1.4.6) unstable; urgency=medium
+
+  * Hide the writable-directory status banner while the system is healthy,
+    while retaining missing and read-only errors.
+  * Disable lower action buttons while kernel-list and activation loading
+    overlays are active.
+
+ -- crims0n <crims0n@minios.dev>  Tue, 22 Sep 2026 20:06:29 +0300
+
 minios-kernel-manager (1.4.5) unstable; urgency=medium
 
   * Keep the generated SquashFS root traversable while retaining a private
