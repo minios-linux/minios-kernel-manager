@@ -1,0 +1,171 @@
+#!/bin/bash
+
+set -euo pipefail
+
+[ "$#" -ge 5 ] || { echo "Usage: dkms-sandbox WORKSPACE KERNEL_ROOT MODULES_REL KERNEL_VERSION PACKAGE..." >&2; exit 2; }
+
+WORKSPACE="$1"
+KERNEL_ROOT="$2"
+MODULES_REL="$3"
+KERNEL_VERSION="$4"
+shift 4
+PACKAGES=("$@")
+
+case "${MODULES_REL}" in
+    lib/modules|usr/lib/modules) ;;
+    *) echo "Invalid modules path: ${MODULES_REL}" >&2; exit 2 ;;
+esac
+[[ "${KERNEL_VERSION}" =~ ^[A-Za-z0-9.+:~_-]+$ ]] || { echo "Invalid kernel version" >&2; exit 2; }
+for PACKAGE in "${PACKAGES[@]}"; do
+    [[ "${PACKAGE}" =~ ^[a-z0-9][a-z0-9+.-]*(-dkms)(=[A-Za-z0-9.+:~_-]+)?$ ]] || {
+        echo "Invalid DKMS package request: ${PACKAGE}" >&2
+        exit 2
+    }
+done
+
+ROOT_UPPER="${WORKSPACE}/root-upper"
+ROOT_WORK="${WORKSPACE}/root-work"
+MERGED="${WORKSPACE}/merged"
+KERNEL_BASE="${WORKSPACE}/kernel-base"
+MODULE_UPPER="${WORKSPACE}/module-upper"
+MODULE_WORK="${WORKSPACE}/module-work"
+RESULT="${WORKSPACE}/result"
+
+mount --make-rprivate /
+mkdir -p "${ROOT_UPPER}" "${ROOT_WORK}" "${MERGED}" "${KERNEL_BASE}" \
+    "${MODULE_UPPER}" "${MODULE_WORK}" "${RESULT}/modules" "${RESULT}/runtime"
+for ROOT_ENTRY in bin boot etc lib lib32 lib64 libx32 opt sbin usr var; do
+    if [ -L "/${ROOT_ENTRY}" ]; then
+        cp -a "/${ROOT_ENTRY}" "${MERGED}/${ROOT_ENTRY}"
+    elif [ -d "/${ROOT_ENTRY}" ]; then
+        mkdir -p "${ROOT_UPPER}/${ROOT_ENTRY}" "${ROOT_WORK}/${ROOT_ENTRY}" \
+            "${MERGED}/${ROOT_ENTRY}"
+        mount -t overlay overlay \
+            -o "lowerdir=/${ROOT_ENTRY},upperdir=${ROOT_UPPER}/${ROOT_ENTRY},workdir=${ROOT_WORK}/${ROOT_ENTRY}" \
+            "${MERGED}/${ROOT_ENTRY}"
+    fi
+done
+
+# Hide running kernels and expose only the target modules tree.
+if [ "${MODULES_REL}" = usr/lib/modules ]; then
+    rm -rf "${MERGED}/usr/lib/modules"
+    mkdir -p "${MERGED}/usr/lib/modules/${KERNEL_VERSION}"
+else
+    rm -rf "${MERGED}/lib/modules"
+    mkdir -p "${MERGED}/lib/modules/${KERNEL_VERSION}"
+fi
+cp -a "${KERNEL_ROOT}/${MODULES_REL}/${KERNEL_VERSION}/." "${KERNEL_BASE}/"
+mount -t overlay overlay -o "lowerdir=${KERNEL_BASE},upperdir=${MODULE_UPPER},workdir=${MODULE_WORK}" \
+    "${MERGED}/${MODULES_REL}/${KERNEL_VERSION}"
+
+mkdir -p "${MERGED}/boot" "${MERGED}/proc" "${MERGED}/sys" "${MERGED}/dev" \
+    "${MERGED}/run" "${MERGED}/tmp"
+for BOOT_FILE in "config-${KERNEL_VERSION}" "System.map-${KERNEL_VERSION}"; do
+    if [ -f "${KERNEL_ROOT}/boot/${BOOT_FILE}" ]; then
+        cp -L "${KERNEL_ROOT}/boot/${BOOT_FILE}" "${MERGED}/boot/${BOOT_FILE}"
+    elif [ -f "${KERNEL_ROOT}/usr/boot/${BOOT_FILE}" ]; then
+        cp -L "${KERNEL_ROOT}/usr/boot/${BOOT_FILE}" "${MERGED}/boot/${BOOT_FILE}"
+    fi
+done
+mount -t proc proc "${MERGED}/proc"
+chmod 0755 "${MERGED}/run" "${MERGED}/dev"
+chmod 1777 "${MERGED}/tmp"
+for DEVICE in null zero random urandom; do
+    touch "${MERGED}/dev/${DEVICE}"
+    mount --bind "/dev/${DEVICE}" "${MERGED}/dev/${DEVICE}"
+done
+
+# Recreate DKMS state and source storage. The complete target header dependency
+# closure is reinstalled below, so no host DKMS source can affect the result.
+rm -rf "${MERGED}/var/lib/dkms" "${MERGED}/usr/src"
+mkdir -p "${MERGED}/var/lib/dkms" "${MERGED}/usr/src" "${MERGED}/usr/sbin"
+cat >"${MERGED}/usr/sbin/policy-rc.d" <<'EOF'
+#!/bin/sh
+exit 101
+EOF
+chmod 0755 "${MERGED}/usr/sbin/policy-rc.d"
+
+for EXPOSED in result module-upper root-upper; do
+    mkdir -p "${MERGED}/run/minios-${EXPOSED}"
+done
+mount --bind "${RESULT}" "${MERGED}/run/minios-result"
+mount --bind "${MODULE_UPPER}" "${MERGED}/run/minios-module-upper"
+mount --bind "${ROOT_UPPER}" "${MERGED}/run/minios-root-upper"
+
+cat >"${MERGED}/run/minios-dkms-build" <<'INNER_SCRIPT'
+#!/bin/bash
+set -euo pipefail
+
+KERNEL_VERSION="$1"
+shift
+PACKAGES=("$@")
+RESULT=/run/minios-result
+MODULE_UPPER=/run/minios-module-upper
+ROOT_UPPER=/run/minios-root-upper
+export DEBIAN_FRONTEND=noninteractive LC_ALL=C LANG=C
+
+apt-get update
+PREREQUISITES=(build-essential libelf-dev debhelper dpkg-dev dkms bc git)
+if grep -q '^CONFIG_DEBUG_INFO_BTF_MODULES=[ym]$' "/boot/config-${KERNEL_VERSION}"; then
+    if apt-cache show pahole >/dev/null 2>&1; then
+        PREREQUISITES+=(pahole)
+    else
+        PREREQUISITES+=(dwarves)
+    fi
+fi
+apt-get install -y --no-install-recommends "${PREREQUISITES[@]}"
+{
+    printf '%s\n' "linux-headers-${KERNEL_VERSION}"
+    apt-cache depends --recurse --important "linux-headers-${KERNEL_VERSION}" |
+        sed -n 's/.*Depends: \([^ <][^ ]*\).*/\1/p' |
+        grep -E '^(linux-headers-|linux-kbuild-)'
+} | sort -u > /run/minios-header-packages
+mapfile -t HEADER_PACKAGES < /run/minios-header-packages
+rm -f /run/minios-header-packages
+apt-get install -y --reinstall --allow-downgrades --allow-change-held-packages \
+    --no-install-recommends \
+    "${HEADER_PACKAGES[@]}" "${PACKAGES[@]}"
+depmod "${KERNEL_VERSION}"
+
+: > /run/minios-built-modules
+if [ -d "${MODULE_UPPER}/updates/dkms" ]; then
+    find "${MODULE_UPPER}/updates/dkms" -type f \
+        \( -name '*.ko' -o -name '*.ko.xz' -o -name '*.ko.zst' -o -name '*.ko.gz' \) \
+        -print0 > /run/minios-built-modules
+fi
+while IFS= read -r -d '' MODULE; do
+    RELATIVE="${MODULE#"${MODULE_UPPER}"/}"
+    mkdir -p "${RESULT}/modules/$(dirname "${RELATIVE}")"
+    cp -a "${MODULE}" "${RESULT}/modules/${RELATIVE}"
+done < /run/minios-built-modules
+rm -f /run/minios-built-modules
+
+for RUNTIME_DIR in etc/modprobe.d etc/modules-load.d lib/modprobe.d lib/modules-load.d \
+    lib/udev/rules.d usr/lib/modprobe.d usr/lib/modules-load.d usr/lib/udev/rules.d; do
+    if [ -d "${ROOT_UPPER}/${RUNTIME_DIR}" ]; then
+        find "${ROOT_UPPER}/${RUNTIME_DIR}" -type f -print0 > /run/minios-runtime-files
+        while IFS= read -r -d '' RUNTIME_FILE; do
+            RELATIVE="${RUNTIME_FILE#"${ROOT_UPPER}"/}"
+            mkdir -p "${RESULT}/runtime/$(dirname "${RELATIVE}")"
+            cp -a "${RUNTIME_FILE}" "${RESULT}/runtime/${RELATIVE}"
+        done < /run/minios-runtime-files
+        rm -f /run/minios-runtime-files
+    fi
+done
+
+: >"${RESULT}/packages.tsv"
+for PACKAGE in "${PACKAGES[@]}"; do
+    NAME="${PACKAGE%%=*}"
+    # shellcheck disable=SC2016
+    VERSION="$(dpkg-query -W -f='${Version}' "${NAME}")"
+    printf '%s\t%s\n' "${NAME}" "${VERSION}" >>"${RESULT}/packages.tsv"
+done
+INNER_SCRIPT
+chmod 0755 "${MERGED}/run/minios-dkms-build"
+
+# PID 1 enters the chroot before package scripts execute. /proc/1/root points
+# to this build root instead of the running host filesystem.
+SANDBOX_CAPS='-sys_admin,-mknod,-sys_rawio,-sys_module,-sys_boot,-net_admin,-net_raw'
+exec chroot "${MERGED}" setpriv --bounding-set="${SANDBOX_CAPS}" \
+    --inh-caps=-all --ambient-caps=-all --no-new-privs -- \
+    /bin/bash /run/minios-dkms-build "${KERNEL_VERSION}" "${PACKAGES[@]}"

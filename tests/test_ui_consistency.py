@@ -18,9 +18,9 @@ def test_release_metadata_is_synchronized():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     assert readme.startswith("# MiniOS Kernel Manager {}\n".format(version))
     for name in ("minios-kernel.1", "minios-kernel-manager.1"):
-        first_line = (ROOT / "debian" / name).read_text(
+        first_line = (ROOT / "manpages" / "en" / name).read_text(
             encoding="utf-8").splitlines()[0]
-        assert 'MiniOS Kernel Manager {}"'.format(version) in first_line
+        assert '"MiniOS Kernel Manager"' in first_line
 
 
 def test_split_packages_have_disjoint_payloads_and_exact_backend_dependency():
@@ -36,6 +36,8 @@ def test_split_packages_have_disjoint_payloads_and_exact_backend_dependency():
     assert "minios-kernel (= ${binary:Version})" in control
     assert "Breaks: minios-kernel-manager (<< 1.4.0)" in control
     assert "Replaces: minios-kernel-manager (<< 1.4.0)" in control
+    assert "         util-linux\n" in control
+    assert "         build-essential" not in control
 
 
 def kernel_status_branch():
@@ -155,6 +157,14 @@ def test_packaging_uses_shared_command_lifecycle_and_choosers():
     assert 'Gtk.main_iteration()' not in SOURCE
     assert 'subprocess.Popen(' not in SOURCE
     assert 'GLib.timeout_add(' not in SOURCE
+
+
+def test_each_curated_driver_has_an_independent_gui_checkbox():
+    assert 'self.driver_checks = {}' in SOURCE
+    assert "check = Gtk.CheckButton(label=driver['label'])" in SOURCE
+    assert "cmd_args.extend(['--dkms-driver', driver_id])" in SOURCE
+    assert 'self.driver_frame.set_sensitive(False)' in SOURCE
+    assert 'get_compatible_driver_ids(' in SOURCE
 
 
 def test_packaging_log_matches_installer_details_layout():

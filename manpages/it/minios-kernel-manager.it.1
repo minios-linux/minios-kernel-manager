@@ -1,0 +1,60 @@
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH MINIOS\-KERNEL\-MANAGER 1 "Settembre 2026" "Gestore kernel MiniOS" "Comandi utente"
+.SH NOME
+minios\-kernel\-manager \- Strumento grafico per la gestione dei kernel MiniOS
+.SH SINTASSI
+\fBminios\-kernel\-manager\fP [\fI\-\-help\fP]
+.SH DESCRIZIONE
+\fBminios\-kernel\-manager\fP è un'utilità grafica GTK3 per la gestione dei
+kernel Linux in MiniOS. Fornisce un'interfaccia intuitiva per le operazioni
+di attivazione, impacchettamento e gestione dei kernel. Utilizza
+\fBminios\-kernel\fP(1) come backend e gestisce automaticamente l'autenticazione
+tramite PolicyKit.
+.PP
+L'applicazione offre le schede Gestione Kernel e Pacchetto Kernel. Gestione
+Kernel mostra le versioni attive, in esecuzione e disponibili; l'attivazione
+e l'eliminazione sono disponibili dal menu contestuale quando
+sicuro. Pacchetto Kernel accetta pacchetti di repository o più file .deb
+locali, selezione della compressione, visualizzazione dell'avanzamento e
+annullamento. Ogni driver dal catalogo curato 01\-kernel DKMS può essere
+selezionato indipendentemente per i kernel di repository. I pacchetti di
+repository possono essere filtrati per nome del pacchetto o versione del
+kernel visualizzata. Il filtraggio cancella una selezione che non è più
+visibile. L'interfaccia disabilita le operazioni di archiviazione quando la
+root MiniOS rilevata è mancante o di sola lettura.
+.PP
+L'impacchettamento viene eseguito al di fuori del main loop GTK. L'output
+standard viene interpretato come avanzamento del backend, mentre l'errore
+standard rimane visibile come output diagnostico; l'annullamento termina
+l'intero comando delegato. La disponibilità delle azioni sul kernel utilizza
+l'elenco privilegiato autorevole invece di richiedere al processo desktop di
+leggere nuovamente i metadati protetti del repository.
+.SH OPZIONI
+.TP
+\fB\-h, \-\-help\fP
+Mostra un breve messaggio di utilizzo ed esce.
+.SH FILE
+.TP
+\fI<MiniOS\-root>/kernels/<version>/\fP
+Repository per kernel impacchettati inattivi.
+.TP
+\fI<MiniOS\-root>/boot/active\-kernel\fP
+File marcatore che contiene la versione attualmente attiva del kernel.
+.TP
+\fI/usr/share/applications/minios\-kernel\-manager.desktop\fP
+File desktop entry.
+.TP
+\fI/usr/share/polkit\-1/actions/dev.minios.kernel\-manager.policy\fP
+File PolicyKit per l'elevazione dei privilegi.
+.TP
+\fI/usr/share/minios\-kernel\-manager/style.css\fP
+Foglio di stile dell'applicazione per la personalizzazione grafica della
+GUI.
+.SH AUTORE
+crims0n <crims0n@minios.dev>
+.SH "VEDERE ANCHE"
+\fBminios\-kernel\fP(1), \fBmksquashfs\fP(1)

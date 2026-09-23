@@ -1,4 +1,4 @@
-# MiniOS Kernel Manager 1.4.6
+# MiniOS Kernel Manager 1.5.0
 
 ## Overview
 
@@ -20,6 +20,7 @@ minios-kernel list
 minios-kernel info [version]
 minios-kernel activate <version>
 minios-kernel package --repo <package> -o <output>
+minios-kernel package --repo <package> --dkms-driver rtl8821au -o <output>
 minios-kernel package --deb linux-image.deb linux-modules.deb -o <output>
 minios-kernel delete <version>
 minios-kernel status
@@ -36,6 +37,8 @@ Repository mode uses the running system's APT sources, trust configuration, and 
 Downloaded `.deb` files live only in the private packaging workspace and are removed after success or handled failure. Local input `.deb` files remain at their caller-owned paths.
 
 Packaging produces the kernel image, initramfs, and SquashFS module. Compact dpkg metadata from the source packages is retained under `/usr/share/minios/kernel-dpkg/` inside the SquashFS. When a writable MiniOS root is detected, the completed package is staged into `<MiniOS-root>/kernels/<version>`.
+
+Repository kernels can include any individually selected driver from the curated `01-kernel` DKMS catalog. Repeat `--dkms-driver ID` for multiple drivers, or use the checkboxes in the GUI. The backend resolves matching headers, builds the selected packages in a private overlay/chroot, verifies module `vermagic`, and copies only the resulting modules and runtime configuration into the bundle. Manual kernel `.deb` files do not enable this option because matching header packages cannot be inferred reliably.
 
 Manager-produced bundles use canonical format 1 with `update_policy: frozen`: the image package is manual and held, subordinate kernel packages are automatic and unheld, and no repository configuration is embedded. Activation also accepts canonical tracked bundles from `01-kernel`. Legacy 1.2.1 metadata is accepted only for live activation, not as Installer-native format 1.
 

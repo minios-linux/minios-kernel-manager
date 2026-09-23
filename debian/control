@@ -15,7 +15,8 @@ Depends: ${misc:Depends},
          apt,
          dpkg-dev,
          zstd,
-         mount
+         mount,
+         util-linux
 Recommends: lz4, lzop, xz-utils, bzip2,
             polkitd | policykit-1,
             pkexec | policykit-1

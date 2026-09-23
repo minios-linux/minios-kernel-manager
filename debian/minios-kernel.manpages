@@ -1,1 +1,9 @@
-debian/minios-kernel.1
+manpages/en/minios-kernel.1
+manpages/de/minios-kernel.de.1
+manpages/es/minios-kernel.es.1
+manpages/fr/minios-kernel.fr.1
+manpages/id/minios-kernel.id.1
+manpages/it/minios-kernel.it.1
+manpages/pt/minios-kernel.pt.1
+manpages/pt_BR/minios-kernel.pt_BR.1
+manpages/ru/minios-kernel.ru.1

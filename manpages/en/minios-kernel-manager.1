@@ -1,4 +1,4 @@
-.TH MINIOS-KERNEL-MANAGER 1 "September 2026" "MiniOS Kernel Manager 1.4.6" "User Commands"
+.TH MINIOS-KERNEL-MANAGER 1 "September 2026" "MiniOS Kernel Manager" "User Commands"
 .SH NAME
 minios-kernel-manager \- Graphical tool for managing MiniOS kernels
 .SH SYNOPSIS
@@ -14,7 +14,8 @@ The application provides Manage Kernels and Package Kernel tabs. Manage Kernels
 shows active, running, and available versions; activation and deletion are
 available from the context menu when safe. Package Kernel accepts repository
 packages or multiple local .deb files, compression selection, progress output,
-and cancellation. Repository packages can be filtered by package name or
+and cancellation. Each driver from the curated 01-kernel DKMS catalog can be
+selected independently for repository kernels. Repository packages can be filtered by package name or
 displayed kernel version. Filtering clears a selection that is no longer
 visible. The interface disables storage operations when the detected MiniOS
 root is missing or read-only.

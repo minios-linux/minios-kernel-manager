@@ -14,6 +14,7 @@ import tempfile
 import gettext
 import filecmp
 import lzma
+import gzip
 import re
 import stat
 from typing import Optional, Callable
@@ -25,12 +26,14 @@ try:
     from .kernel_utils import KERNEL_DPKG_METADATA_DIR, get_non_symlink_modules_dir
     from .kernel_acquisition import finalize_payload_metadata, validate_embedded_support_tree
     from .minios_utils import get_temp_dir_with_space_check
+    from .dkms_utils import finalize_driver_manifest
 except ImportError:
     # Fall back to absolute imports (when run as main script)
     from compression_utils import get_available_compressions, get_compression_params
     from kernel_utils import KERNEL_DPKG_METADATA_DIR, get_non_symlink_modules_dir
     from kernel_acquisition import finalize_payload_metadata, validate_embedded_support_tree
     from minios_utils import get_temp_dir_with_space_check
+    from dkms_utils import finalize_driver_manifest
 
 # Initialize gettext
 gettext.bindtextdomain('minios-kernel-manager', '/usr/share/locale')
@@ -245,11 +248,27 @@ def normalize_modules_order(modules_root: str) -> None:
         return
     with open(path, 'r', encoding='utf-8') as source:
         lines = source.readlines()
-    normalized = [re.sub(r'\.ko\.(?:xz|zst)(?=\s*$)', '.ko', line)
+    normalized = [re.sub(r'\.ko\.(?:xz|zst|gz)(?=\s*$)', '.ko', line)
                   for line in lines]
     if normalized != lines:
         with open(path, 'w', encoding='utf-8') as output:
             output.writelines(normalized)
+
+
+def merge_regular_tree(source: str, destination: str) -> None:
+    """Merge a trusted runtime tree without following or preserving symlinks."""
+    for parent, directories, filenames in os.walk(source):
+        directories[:] = [name for name in directories
+                          if not os.path.islink(os.path.join(parent, name))]
+        relative = os.path.relpath(parent, source)
+        target_parent = (destination if relative == '.' else
+                         os.path.join(destination, relative))
+        os.makedirs(target_parent, exist_ok=True)
+        for filename in filenames:
+            item = os.path.join(parent, filename)
+            if not stat.S_ISREG(os.lstat(item).st_mode):
+                continue
+            shutil.copy2(item, os.path.join(target_parent, filename))
 
 
 def create_squashfs_image(kernel_version: str, compression: str, output_dir: str,
@@ -326,6 +345,12 @@ def create_squashfs_image(kernel_version: str, compression: str, output_dir: str
                     shutil.copyfileobj(compressed, output)
                 os.chmod(destination, stat.S_IMODE(os.lstat(source).st_mode))
                 os.unlink(source)
+            elif filename.endswith('.ko.gz'):
+                destination = source[:-3]
+                with gzip.open(source, 'rb') as compressed, open(destination, 'wb') as output:
+                    shutil.copyfileobj(compressed, output)
+                os.chmod(destination, stat.S_IMODE(os.lstat(source).st_mode))
+                os.unlink(source)
             elif filename.endswith('.ko.zst'):
                 destination = source[:-4]
                 result = subprocess.run(
@@ -374,6 +399,21 @@ def create_squashfs_image(kernel_version: str, compression: str, output_dir: str
         temp_squashfs_dir, 'usr', 'share', 'minios', 'kernel-dpkg')
     os.makedirs(os.path.dirname(metadata_dst), exist_ok=True)
     shutil.copytree(metadata_src, metadata_dst)
+    dkms_src = os.path.join(temp_dir, '.minios-kernel-dkms')
+    if os.path.isdir(dkms_src):
+        runtime_src = os.path.join(dkms_src, 'runtime')
+        if os.path.isdir(runtime_src):
+            for entry in os.listdir(runtime_src):
+                source = os.path.join(runtime_src, entry)
+                destination = os.path.join(temp_squashfs_dir, entry)
+                if os.path.isdir(source) and not os.path.islink(source):
+                    merge_regular_tree(source, destination)
+        dkms_dst = os.path.join(
+            temp_squashfs_dir, 'usr', 'share', 'minios', 'kernel-dkms')
+        os.makedirs(dkms_dst, exist_ok=True)
+        finalize_driver_manifest(
+            os.path.join(dkms_src, 'manifest.json'),
+            os.path.join(dkms_dst, 'manifest.json'), staged_modules)
     if glob.glob(os.path.join(temp_squashfs_dir, '**', '*.deb'), recursive=True):
         raise RuntimeError(_('Source package archives must not enter the kernel module'))
 

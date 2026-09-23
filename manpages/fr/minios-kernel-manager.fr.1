@@ -1,0 +1,60 @@
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH MINIOS\-KERNEL\-MANAGER 1 "septembre 2026" "Gestionnaire de noyaux MiniOS" "Commandes utilisateur"
+.SH NOM
+minios\-kernel\-manager \- Outil graphique pour la gestion des noyaux MiniOS
+.SH SYNOPSIS
+\fBminios\-kernel\-manager\fP [\fI\-\-help\fP]
+.SH DESCRIPTION
+\fBminios\-kernel\-manager\fP est un utilitaire graphique GTK3 permettant de
+gérer les noyaux Linux dans MiniOS. Il offre une interface intuitive pour
+l’activation, le conditionnement et la gestion des noyaux. Utilise
+\fBminios\-kernel\fP(1) comme moteur et gère automatiquement l’authentification
+via PolicyKit.
+.PP
+L’application propose les onglets Gérer les noyaux et Conditionner le
+noyau. Gérer les noyaux affiche les versions actives, en cours d’exécution
+et disponibles ; l’activation et la suppression sont accessibles via le menu
+contextuel lorsque cela est sûr. Conditionner le noyau accepte les paquets
+du dépôt ou plusieurs fichiers .deb locaux, permet de choisir la
+compression, affiche la progression et permet l’annulation. Chaque pilote du
+catalogue DKMS 01\-kernel sélectionné peut être choisi indépendamment pour
+les noyaux du dépôt. Les paquets du dépôt peuvent être filtrés par nom de
+paquet ou par version du noyau affichée. Le filtrage annule une sélection
+qui n’est plus visible. L’interface désactive les opérations de stockage
+lorsque la racine MiniOS détectée est absente ou en lecture seule.
+.PP
+Le conditionnement s’exécute en dehors de la boucle principale GTK. La
+sortie standard est interprétée comme la progression du moteur tandis que la
+sortie d’erreur standard reste visible pour le diagnostic ; l’annulation
+termine la commande déléguée dans son ensemble. La disponibilité des actions
+sur les noyaux utilise la liste privilégiée autoritaire, évitant ainsi que
+le processus du bureau ait à relire les métadonnées protégées du dépôt.
+.SH OPTIONS
+.TP
+\fB\-h, \-\-help\fP
+Affiche un message d’utilisation succinct et quitte.
+.SH FICHIERS
+.TP
+\fI<MiniOS\-root>/kernels/<version>/\fP
+Répertoire pour les noyaux conditionnés inactifs.
+.TP
+\fI<MiniOS\-root>/boot/active\-kernel\fP
+Fichier indicateur contenant la version du noyau actuellement active.
+.TP
+\fI/usr/share/applications/minios\-kernel\-manager.desktop\fP
+Fichier d’entrée du bureau.
+.TP
+\fI/usr/share/polkit\-1/actions/dev.minios.kernel\-manager.policy\fP
+Fichier de politique PolicyKit pour l’élévation des privilèges.
+.TP
+\fI/usr/share/minios\-kernel\-manager/style.css\fP
+Feuille de style de l’application pour la personnalisation de l’interface
+graphique.
+.SH AUTEUR
+crims0n <crims0n@minios.dev>
+.SH "VOIR AUSSI"
+\fBminios\-kernel\fP(1), \fBmksquashfs\fP(1)

@@ -1,0 +1,228 @@
+# French translations for minios-kernel-manager package
+# Copyright (C) 2026 Free Software Foundation, Inc.
+# This file is distributed under the same license as the minios-kernel-manager package.
+# Automatically generated, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: minios-kernel-manager 1.5.0\n"
+"POT-Creation-Date: 2026-09-22 21:17+0300\n"
+"PO-Revision-Date: 2026-09-22 18:21+0000\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#. type: TH
+#: en/minios-kernel-manager.1:1
+#, no-wrap
+msgid "MINIOS-KERNEL-MANAGER"
+msgstr "MINIOS-KERNEL-MANAGER"
+
+#. type: TH
+#: en/minios-kernel-manager.1:1 en/minios-kernel.1:1
+#, no-wrap
+msgid "September 2026"
+msgstr "septembre 2026"
+
+#. type: TH
+#: en/minios-kernel-manager.1:1 en/minios-kernel.1:1
+#, no-wrap
+msgid "MiniOS Kernel Manager"
+msgstr "Gestionnaire de noyaux MiniOS"
+
+#. type: TH
+#: en/minios-kernel-manager.1:1 en/minios-kernel.1:1
+#, no-wrap
+msgid "User Commands"
+msgstr "Commandes utilisateur"
+
+#. type: SH
+#: en/minios-kernel-manager.1:2 en/minios-kernel.1:2
+#, no-wrap
+msgid "NAME"
+msgstr "NOM"
+
+#. type: Plain text
+#: en/minios-kernel-manager.1:4
+msgid "minios-kernel-manager - Graphical tool for managing MiniOS kernels"
+msgstr ""
+"minios-kernel-manager - Outil graphique pour la gestion des noyaux MiniOS"
+
+#. type: SH
+#: en/minios-kernel-manager.1:4 en/minios-kernel.1:4
+#, no-wrap
+msgid "SYNOPSIS"
+msgstr "SYNOPSIS"
+
+#. type: Plain text
+#: en/minios-kernel-manager.1:7
+msgid "B<minios-kernel-manager> [I<--help>]"
+msgstr "B<minios-kernel-manager> [I<--help>]"
+
+#. type: SH
+#: en/minios-kernel-manager.1:7 en/minios-kernel.1:41
+#, no-wrap
+msgid "DESCRIPTION"
+msgstr "DESCRIPTION"
+
+#. type: Plain text
+#: en/minios-kernel-manager.1:12
+msgid ""
+"B<minios-kernel-manager> is a GTK3 graphical utility for managing Linux "
+"kernels in MiniOS. It provides an intuitive interface for kernel activation, "
+"packaging, and management operations. Uses B<minios-kernel>(1)  as backend "
+"and handles authentication automatically via PolicyKit."
+msgstr ""
+"B<minios-kernel-manager> est un utilitaire graphique GTK3 permettant de "
+"gérer les noyaux Linux dans MiniOS. Il offre une interface intuitive pour "
+"l’activation, le conditionnement et la gestion des noyaux. Utilise B<minios-"
+"kernel>(1) comme moteur et gère automatiquement l’authentification via "
+"PolicyKit."
+
+#. type: Plain text
+#: en/minios-kernel-manager.1:22
+msgid ""
+"The application provides Manage Kernels and Package Kernel tabs. Manage "
+"Kernels shows active, running, and available versions; activation and "
+"deletion are available from the context menu when safe. Package Kernel "
+"accepts repository packages or multiple local .deb files, compression "
+"selection, progress output, and cancellation. Each driver from the curated "
+"01-kernel DKMS catalog can be selected independently for repository kernels. "
+"Repository packages can be filtered by package name or displayed kernel "
+"version. Filtering clears a selection that is no longer visible. The "
+"interface disables storage operations when the detected MiniOS root is "
+"missing or read-only."
+msgstr ""
+"L’application propose les onglets Gérer les noyaux et Conditionner le noyau. "
+"Gérer les noyaux affiche les versions actives, en cours d’exécution et "
+"disponibles ; l’activation et la suppression sont accessibles via le menu "
+"contextuel lorsque cela est sûr. Conditionner le noyau accepte les paquets "
+"du dépôt ou plusieurs fichiers .deb locaux, permet de choisir la "
+"compression, affiche la progression et permet l’annulation. Chaque pilote du "
+"catalogue DKMS 01-kernel sélectionné peut être choisi indépendamment pour "
+"les noyaux du dépôt. Les paquets du dépôt peuvent être filtrés par nom de "
+"paquet ou par version du noyau affichée. Le filtrage annule une sélection "
+"qui n’est plus visible. L’interface désactive les opérations de stockage "
+"lorsque la racine MiniOS détectée est absente ou en lecture seule."
+
+#. type: Plain text
+#: en/minios-kernel-manager.1:28
+msgid ""
+"Packaging is run outside the GTK main loop. Standard output is interpreted "
+"as backend progress while standard error remains visible as diagnostic "
+"output; cancellation terminates the complete delegated command. Kernel "
+"action availability uses the authoritative privileged listing rather than "
+"requiring the desktop process to read protected repository metadata again."
+msgstr ""
+"Le conditionnement s’exécute en dehors de la boucle principale GTK. La "
+"sortie standard est interprétée comme la progression du moteur tandis que la "
+"sortie d’erreur standard reste visible pour le diagnostic ; l’annulation "
+"termine la commande déléguée dans son ensemble. La disponibilité des actions "
+"sur les noyaux utilise la liste privilégiée autoritaire, évitant ainsi que "
+"le processus du bureau ait à relire les métadonnées protégées du dépôt."
+
+#. type: SH
+#: en/minios-kernel-manager.1:28 en/minios-kernel.1:48
+#, no-wrap
+msgid "OPTIONS"
+msgstr "OPTIONS"
+
+#. type: TP
+#: en/minios-kernel-manager.1:29 en/minios-kernel.1:49
+#, no-wrap
+msgid "B<-h, --help>"
+msgstr "B<-h, --help>"
+
+#. type: Plain text
+#: en/minios-kernel-manager.1:32
+msgid "Show a short usage message and exit."
+msgstr "Affiche un message d’utilisation succinct et quitte."
+
+#. type: SH
+#: en/minios-kernel-manager.1:32 en/minios-kernel.1:196
+#, no-wrap
+msgid "FILES"
+msgstr "FICHIERS"
+
+#. type: TP
+#: en/minios-kernel-manager.1:33 en/minios-kernel.1:203
+#, no-wrap
+msgid "I<E<lt>MiniOS-rootE<gt>/kernels/E<lt>versionE<gt>/>"
+msgstr "I<E<lt>MiniOS-rootE<gt>/kernels/E<lt>versionE<gt>/>"
+
+#. type: Plain text
+#: en/minios-kernel-manager.1:36 en/minios-kernel.1:206
+msgid "Repository for inactive packaged kernels."
+msgstr "Répertoire pour les noyaux conditionnés inactifs."
+
+#. type: TP
+#: en/minios-kernel-manager.1:36 en/minios-kernel.1:215
+#, no-wrap
+msgid "I<E<lt>MiniOS-rootE<gt>/boot/active-kernel>"
+msgstr "I<E<lt>MiniOS-rootE<gt>/boot/active-kernel>"
+
+#. type: Plain text
+#: en/minios-kernel-manager.1:39
+msgid "Marker file containing the currently active kernel version."
+msgstr "Fichier indicateur contenant la version du noyau actuellement active."
+
+#. type: TP
+#: en/minios-kernel-manager.1:39
+#, no-wrap
+msgid "I</usr/share/applications/minios-kernel-manager.desktop>"
+msgstr "I</usr/share/applications/minios-kernel-manager.desktop>"
+
+#. type: Plain text
+#: en/minios-kernel-manager.1:42
+msgid "Desktop entry file."
+msgstr "Fichier d’entrée du bureau."
+
+#. type: TP
+#: en/minios-kernel-manager.1:42
+#, no-wrap
+msgid "I</usr/share/polkit-1/actions/dev.minios.kernel-manager.policy>"
+msgstr "I</usr/share/polkit-1/actions/dev.minios.kernel-manager.policy>"
+
+#. type: Plain text
+#: en/minios-kernel-manager.1:45
+msgid "PolicyKit policy file for privilege escalation."
+msgstr "Fichier de politique PolicyKit pour l’élévation des privilèges."
+
+#. type: TP
+#: en/minios-kernel-manager.1:45
+#, no-wrap
+msgid "I</usr/share/minios-kernel-manager/style.css>"
+msgstr "I</usr/share/minios-kernel-manager/style.css>"
+
+#. type: Plain text
+#: en/minios-kernel-manager.1:48
+msgid "Application stylesheet for custom GUI styling."
+msgstr ""
+"Feuille de style de l’application pour la personnalisation de l’interface "
+"graphique."
+
+#. type: SH
+#: en/minios-kernel-manager.1:48 en/minios-kernel.1:218
+#, no-wrap
+msgid "AUTHOR"
+msgstr "AUTEUR"
+
+#. type: Plain text
+#: en/minios-kernel-manager.1:50 en/minios-kernel.1:220
+msgid "crims0n E<lt>crims0n@minios.devE<gt>"
+msgstr "crims0n E<lt>crims0n@minios.devE<gt>"
+
+#. type: SH
+#: en/minios-kernel-manager.1:50 en/minios-kernel.1:220
+#, no-wrap
+msgid "SEE ALSO"
+msgstr "VOIR AUSSI"
+
+#. type: Plain text
+#: en/minios-kernel-manager.1:52
+msgid "B<minios-kernel>(1), B<mksquashfs>(1)"
+msgstr "B<minios-kernel>(1), B<mksquashfs>(1)"

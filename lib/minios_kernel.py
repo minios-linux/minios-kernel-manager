@@ -33,6 +33,7 @@ _temp_dir = None
 def cleanup_temp_dir():
     """Clean up temporary directory"""
     global _temp_dir
+    terminate_active_build()
     if _temp_dir and os.path.exists(_temp_dir):
         try:
             print("I: {}".format(_('Cleaning up on interruption: {}')).format(_temp_dir), flush=True)
@@ -68,6 +69,8 @@ try:
         cleanup_temp_modules, get_last_kernel_versions
     )
     from .build_utils import create_squashfs_image, generate_initramfs, copy_vmlinuz
+    from .dkms_utils import (DRIVER_CATALOG, build_selected_drivers,
+                             terminate_active_build)
     from .minios_utils import (
         find_minios_directory, activate_kernel, list_all_kernels, get_active_kernel,
         get_temp_dir_with_space_check, is_kernel_currently_running,
@@ -81,6 +84,8 @@ except ImportError:
         cleanup_temp_modules, get_last_kernel_versions
     )
     from build_utils import create_squashfs_image, generate_initramfs, copy_vmlinuz
+    from dkms_utils import (DRIVER_CATALOG, build_selected_drivers,
+                            terminate_active_build)
     from minios_utils import (
         find_minios_directory, activate_kernel, list_all_kernels, get_active_kernel,
         get_temp_dir_with_space_check, is_kernel_currently_running,
@@ -156,8 +161,14 @@ def package_kernel(args):
 
     try:
         # Check available space and choose appropriate temporary directory
-        # Use 1024MB estimate for full kernel packaging
-        temp_dir = get_temp_dir_with_space_check(1024, "minios-kernel-", "kernel_packaging", args.temp_dir)
+        driver_ids = getattr(args, 'dkms_driver', []) or []
+        if driver_ids and not args.repo:
+            raise RuntimeError(
+                _('Additional DKMS drivers require a repository kernel so matching headers can be resolved'))
+        # DKMS needs room for headers, a compiler toolchain and package builds.
+        required_space = 4096 if driver_ids else 1024
+        temp_dir = get_temp_dir_with_space_check(
+            required_space, "minios-kernel-", "kernel_packaging", args.temp_dir)
         _temp_dir = temp_dir  # Set global for signal handler
 
         workspace_stat = os.lstat(temp_dir)
@@ -185,6 +196,10 @@ def package_kernel(args):
 
         progress_print(40, _("Preparing kernel modules"))
         # Skip system installation for packaging - modules will be used directly from temp_dir
+
+        if driver_ids:
+            progress_print(45, _("Building selected additional drivers"))
+            build_selected_drivers(temp_dir, kernel_version, driver_ids)
 
         progress_print(50, _("Copying kernel files"))
         copy_vmlinuz(kernel_version, temp_dir, artifact_dir)
@@ -273,6 +288,7 @@ def package_kernel(args):
                 "type": "result",
                 "command": "package",
                 "kernel_version": kernel_version,
+                "dkms_drivers": driver_ids,
             }
             _emit_record(success_data, _record_stream(args))
 
@@ -639,6 +655,10 @@ def main():
     package_parser.add_argument("--sqfs-comp", default="zstd", help=_("Compression method for SquashFS"))
     package_parser.add_argument("--temp-dir", help=_("Custom temporary directory (must have at least 1024MB free space)"))
     package_parser.add_argument("--force-update", action="store_true", help=_("Force package lists update if outdated"))
+    package_parser.add_argument(
+        "--dkms-driver", action="append", default=[],
+        choices=[item['id'] for item in DRIVER_CATALOG],
+        help=_("Additional driver from the curated 01-kernel DKMS catalog (repeatable)"))
 
     # List command
     list_parser = subparsers.add_parser('list', help=_('List available kernels'), parents=[parent_parser])

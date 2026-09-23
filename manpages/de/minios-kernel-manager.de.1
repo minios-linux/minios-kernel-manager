@@ -1,0 +1,61 @@
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH MINIOS\-KERNEL\-MANAGER 1 "September 2026" MiniOS\-Kernelmanager Benutzerkommandos
+.SH NAME
+minios\-kernel\-manager \- Grafisches Werkzeug zur Verwaltung von
+MiniOS\-Kernels
+.SH ÜBERSICHT
+\fBminios\-kernel\-manager\fP [\fI\-\-help\fP]
+.SH BESCHREIBUNG
+\fBminios\-kernel\-manager\fP ist ein grafisches GTK3\-Programm zur Verwaltung von
+Linux\-Kernels in MiniOS. Es bietet eine intuitive Oberfläche für
+Kernel\-Aktivierung, Paketierung und Verwaltungsaufgaben. Verwendet
+\fBminios\-kernel\fP(1) als Backend und übernimmt die Authentifizierung
+automatisch über PolicyKit.
+.PP
+Die Anwendung stellt die Registerkarten Kernel verwalten und Kernel
+paketieren bereit. Kernel verwalten zeigt aktive, laufende und verfügbare
+Versionen an; Aktivierung und Löschung sind über das Kontextmenü verfügbar,
+sofern dies sicher ist. Kernel paketieren akzeptiert Repository\-Pakete oder
+mehrere lokale .deb\-Dateien, ermöglicht die Auswahl der Komprimierung, zeigt
+Fortschritt und erlaubt Abbruch. Jeder Treiber aus dem kuratierten
+01\-kernel\-DKMS\-Katalog kann für Repository\-Kernels unabhängig ausgewählt
+werden. Repository\-Pakete können nach Paketnamen oder angezeigter
+Kernel\-Version gefiltert werden. Beim Filtern wird eine nicht mehr sichtbare
+Auswahl aufgehoben. Die Oberfläche deaktiviert Speicheroperationen, wenn das
+erkannte MiniOS\-Root fehlt oder schreibgeschützt ist.
+.PP
+Die Paketierung wird außerhalb der GTK\-Hauptschleife ausgeführt. Die
+Standardausgabe wird als Backend\-Fortschritt interpretiert, während die
+Standardfehlerausgabe als Diagnoseausgabe sichtbar bleibt; ein Abbruch
+beendet den gesamten delegierten Befehl. Die Verfügbarkeit von
+Kernel\-Aktionen basiert auf der autoritativen, privilegierten Auflistung,
+sodass der Desktop\-Prozess geschützte Repository\-Metadaten nicht erneut
+lesen muss.
+.SH OPTIONEN
+.TP
+\fB\-h, \-\-help\fP
+Zeigt eine kurze Gebrauchsanweisung an und beendet das Programm.
+.SH DATEIEN
+.TP
+\fI<MiniOS\-root>/kernels/<version>/\fP
+Ablage für inaktive, paketierte Kernel.
+.TP
+\fI<MiniOS\-root>/boot/active\-kernel\fP
+Markierungsdatei mit der aktuell aktiven Kernel\-Version.
+.TP
+\fI/usr/share/applications/minios\-kernel\-manager.desktop\fP
+Desktop\-Eintragsdatei.
+.TP
+\fI/usr/share/polkit\-1/actions/dev.minios.kernel\-manager.policy\fP
+PolicyKit\-Richtliniendatei für Privilegienerweiterung.
+.TP
+\fI/usr/share/minios\-kernel\-manager/style.css\fP
+Anwendungs\-Stylesheet für individuelle GUI\-Gestaltung.
+.SH AUTOR
+crims0n <crims0n@minios.dev>
+.SH "SIEHE AUCH"
+\fBminios\-kernel\fP(1), \fBmksquashfs\fP(1)

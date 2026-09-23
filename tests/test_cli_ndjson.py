@@ -169,3 +169,47 @@ def test_package_progress_and_result_are_ndjson_and_logs_are_stderr(tmp_path):
     assert list(workspace_parent.iterdir()) == []
     assert {path.name for path in output.iterdir()} == {
         '01-kernel-test.sb', 'vmlinuz-test', 'initrfs-test.img'}
+
+
+def test_package_builds_each_selected_driver_before_squashfs(tmp_path):
+    import minios_kernel
+
+    workspace_parent = tmp_path / 'workspace-parent'
+    workspace_parent.mkdir()
+    workspace_parent.chmod(0o700)
+    output = tmp_path / 'output'
+    calls = []
+
+    def artifact(name, contents):
+        def create(version, *args, **_kwargs):
+            output_dir = args[-1]
+            path = os.path.join(output_dir, name.format(version=version))
+            open(path, 'wb').write(contents)
+            calls.append(name)
+            return path
+        return create
+
+    args = SimpleNamespace(
+        json=False, output=str(output), temp_dir=str(workspace_parent),
+        repo='linux-image-test', deb=None, force_update=False,
+        sqfs_comp='zstd', dkms_driver=['dynblk', 'rtl8821au'])
+    with patch('minios_kernel.download_kernel_package', return_value='test'), \
+         patch('minios_kernel.build_selected_drivers',
+               side_effect=lambda *_args: calls.append('drivers')), \
+         patch('minios_kernel.copy_vmlinuz',
+               side_effect=artifact('vmlinuz-{version}', b'kernel')), \
+         patch('minios_kernel.create_squashfs_image',
+               side_effect=lambda version, _compression, output_dir, **kwargs:
+               artifact('01-kernel-{version}.sb', b'squashfs')(
+                   version, output_dir, **kwargs)), \
+         patch('minios_kernel.generate_initramfs',
+               side_effect=artifact('initrfs-{version}.img', b'initrd')), \
+         patch('minios_kernel.validate_kernel_bundle_artifacts'), \
+         patch('minios_kernel.get_last_kernel_versions',
+               return_value={'actual_version': 'test'}), \
+         patch('minios_utils.os.statvfs', return_value=SimpleNamespace(
+             f_bavail=8 * 1024 * 1024 * 1024, f_frsize=1)), \
+         patch('minios_kernel.find_minios_directory', return_value=None):
+        minios_kernel.package_kernel(args)
+
+    assert calls.index('drivers') < calls.index('01-kernel-{version}.sb')

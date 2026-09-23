@@ -1,0 +1,62 @@
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH MINIOS\-KERNEL\-MANAGER 1 "septiembre de 2026" "Gestor de kernels de MiniOS" "Comandos de usuario"
+.SH NOMBRE
+minios\-kernel\-manager \- Herramienta gráfica para gestionar núcleos MiniOS
+.SH SINOPSIS
+\fBminios\-kernel\-manager\fP [\fI\-\-help\fP]
+.SH DESCRIPCIÓN
+\fBminios\-kernel\-manager\fP es una utilidad gráfica basada en GTK3 para la
+gestión de núcleos Linux en MiniOS. Proporciona una interfaz intuitiva para
+operaciones de activación, empaquetado y administración de núcleos. Utiliza
+\fBminios\-kernel\fP(1) como backend y gestiona la autenticación automáticamente
+mediante PolicyKit.
+.PP
+La aplicación ofrece las pestañas Gestionar núcleos y Empaquetar
+núcleo. Gestionar núcleos muestra las versiones activas, en ejecución y
+disponibles; la activación y eliminación están disponibles en el menú
+contextual cuando es seguro. Empaquetar núcleo acepta paquetes de
+repositorio o varios archivos .deb locales, permite seleccionar el tipo de
+compresión, muestra el progreso y permite cancelar la operación. Cada
+controlador del catálogo curado 01\-kernel DKMS puede seleccionarse de forma
+independiente para los núcleos de repositorio. Los paquetes de repositorio
+pueden filtrarse por nombre de paquete o por la versión del núcleo
+mostrada. El filtrado elimina una selección que ya no es visible. La
+interfaz desactiva las operaciones de almacenamiento cuando la raíz
+detectada de MiniOS no existe o es de solo lectura.
+.PP
+El empaquetado se ejecuta fuera del bucle principal de GTK. La salida
+estándar se interpreta como progreso del backend, mientras que la salida de
+error estándar permanece visible como salida de diagnóstico; la cancelación
+termina el comando delegado completo. La disponibilidad de acciones sobre el
+núcleo utiliza el listado privilegiado autorizado en lugar de requerir que
+el proceso de escritorio lea nuevamente los metadatos protegidos del
+repositorio.
+.SH OPCIONES
+.TP
+\fB\-h, \-\-help\fP
+Muestra un mensaje breve de uso y termina.
+.SH ARCHIVOS
+.TP
+\fI<MiniOS\-root>/kernels/<version>/\fP
+Repositorio para núcleos empaquetados inactivos.
+.TP
+\fI<MiniOS\-root>/boot/active\-kernel\fP
+Archivo marcador que contiene la versión del núcleo actualmente activa.
+.TP
+\fI/usr/share/applications/minios\-kernel\-manager.desktop\fP
+Archivo de entrada de escritorio.
+.TP
+\fI/usr/share/polkit\-1/actions/dev.minios.kernel\-manager.policy\fP
+Archivo de política de PolicyKit para la elevación de privilegios.
+.TP
+\fI/usr/share/minios\-kernel\-manager/style.css\fP
+Hoja de estilos de la aplicación para la personalización de la interfaz
+gráfica.
+.SH AUTOR
+crims0n <crims0n@minios.dev>
+.SH "VÉASE TAMBIÉN"
+\fBminios\-kernel\fP(1), \fBmksquashfs\fP(1)

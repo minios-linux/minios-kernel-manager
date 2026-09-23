@@ -1,0 +1,210 @@
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH MINIOS\-KERNEL 1 "September 2026" "Manajer Kernel MiniOS" "Perintah Pengguna"
+.SH NAMA
+minios\-kernel \- Alat baris perintah untuk mengelola kernel MiniOS
+.SH SINOPSIS
+\fBminios\-kernel\fP [\fI\-\-help\fP]
+.br
+\fBminios\-kernel\fP [\fB\-\-json\fP] \fBlist\fP
+.br
+\fBminios\-kernel\fP [\fB\-\-json\fP] \fBactivate\fP \fIkernel\-version\fP
+.br
+\fBminios\-kernel\fP [\fB\-\-json\fP] \fBinfo\fP [\fIkernel\-version\fP]
+.br
+\fBminios\-kernel\fP [\fB\-\-json\fP] \fBpackage\fP {\fB\-\-repo\fP \fIpackage\fP |\fB\-\-deb\fP
+\fIfile...\fP} \fB\-o\fP \fIoutput\-dir\fP [\fIoptions\fP]
+.br
+\fBminios\-kernel\fP [\fB\-\-json\fP] \fBstatus\fP
+.br
+\fBminios\-kernel\fP [\fB\-\-json\fP] \fBdelete\fP \fIkernel\-version\fP
+.SH DESKRIPSI
+\fBminios\-kernel\fP adalah utilitas baris perintah untuk mengelola kernel Linux
+pada distribusi MiniOS. Membutuhkan hak akses root.
+.PP
+Alat ini berfungsi sebagai utilitas CLI mandiri sekaligus backend untuk
+antarmuka grafis \fBminios\-kernel\-manager\fP.  Alat ini menangani pengemasan
+kernel, aktivasi, serta menyediakan informasi kernel secara detail.
+.SH OPSI
+.TP
+\fB\-h, \-\-help\fP
+Tampilkan pesan bantuan bawaan dan keluar.
+.TP
+\fB\-\-json\fP
+Keluarkan hasil dalam format JSON. Dapat digunakan pada perintah apa pun.
+.SH PERINTAH
+.TP
+\fBlist\fP
+Daftar kernel yang tersedia beserta statusnya.
+.TP
+\fBactivate\fP\fI kernel\-version\fP
+Aktifkan versi kernel yang ditentukan untuk boot berikutnya.
+.TP
+\fBinfo\fP\fI [kernel\-version]\fP
+Tampilkan informasi tentang sebuah kernel. Jika tidak ada versi yang
+ditentukan, akan menampilkan kernel aktif saat ini.
+.TP
+\fBpackage\fP
+Kemasi kernel dari repositori atau satu atau lebih berkas .deb lokal.
+.TP
+\fBstatus\fP
+Periksa status direktori MiniOS dan izin tulisnya.
+.TP
+\fBdelete\fP\fI kernel\-version\fP
+Hapus kernel terpaket yang ditentukan dari repositori.
+.SH "OPSI PAKET"
+.TP
+\fB\-\-repo\fP\fI nama\-paket\fP
+Unduh dan paketkan kernel versi nyata dari konfigurasi APT sistem yang
+ada. Metapaket pelacak seperti linux\-image\-amd64 tidak didukung.
+.TP
+\fB\-\-deb\fP\fI berkas\-deb...\fP
+Paketkan kernel dari satu atau lebih berkas .deb lokal. Kernel split Debian
+memerlukan satu set image, binary, base, dan modules yang konsisten; kernel
+split Ubuntu memerlukan paket image dan modules yang sesuai, serta
+modules\-extra jika dipilih.
+.TP
+\fB\-o, \-\-output \fP\fIdirektori\-output\fP
+Direktori untuk menyimpan berkas kernel yang telah dipaketkan. Wajib diisi.
+.TP
+\fB\-\-sqfs\-comp\fP\fI metode\fP
+Metode kompresi untuk SquashFS image. Default: \fBzstd\fP.
+.TP
+\fB\-\-temp\-dir\fP\fI direktori\fP
+Direktori sementara kustom (harus memiliki ruang kosong minimal 1024MB).
+.TP
+\fB\-\-force\-update\fP
+Jalankan apt update sebelum pemaketan repositori. Tanpa opsi ini, daftar
+paket sistem yang ada akan digunakan tanpa pembatasan usia.
+.TP
+\fB\-\-dkms\-driver\fP\fI id\-driver\fP
+Bangun satu driver tambahan dari katalog DKMS 01\-kernel yang telah
+dikurasi. Opsi ini dapat digunakan berulang kali dan hanya didukung dengan
+\-\-repo, di mana header yang sesuai dapat diidentifikasi secara otomatis.
+.SH PEMAKETAN
+Mode repositori secara otomatis mengidentifikasi paket linux\-modules yang
+sesuai. Mode lokal menerima beberapa paket untuk kernel split. Output
+mencakup image kernel, initramfs, dan modul SquashFS; metadata dpkg terpilih
+disimpan di dalam SquashFS pada \fI/usr/share/minios/kernel\-dpkg/\fP.
+.PP
+Driver DKMS yang dipilih dibangun di chroot overlay privat tanpa mengubah
+basis data paket sistem yang sedang berjalan. Modul yang dihasilkan
+diperiksa terhadap versi kernel target sebelum dimasukkan. Asal driver
+disimpan di \fI/usr/share/minios/kernel\-dkms/\fP.
+.PP
+Unduhan repositori adalah input workspace sementara dan akan dihapus setelah
+berhasil atau kegagalan yang ditangani. Arsip input lokal tetap menjadi
+milik pemanggil. Bundle baru menggunakan format beku kanonik 1 dengan paket
+image yang ditahan secara manual, paket kernel bawahan otomatis, dan tanpa
+konfigurasi repositori tertanam.
+.PP
+Path modul runtime kanonik adalah /lib/modules/<version>. Path fisik
+yang disimpan dalam bundle mengikuti sistem dasar yang berjalan: lib/modules
+pada tata letak tradisional atau usr/lib/modules jika /lib telah
+usrmerged. Pemaketan akan menolak pohon modul versi sama yang sudah ada
+daripada mencampurnya dengan revisi paket berbeda.
+.PP
+Jika root MiniOS dapat ditulis terdeteksi dan output belum merupakan
+direktori repositori, paket yang selesai akan dipindahkan secara atomik ke
+\fI<MiniOS\-root>/kernels/<version>\fP.
+.PP
+Pemaketan memerlukan runtime live MiniOS dengan mkdracut atau mkinitrfs di
+bawah \fI/run/initramfs\fP, serta mksquashfs, depmod, dan dpkg\-deb. Mode
+repositori juga memerlukan APT.
+.SH "PERSISTENSI TERENKRIPSI"
+Jika initrd yang berjalan mengumumkan persistensi terenkripsi, kernel
+pengganti harus menyediakan dukungan dm\-crypt. Initramfs yang dihasilkan
+akan diperiksa untuk cryptsetup, dm\-crypt.ko, dan
+etc/minios\-initramfs\-crypt. Pemaketan gagal jika perlindungan tersebut tidak
+dapat dijaga.
+.SH AKTIVASI
+Aktivasi memerlukan entri repositori lengkap yang berisi SquashFS, image
+kernel, dan initramfs. Berkas boot dan konfigurasi bootloader diperbarui
+secara atomik dan akan dipulihkan jika aktivasi gagal. Konfigurasi GRUB
+diperlukan; konfigurasi SYSLINUX diperbarui jika ada. Aktivasi memengaruhi
+boot berikutnya dan tidak melakukan reboot mesin.
+.PP
+Aktivasi menerima bundle format\-beku\-1 yang diproduksi Manager dan bundle
+terpantau kanonik yang dihasilkan oleh 01\-kernel. Bentuk metadata legacy
+1.2.1 hanya diterima oleh jalur kompatibilitas aktivasi live.
+.SH CONTOH
+Daftar kernel yang tersedia:
+.RS
+\fBsudo minios\-kernel list\fP
+.RE
+.PP
+Aktifkan kernel tertentu:
+.RS
+\fBsudo minios\-kernel activate 6.12.38+deb13\-amd64\fP
+.RE
+.PP
+Paketkan kernel dari repositori:
+.RS
+\fBsudo minios\-kernel package \-\-repo linux\-image\-6.12.38+deb13\-amd64 \-o /tmp/output\fP
+.RE
+.PP
+Paketkan kernel repositori dengan dua driver tambahan:
+.RS
+\fBsudo minios\-kernel package \-\-repo linux\-image\-6.12.38+deb13\-amd64 \-\-dkms\-driver dynblk \-\-dkms\-driver rtl8821au \-o /tmp/output\fP
+.RE
+.PP
+Paketkan kernel dari berkas .deb lokal:
+.RS
+\fBsudo minios\-kernel package \-\-deb kernel.deb \-o /tmp/output\fP
+.RE
+.PP
+Hapus kernel terpaket:
+.RS
+\fBsudo minios\-kernel delete 6.12.38+deb13\-amd64\fP
+.RE
+.SH "KELUARAN JSON"
+Saat menggunakan opsi \fB\-\-json\fP, perintah akan mengembalikan data
+terstruktur:
+.TP
+\fBlist\fP
+Mengembalikan array kernel beserta versi, status, dan metadata.
+.TP
+\fBaktifkan\fP
+Mengembalikan status keberhasilan dan detail aktivasi.
+.TP
+\fBinfo\fP
+Mengembalikan informasi kernel termasuk versi, status, dan path sistem.
+.TP
+\fBpackage\fP
+Mengembalikan pembaruan progres selama proses packaging dan status
+keberhasilan akhir.
+.TP
+\fBstatus\fP
+Mengembalikan status direktori MiniOS dan informasi sistem berkas.
+.TP
+\fBhapus\fP
+Mengembalikan status keberhasilan dan detail penghapusan.
+.SH BERKAS
+.TP
+\fI/run/initramfs/memory/data/minios/\fP
+Root MiniOS yang disarankan pada runtime standar.
+.TP
+\fI/lib/live/mount/medium/minios/\fP
+Root MiniOS cadangan pada media live yang ter\-mount.
+.TP
+\fI<MiniOS\-root>/kernels/<version>/\fP
+Repositori untuk kernel terkemas yang tidak aktif.
+.TP
+\fI<MiniOS\-root>/boot/vmlinuz\-*\fP
+Berkas image kernel aktif.
+.TP
+\fI<MiniOS\-root>/boot/initrfs\-*.img\fP
+Berkas image initramfs aktif.
+.TP
+\fI<MiniOS\-root>/01\-kernel\-*.sb\fP
+Modul kernel SquashFS yang aktif.
+.TP
+\fI<MiniOS\-root>/boot/active\-kernel\fP
+Penanda versi aktif.
+.SH PENULIS
+crims0n <crims0n@minios.dev>
+.SH "LIHAT JUGA"
+\fBminios\-kernel\-manager\fP(1), \fBmksquashfs\fP(1)

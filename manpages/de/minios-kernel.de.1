@@ -1,0 +1,225 @@
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH MINIOS\-KERNEL 1 "September 2026" MiniOS\-Kernelmanager Benutzerkommandos
+.SH NAME
+minios\-kernel \- Kommandozeilenwerkzeug zur Verwaltung von MiniOS\-Kernels
+.SH ÜBERSICHT
+\fBminios\-kernel\fP [\fI\-\-help\fP]
+.br
+\fBminios\-kernel\fP [\fB\-\-json\fP] \fBlist\fP
+.br
+\fBminios\-kernel\fP [\fB\-\-json\fP] \fBactivate\fP \fIkernel\-version\fP
+.br
+\fBminios\-kernel\fP [\fB\-\-json\fP] \fBinfo\fP [\fIkernel\-version\fP]
+.br
+\fBminios\-kernel\fP [\fB\-\-json\fP] \fBpackage\fP {\fB\-\-repo\fP \fIpackage\fP |\fB\-\-deb\fP
+\fIfile...\fP} \fB\-o\fP \fIoutput\-dir\fP [\fIoptions\fP]
+.br
+\fBminios\-kernel\fP [\fB\-\-json\fP] \fBstatus\fP
+.br
+\fBminios\-kernel\fP [\fB\-\-json\fP] \fBdelete\fP \fIkernel\-version\fP
+.SH BESCHREIBUNG
+\fBminios\-kernel\fP ist ein Kommandozeilenwerkzeug zur Verwaltung von
+Linux\-Kernels in der MiniOS\-Distribution. Erfordert Root\-Rechte.
+.PP
+Dieses Werkzeug dient sowohl als eigenständiges CLI\-Programm als auch als
+Backend für die grafische \fBminios\-kernel\-manager\fP.  Es übernimmt das
+Verpacken und Aktivieren von Kernels und stellt detaillierte
+Kernel\-Informationen bereit.
+.SH OPTIONEN
+.TP
+\fB\-h, \-\-help\fP
+Zeigt die integrierte Hilfemeldung an und beendet das Programm.
+.TP
+\fB\-\-json\fP
+Gibt die Ergebnisse im JSON\-Format aus. Kann mit jedem Befehl verwendet
+werden.
+.SH BEFEHLE
+.TP
+\fBlist\fP
+Listet verfügbare Kernel mit ihrem Status auf.
+.TP
+\fBactivate\fP\fI kernel\-version\fP
+Aktiviert die angegebene Kernel\-Version für den nächsten Systemstart.
+.TP
+\fBinfo\fP\fI [kernel\-version]\fP
+Zeigt Informationen zu einem Kernel an. Ohne Angabe einer Version wird der
+aktuell aktive Kernel angezeigt.
+.TP
+\fBpackage\fP
+Paketiert einen Kernel aus einem Repository oder aus einer oder mehreren
+lokalen .deb\-Dateien.
+.TP
+\fBstatus\fP
+Überprüft den Status und die Schreibrechte des MiniOS\-Verzeichnisses.
+.TP
+\fBdelete\fP\fI kernel\-version\fP
+Löschen Sie den angegebenen paketierten Kernel aus dem Repository.
+.SH PAKETOPTIONEN
+.TP
+\fB\-\-repo\fP\fI package\-name\fP
+Laden und paketieren Sie ein echtes Kernel\-Paket mit Versionsnummer aus der
+bestehenden System\-APT\-Konfiguration. Metapakete wie linux\-image\-amd64
+werden abgelehnt.
+.TP
+\fB\-\-deb\fP\fI deb\-file...\fP
+Paketieren Sie einen Kernel aus einer oder mehreren lokalen
+\&.deb\-Dateien. Debian\-gesplittete Kernel erfordern ein konsistentes Set aus
+image, binary, base und modules; Ubuntu\-gesplittete Kernel benötigen die
+passenden image\- und modules\-Pakete sowie modules\-extra, falls ausgewählt.
+.TP
+\fB\-o, \-\-output \fP\fIoutput\-dir\fP
+Verzeichnis zum Speichern der paketierten Kernel\-Dateien. Erforderlich.
+.TP
+\fB\-\-sqfs\-comp\fP\fI method\fP
+Komprimierungsmethode für SquashFS\-Abbild. Standard: \fBzstd\fP.
+.TP
+\fB\-\-temp\-dir\fP\fI directory\fP
+Benutzerdefiniertes temporäres Verzeichnis (muss mindestens 1024MB freien
+Speicherplatz haben).
+.TP
+\fB\-\-force\-update\fP
+Führen Sie vor dem Verpacken des Repositorys ein apt update aus. Ohne diese
+Option werden die vorhandenen System\-Paketlisten ohne Altersprüfung
+verwendet.
+.TP
+\fB\-\-dkms\-driver\fP\fI driver\-id\fP
+Bauen Sie einen zusätzlichen Treiber aus dem kuratierten
+01\-kernel\-DKMS\-Katalog. Diese Option kann mehrfach angegeben werden und wird
+nur mit \-\-repo unterstützt, wobei passende Header automatisch aufgelöst
+werden können.
+.SH PAKETIERUNG
+Im Repository\-Modus werden passende linux\-modules\-Pakete automatisch
+aufgelöst. Im lokalen Modus können mehrere Pakete für gesplittete Kernel
+angegeben werden. Die Ausgabe enthält das Kernel\-Image, das initramfs und
+das SquashFS\-Modul; ausgewählte dpkg\-Metadaten werden innerhalb der SquashFS
+unter \fI/usr/share/minios/kernel\-dpkg/\fP beibehalten.
+.PP
+Ausgewählte DKMS\-Treiber werden in einem privaten Overlay\-Chroot gebaut,
+ohne die laufende System\-Paketdatenbank zu verändern. Die resultierenden
+Module werden vor der Aufnahme auf die Ziel\-Kernel\-Version geprüft. Die
+Herkunft der Treiber wird unter \fI/usr/share/minios/kernel\-dkms/\fP
+gespeichert.
+.PP
+Repository\-Downloads sind temporäre Arbeitsbereichseingaben und werden nach
+Erfolg oder behandeltetem Fehler entfernt. Lokale Eingabearchive verbleiben
+im Besitz des Aufrufers. Neue Bundles verwenden das kanonische eingefrorene
+Format 1 mit einem manuell gehaltenen Image\-Paket, automatischen
+untergeordneten Kernel\-Paketen und keiner eingebetteten
+Repository\-Konfiguration.
+.PP
+Der kanonische Pfad für Laufzeitmodule ist
+/lib/modules/<version>. Der physische Pfad im Bundle folgt dem
+laufenden Basissystem: lib/modules bei traditionellen Layouts oder
+usr/lib/modules, wenn /lib nach usr gemerged ist. Die Paketierung verweigert
+einen bereits existierenden Modulbaum derselben Version, anstatt ihn mit
+einer anderen Paketrevision zu vermischen.
+.PP
+Wird ein beschreibbarer MiniOS\-Root erkannt und ist die Ausgabe nicht
+bereits das Repository\-Verzeichnis, wird das fertige Paket atomar nach
+\fI<MiniOS\-root>/kernels/<version>\fP verschoben.
+.PP
+Für die Paketierung ist eine MiniOS\-Live\-Laufzeit mit mkdracut oder
+mkinitrfs unter \fI/run/initramfs\fP sowie mksquashfs, depmod und dpkg\-deb
+erforderlich. Der Repository\-Modus benötigt zusätzlich APT.
+.SH "VERSCHLÜSSELTE PERSISTENZ"
+Wenn das laufende initrd verschlüsselte Persistenz unterstützt, muss der
+Ersatzkernel dm\-crypt\-Unterstützung bereitstellen. Das erzeugte initramfs
+wird auf cryptsetup, dm\-crypt.ko und etc/minios\-initramfs\-crypt geprüft. Die
+Paketierung schlägt fehl, wenn diese Schutzmechanismen nicht erhalten
+bleiben können.
+.SH AKTIVIERUNG
+Für die Aktivierung ist ein vollständiger Repository\-Eintrag mit SquashFS,
+Kernel\-Image und initramfs erforderlich. Boot\-Dateien und
+Bootloader\-Konfiguration werden atomar aktualisiert und bei Fehlschlag der
+Aktivierung zurückgesetzt. Eine GRUB\-Konfiguration ist erforderlich;
+SYSLINUX\-Konfiguration wird aktualisiert, falls vorhanden. Die Aktivierung
+betrifft den nächsten Bootvorgang und startet das System nicht neu.
+.PP
+Die Aktivierung akzeptiert von Manager erzeugte eingefrorene
+Format\-1\-Bundles und kanonisch verfolgte Bundles von 01\-kernel. Die
+Legacy\-Metadatenstruktur 1.2.1 wird nur vom
+Live\-Aktivierungskompatibilitätspfad akzeptiert.
+.SH BEISPIELE
+Verfügbare Kernel auflisten:
+.RS
+\fBsudo minios\-kernel list\fP
+.RE
+.PP
+Einen bestimmten Kernel aktivieren:
+.RS
+\fBsudo minios\-kernel activate 6.12.38+deb13\-amd64\fP
+.RE
+.PP
+Kernel aus Repository paketieren:
+.RS
+\fBsudo minios\-kernel package \-\-repo linux\-image\-6.12.38+deb13\-amd64 \-o /tmp/output\fP
+.RE
+.PP
+Repository\-Kernel mit zwei zusätzlichen Treibern paketieren:
+.RS
+\fBsudo minios\-kernel package \-\-repo linux\-image\-6.12.38+deb13\-amd64 \-\-dkms\-driver dynblk \-\-dkms\-driver rtl8821au \-o /tmp/output\fP
+.RE
+.PP
+Kernel aus lokaler .deb\-Datei paketieren:
+.RS
+\fBsudo minios\-kernel package \-\-deb kernel.deb \-o /tmp/output\fP
+.RE
+.PP
+Paketierten Kernel löschen:
+.RS
+\fBsudo minios\-kernel delete 6.12.38+deb13\-amd64\fP
+.RE
+.SH JSON\-AUSGABE
+Bei Verwendung der Option \fB\-\-json\fP geben die Befehle strukturierte Daten
+zurück:
+.TP
+\fBlist\fP
+Gibt ein Array von Kerneln mit Version, Status und Metadaten zurück.
+.TP
+\fBaktivieren\fP
+Gibt den Erfolgsstatus und Details zur Aktivierung zurück.
+.TP
+\fBinfo\fP
+Gibt Kernel\-Informationen einschließlich Version, Status und Systempfaden
+zurück.
+.TP
+\fBpackage\fP
+Gibt Fortschrittsmeldungen während der Paketierung und abschließenden
+Erfolgsstatus zurück.
+.TP
+\fBstatus\fP
+Gibt den Status des MiniOS\-Verzeichnisses und Informationen zum Dateisystem
+zurück.
+.TP
+\fBlöschen\fP
+Gibt den Erfolgsstatus und Details zur Löschung zurück.
+.SH DATEIEN
+.TP
+\fI/run/initramfs/memory/data/minios/\fP
+Bevorzugtes MiniOS\-Root im Standard\-Laufzeitsystem.
+.TP
+\fI/lib/live/mount/medium/minios/\fP
+Alternatives MiniOS\-Root auf einem eingebundenen Live\-Medium.
+.TP
+\fI<MiniOS\-root>/kernels/<version>/\fP
+Ablage für inaktive, paketierte Kernel.
+.TP
+\fI<MiniOS\-root>/boot/vmlinuz\-*\fP
+Aktives Kernel\-Image.
+.TP
+\fI<MiniOS\-root>/boot/initrfs\-*.img\fP
+Aktives Initramfs\-Image.
+.TP
+\fI<MiniOS\-root>/01\-kernel\-*.sb\fP
+Aktive SquashFS\-Kernel\-Module.
+.TP
+\fI<MiniOS\-root>/boot/active\-kernel\fP
+Aktiver Versionsmarker.
+.SH AUTOR
+crims0n <crims0n@minios.dev>
+.SH "SIEHE AUCH"
+\fBminios\-kernel\-manager\fP(1), \fBmksquashfs\fP(1)

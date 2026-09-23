@@ -3,6 +3,8 @@ usr/lib/minios-kernel-manager/__init__.py
 usr/lib/minios-kernel-manager/bootloader_utils.py
 usr/lib/minios-kernel-manager/build_utils.py
 usr/lib/minios-kernel-manager/compression_utils.py
+usr/lib/minios-kernel-manager/dkms_utils.py
+usr/lib/minios-kernel-manager/dkms-sandbox
 usr/lib/minios-kernel-manager/kernel_acquisition.py
 usr/lib/minios-kernel-manager/kernel_utils.py
 usr/lib/minios-kernel-manager/minios_kernel.py

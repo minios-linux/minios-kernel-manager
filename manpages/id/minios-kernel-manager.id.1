@@ -1,0 +1,58 @@
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH MINIOS\-KERNEL\-MANAGER 1 "September 2026" "Manajer Kernel MiniOS" "Perintah Pengguna"
+.SH NAMA
+minios\-kernel\-manager \- Alat grafis untuk mengelola kernel MiniOS
+.SH SINOPSIS
+\fBminios\-kernel\-manager\fP [\fI\-\-help\fP]
+.SH DESKRIPSI
+\fBminios\-kernel\-manager\fP adalah utilitas grafis GTK3 untuk mengelola kernel
+Linux di MiniOS. Aplikasi ini menyediakan antarmuka yang intuitif untuk
+aktivasi kernel, pengemasan, dan operasi manajemen. Menggunakan
+\fBminios\-kernel\fP(1) sebagai backend dan menangani autentikasi secara
+otomatis melalui PolicyKit.
+.PP
+Aplikasi ini menyediakan tab Kelola Kernel dan Paket Kernel. Kelola Kernel
+menampilkan versi aktif, berjalan, dan tersedia; aktivasi dan penghapusan
+dapat dilakukan melalui menu konteks jika aman. Paket Kernel menerima paket
+repositori atau beberapa berkas .deb lokal, pemilihan kompresi, keluaran
+progres, dan pembatalan. Setiap driver dari katalog DKMS 01\-kernel yang
+dikurasi dapat dipilih secara independen untuk kernel repositori. Paket
+repositori dapat difilter berdasarkan nama paket atau versi kernel yang
+ditampilkan. Pemfilteran akan menghapus pilihan yang tidak lagi
+terlihat. Antarmuka akan menonaktifkan operasi penyimpanan jika root MiniOS
+yang terdeteksi hilang atau hanya\-baca.
+.PP
+Proses pengemasan dijalankan di luar main loop GTK. Keluaran standar
+diinterpretasikan sebagai progres backend sementara keluaran error standar
+tetap terlihat sebagai keluaran diagnostik; pembatalan akan menghentikan
+seluruh perintah yang didelegasikan. Ketersediaan aksi kernel menggunakan
+daftar hak istimewa otoritatif, sehingga proses desktop tidak perlu membaca
+ulang metadata repositori yang dilindungi.
+.SH OPSI
+.TP
+\fB\-h, \-\-help\fP
+Tampilkan pesan penggunaan singkat dan keluar.
+.SH BERKAS
+.TP
+\fI<MiniOS\-root>/kernels/<version>/\fP
+Repositori untuk kernel terkemas yang tidak aktif.
+.TP
+\fI<MiniOS\-root>/boot/active\-kernel\fP
+Berkas penanda yang berisi versi kernel yang sedang aktif.
+.TP
+\fI/usr/share/applications/minios\-kernel\-manager.desktop\fP
+Berkas entri desktop.
+.TP
+\fI/usr/share/polkit\-1/actions/dev.minios.kernel\-manager.policy\fP
+Berkas kebijakan PolicyKit untuk peningkatan hak akses.
+.TP
+\fI/usr/share/minios\-kernel\-manager/style.css\fP
+Stylesheet aplikasi untuk penyesuaian tampilan GUI.
+.SH PENULIS
+crims0n <crims0n@minios.dev>
+.SH "LIHAT JUGA"
+\fBminios\-kernel\fP(1), \fBmksquashfs\fP(1)

@@ -47,6 +47,7 @@ try:
     )
     from .kernel_utils import get_repository_kernels, get_manual_packages, _format_size
     from .compression_utils import get_available_compressions
+    from .dkms_utils import get_compatible_driver_ids, get_driver_catalog
 except ImportError:
     # Fall back to absolute imports (when run as main script)
     from minios_utils import (
@@ -55,6 +56,7 @@ except ImportError:
     )
     from kernel_utils import get_repository_kernels, get_manual_packages, _format_size
     from compression_utils import get_available_compressions
+    from dkms_utils import get_compatible_driver_ids, get_driver_catalog
 
 gi.require_version('Gtk', '3.0')
 gi.require_version('Gio', '2.0')
@@ -296,6 +298,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         self.selected_deb_files = []
         self.kernel_source = "manual"
         self.sqfs_compression = "zstd"
+        self.selected_dkms_drivers = []
         self.is_building = False
         self.cancel_requested = False
         self.minios_path = None
@@ -632,8 +635,31 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         self.repo_selection_box.hide()  # Hidden by default (Manual Package is selected)
         
         vb_kernel.pack_start(kernel_selection_box, True, True, 0)
-        
 
+        self.driver_frame = Gtk.Frame(label=_("Additional Drivers (optional)"))
+        driver_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        driver_box.set_margin_top(6)
+        driver_box.set_margin_bottom(6)
+        driver_box.set_margin_start(8)
+        driver_box.set_margin_end(8)
+        driver_note = Gtk.Label(
+            label=_("Select drivers to build for the new kernel. Compatibility is checked before packaging."),
+            xalign=0)
+        driver_note.set_line_wrap(True)
+        driver_note.get_style_context().add_class('field-description')
+        driver_box.pack_start(driver_note, False, False, 0)
+        driver_grid = Gtk.Grid(column_spacing=18, row_spacing=4)
+        self.driver_checks = {}
+        for index, driver in enumerate(get_driver_catalog()):
+            check = Gtk.CheckButton(label=driver['label'])
+            check.driver_id = driver['id']
+            check.connect('toggled', self._on_driver_toggled)
+            driver_grid.attach(check, index % 2, index // 2, 1, 1)
+            self.driver_checks[driver['id']] = check
+        driver_box.pack_start(driver_grid, False, False, 0)
+        self.driver_frame.add(driver_box)
+        self.driver_frame.set_sensitive(False)
+        vb_kernel.pack_start(self.driver_frame, False, False, 0)
 
         # Bottom buttons
         button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
@@ -1096,6 +1122,8 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         self._kernel_loading_visible = True
         self._update_buttons_state()
         if self.repo_radio.get_active():
+            self.driver_frame.set_sensitive(False)
+            self.driver_frame.set_tooltip_text(None)
             status_text = _("Fetching kernel list from repository...")
         else:
             status_text = _("Scanning for manual packages...")
@@ -1329,6 +1357,12 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             thread.daemon = True
             thread.start()
         elif self.local_radio.get_active():
+            self.driver_frame.set_sensitive(False)
+            self.driver_frame.set_tooltip_text(
+                _("Additional drivers require a repository kernel with resolvable matching headers"))
+            self.selected_dkms_drivers = []
+            for check in self.driver_checks.values():
+                check.set_active(False)
             self._hide_kernel_loading()
             # Show manual selection, hide repository kernel list
             self.manual_selection_box.show()
@@ -1346,14 +1380,30 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         # listbox parameter is not used
         if row:
             self.selected_kernel = row.kernel_version
+            compatible = set(get_compatible_driver_ids(
+                row.kernel_version, row.kernel_info.get('architecture', '')))
+            self.driver_frame.set_sensitive(True)
+            for driver_id, check in self.driver_checks.items():
+                available = driver_id in compatible
+                check.set_sensitive(available)
+                if not available:
+                    check.set_active(False)
             self._update_buttons_state()  # Use centralized button state update
         else:
             self.selected_kernel = None
+            self.driver_frame.set_sensitive(False)
             self._update_buttons_state()  # Use centralized button state update
 
     def _on_sqfs_compression_changed(self, combo):
         """Handle SquashFS compression change"""
         self.sqfs_compression = combo.get_active_text()
+
+    def _on_driver_toggled(self, _check):
+        """Keep the selected driver IDs independent from widget recreation."""
+        self.selected_dkms_drivers = [
+            driver_id for driver_id, check in self.driver_checks.items()
+            if check.get_active()
+        ]
 
 
     def _on_build_clicked(self, button):
@@ -1400,6 +1450,8 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             else:
                 deb_files = [str(path) for path in self.selected_deb_files if path]
                 cmd_args.extend(['--deb'] + deb_files)
+            for driver_id in self.selected_dkms_drivers:
+                cmd_args.extend(['--dkms-driver', driver_id])
             
             # The kernel version is not known before packaging, so we pass a placeholder
             # The CLI tool will determine the actual version
@@ -1614,6 +1666,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             'selected_deb_files': list(getattr(self, 'selected_deb_files', [])),
             'kernel_source': self.kernel_source,
             'sqfs_compression': self.sqfs_compression,
+            'selected_dkms_drivers': list(self.selected_dkms_drivers),
             'selected_file_path': getattr(self, 'selected_file_path', None)
         }
 
@@ -1625,6 +1678,8 @@ class KernelPackWindow(Gtk.ApplicationWindow):
             self.selected_deb_files = self.saved_state.get('selected_deb_files', [])
             self.kernel_source = self.saved_state['kernel_source']
             self.sqfs_compression = self.saved_state['sqfs_compression']
+            self.selected_dkms_drivers = self.saved_state.get(
+                'selected_dkms_drivers', [])
             if self.saved_state['selected_file_path']:
                 self.selected_file_path = self.saved_state['selected_file_path']
             
@@ -1633,6 +1688,9 @@ class KernelPackWindow(Gtk.ApplicationWindow):
                 compressions = get_available_compressions()
                 if self.sqfs_compression in compressions:
                     self.sqfs_combo.set_active(compressions.index(self.sqfs_compression))
+            if hasattr(self, 'driver_checks'):
+                for driver_id, check in self.driver_checks.items():
+                    check.set_active(driver_id in self.selected_dkms_drivers)
                     
                     
             # Restore radio buttons

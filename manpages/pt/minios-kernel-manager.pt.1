@@ -1,0 +1,58 @@
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH MINIOS\-KERNEL\-MANAGER 1 "setembro de 2026" "Gestor de kernels MiniOS" "Comandos de Usuário"
+.SH NOME
+minios\-kernel\-manager \- Ferramenta gráfica para gerenciar kernels MiniOS
+.SH SINOPSE
+\fBminios\-kernel\-manager\fP [\fI\-\-help\fP]
+.SH DESCRIÇÃO
+\fBminios\-kernel\-manager\fP é uma ferramenta gráfica GTK3 para gerenciar
+kernels Linux em MiniOS. Oferece uma interface intuitiva para ativação,
+empacotamento e operações de gerenciamento de kernel. Utiliza
+\fBminios\-kernel\fP(1) como backend e realiza autenticação automaticamente via
+PolicyKit.
+.PP
+O aplicativo fornece as abas Gerenciar Kernels e Empacotar Kernel. Gerenciar
+Kernels exibe versões ativas, em execução e disponíveis; ativação e exclusão
+estão disponíveis no menu de contexto quando seguro. Empacotar Kernel aceita
+pacotes de repositório ou múltiplos arquivos .deb locais, seleção de
+compressão, exibição de progresso e cancelamento. Cada driver do catálogo
+curado 01\-kernel DKMS pode ser selecionado independentemente para kernels de
+repositório. Pacotes de repositório podem ser filtrados por nome do pacote
+ou pela versão do kernel exibida. O filtro limpa uma seleção que não está
+mais visível. A interface desabilita operações de armazenamento quando a
+raiz MiniOS detectada está ausente ou somente leitura.
+.PP
+O empacotamento é executado fora do loop principal do GTK. A saída padrão é
+interpretada como progresso do backend enquanto o erro padrão permanece
+visível como saída de diagnóstico; o cancelamento encerra todo o comando
+delegado. A disponibilidade das ações de kernel utiliza a listagem
+privilegiada autorizada, sem exigir que o processo desktop leia novamente os
+metadados protegidos do repositório.
+.SH OPÇÕES
+.TP
+\fB\-h, \-\-help\fP
+Exibe uma mensagem curta de uso e sai.
+.SH ARQUIVOS
+.TP
+\fI<MiniOS\-root>/kernels/<version>/\fP
+Repositório para kernels empacotados inativos.
+.TP
+\fI<MiniOS\-root>/boot/active\-kernel\fP
+Arquivo marcador contendo a versão do kernel atualmente ativa.
+.TP
+\fI/usr/share/applications/minios\-kernel\-manager.desktop\fP
+Arquivo de entrada do desktop.
+.TP
+\fI/usr/share/polkit\-1/actions/dev.minios.kernel\-manager.policy\fP
+Arquivo de política PolicyKit para elevação de privilégios.
+.TP
+\fI/usr/share/minios\-kernel\-manager/style.css\fP
+Folha de estilo do aplicativo para personalização da interface gráfica.
+.SH AUTOR
+crims0n <crims0n@minios.dev>
+.SH "VEJA TAMBÉM"
+\fBminios\-kernel\fP(1), \fBmksquashfs\fP(1)

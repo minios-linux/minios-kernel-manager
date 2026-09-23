@@ -1,4 +1,4 @@
-.TH MINIOS-KERNEL 1 "September 2026" "MiniOS Kernel Manager 1.4.6" "User Commands"
+.TH MINIOS-KERNEL 1 "September 2026" "MiniOS Kernel Manager" "User Commands"
 .SH NAME
 minios-kernel \- Command-line tool for managing MiniOS kernels
 .SH SYNOPSIS
@@ -94,12 +94,22 @@ Custom temporary directory (must have at least 1024MB free space).
 .B --force-update
 Run apt update before repository packaging. Without this option, the existing
 system package lists are used without an age gate.
+.TP
+.BI --dkms-driver " driver-id"
+Build one additional driver from the curated 01-kernel DKMS catalog. This
+option may be repeated and is supported only with --repo, where matching
+headers can be resolved automatically.
 .SH PACKAGING
 Repository mode resolves matching linux-modules packages automatically. Local
 mode accepts multiple packages for split kernels. The output includes the
 kernel image, initramfs, and SquashFS module; selected dpkg metadata is retained
 inside the SquashFS at
 .IR /usr/share/minios/kernel-dpkg/ .
+.PP
+Selected DKMS drivers are built in a private overlay chroot without changing
+the running system package database. Resulting modules are checked against the
+target kernel version before they are included. Driver provenance is stored at
+.IR /usr/share/minios/kernel-dkms/ .
 .PP
 Repository downloads are temporary workspace inputs and are removed after
 success or handled failure. Local input archives remain caller-owned. New
@@ -147,6 +157,11 @@ Activate a specific kernel:
 Package kernel from repository:
 .RS
 .B sudo minios-kernel package --repo linux-image-6.12.38+deb13-amd64 -o /tmp/output
+.RE
+.PP
+Package a repository kernel with two additional drivers:
+.RS
+.B sudo minios-kernel package --repo linux-image-6.12.38+deb13-amd64 --dkms-driver dynblk --dkms-driver rtl8821au -o /tmp/output
 .RE
 .PP
 Package kernel from local .deb file:

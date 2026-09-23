@@ -1,0 +1,721 @@
+# Russian translations for minios-kernel-manager package
+# Copyright (C) 2026 Free Software Foundation, Inc.
+# This file is distributed under the same license as the minios-kernel-manager package.
+# Automatically generated, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: minios-kernel-manager 1.5.0\n"
+"POT-Creation-Date: 2026-09-22 21:17+0300\n"
+"PO-Revision-Date: 2026-09-22 18:21+0000\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: ru\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+#. type: TH
+#: en/minios-kernel-manager.1:1 en/minios-kernel.1:1
+#, no-wrap
+msgid "September 2026"
+msgstr "Сентябрь 2026"
+
+#. type: TH
+#: en/minios-kernel-manager.1:1 en/minios-kernel.1:1
+#, no-wrap
+msgid "MiniOS Kernel Manager"
+msgstr "Менеджер ядер MiniOS"
+
+#. type: TH
+#: en/minios-kernel-manager.1:1 en/minios-kernel.1:1
+#, no-wrap
+msgid "User Commands"
+msgstr "Пользовательские команды"
+
+#. type: SH
+#: en/minios-kernel-manager.1:2 en/minios-kernel.1:2
+#, no-wrap
+msgid "NAME"
+msgstr "ИМЯ"
+
+#. type: SH
+#: en/minios-kernel-manager.1:4 en/minios-kernel.1:4
+#, no-wrap
+msgid "SYNOPSIS"
+msgstr "СИНТАКСИС"
+
+#. type: SH
+#: en/minios-kernel-manager.1:7 en/minios-kernel.1:41
+#, no-wrap
+msgid "DESCRIPTION"
+msgstr "ОПИСАНИЕ"
+
+#. type: SH
+#: en/minios-kernel-manager.1:28 en/minios-kernel.1:48
+#, no-wrap
+msgid "OPTIONS"
+msgstr "ПАРАМЕТРЫ"
+
+#. type: TP
+#: en/minios-kernel-manager.1:29 en/minios-kernel.1:49
+#, no-wrap
+msgid "B<-h, --help>"
+msgstr "B<-h, --help>"
+
+#. type: SH
+#: en/minios-kernel-manager.1:32 en/minios-kernel.1:196
+#, no-wrap
+msgid "FILES"
+msgstr "ФАЙЛЫ"
+
+#. type: TP
+#: en/minios-kernel-manager.1:33 en/minios-kernel.1:203
+#, no-wrap
+msgid "I<E<lt>MiniOS-rootE<gt>/kernels/E<lt>versionE<gt>/>"
+msgstr "I<E<lt>MiniOS-rootE<gt>/kernels/E<lt>versionE<gt>/>"
+
+#. type: Plain text
+#: en/minios-kernel-manager.1:36 en/minios-kernel.1:206
+msgid "Repository for inactive packaged kernels."
+msgstr "Репозиторий неактивных упакованных ядер."
+
+#. type: TP
+#: en/minios-kernel-manager.1:36 en/minios-kernel.1:215
+#, no-wrap
+msgid "I<E<lt>MiniOS-rootE<gt>/boot/active-kernel>"
+msgstr "I<E<lt>MiniOS-rootE<gt>/boot/active-kernel>"
+
+#. type: SH
+#: en/minios-kernel-manager.1:48 en/minios-kernel.1:218
+#, no-wrap
+msgid "AUTHOR"
+msgstr "АВТОР"
+
+#. type: Plain text
+#: en/minios-kernel-manager.1:50 en/minios-kernel.1:220
+msgid "crims0n E<lt>crims0n@minios.devE<gt>"
+msgstr "crims0n E<lt>crims0n@minios.devE<gt>"
+
+#. type: SH
+#: en/minios-kernel-manager.1:50 en/minios-kernel.1:220
+#, no-wrap
+msgid "SEE ALSO"
+msgstr "СМ. ТАКЖЕ"
+
+#. type: TH
+#: en/minios-kernel.1:1
+#, no-wrap
+msgid "MINIOS-KERNEL"
+msgstr "MINIOS-KERNEL"
+
+#. type: Plain text
+#: en/minios-kernel.1:4
+msgid "minios-kernel - Command-line tool for managing MiniOS kernels"
+msgstr "minios-kernel — консольная утилита для управления ядрами MiniOS"
+
+#. type: Plain text
+#: en/minios-kernel.1:7
+msgid "B<minios-kernel> [I<--help>]"
+msgstr "B<minios-kernel> [I<--help>]"
+
+#. type: Plain text
+#: en/minios-kernel.1:11
+msgid "B<minios-kernel> [B<--json>] B<list>"
+msgstr "B<minios-kernel> [B<--json>] B<list>"
+
+#. type: Plain text
+#: en/minios-kernel.1:16
+msgid "B<minios-kernel> [B<--json>] B<activate> I<kernel-version>"
+msgstr "B<minios-kernel> [B<--json>] B<activate> I<kernel-version>"
+
+#. type: Plain text
+#: en/minios-kernel.1:21
+msgid "B<minios-kernel> [B<--json>] B<info> [I<kernel-version>]"
+msgstr "B<minios-kernel> [B<--json>] B<info> [I<kernel-version>]"
+
+#. type: Plain text
+#: en/minios-kernel.1:32
+msgid ""
+"B<minios-kernel> [B<--json>] B<package> {B<--repo> I<package> |B<--deb> "
+"I<file...>} B<-o> I<output-dir> [I<options>]"
+msgstr ""
+"B<minios-kernel> [B<--json>] B<package> {B<--repo> I<package> |B<--deb> "
+"I<file...>} B<-o> I<output-dir> [I<options>]"
+
+#. type: Plain text
+#: en/minios-kernel.1:36
+msgid "B<minios-kernel> [B<--json>] B<status>"
+msgstr "B<minios-kernel> [B<--json>] B<status>"
+
+#. type: Plain text
+#: en/minios-kernel.1:41
+msgid "B<minios-kernel> [B<--json>] B<delete> I<kernel-version>"
+msgstr "B<minios-kernel> [B<--json>] B<delete> I<kernel-version>"
+
+#. type: Plain text
+#: en/minios-kernel.1:44
+msgid ""
+"B<minios-kernel> is a command-line utility for managing Linux kernels in the "
+"MiniOS distribution. Requires root privileges."
+msgstr ""
+"B<minios-kernel> — это консольная утилита для управления ядрами Linux в "
+"дистрибутиве MiniOS. Требуются права суперпользователя."
+
+#. type: Plain text
+#: en/minios-kernel.1:48
+msgid ""
+"This tool serves as both a standalone CLI utility and the backend for the "
+"graphical B<minios-kernel-manager>.  It handles kernel packaging, "
+"activation, and provides detailed kernel information."
+msgstr ""
+"Этот инструмент может использоваться как самостоятельная CLI-утилита, так и "
+"как бэкенд для графического интерфейса B<minios-kernel-manager>.  Позволяет "
+"упаковывать ядра, активировать их и получать подробную информацию о ядрах."
+
+#. type: Plain text
+#: en/minios-kernel.1:52
+msgid "Show the built-in help message and exit."
+msgstr "Показать встроенное справочное сообщение и завершить работу."
+
+#. type: TP
+#: en/minios-kernel.1:52
+#, no-wrap
+msgid "B<--json>"
+msgstr "B<--json>"
+
+#. type: Plain text
+#: en/minios-kernel.1:55
+msgid "Output results in JSON format. Can be used with any command."
+msgstr ""
+"Выводить результаты в формате JSON. Может использоваться с любой командой."
+
+#. type: SH
+#: en/minios-kernel.1:55
+#, no-wrap
+msgid "COMMANDS"
+msgstr "КОМАНДЫ"
+
+#. type: TP
+#: en/minios-kernel.1:56 en/minios-kernel.1:178
+#, no-wrap
+msgid "B<list>"
+msgstr "B<list>"
+
+#. type: Plain text
+#: en/minios-kernel.1:59
+msgid "List available kernels with their status."
+msgstr "Показать список доступных ядер и их статусы."
+
+#. type: TP
+#: en/minios-kernel.1:59
+#, no-wrap
+msgid "B<activate>I< kernel-version>"
+msgstr "B<activate>I< kernel-version>"
+
+#. type: Plain text
+#: en/minios-kernel.1:62
+msgid "Activate the specified kernel version for the next boot."
+msgstr "Активировать указанную версию ядра для следующей загрузки."
+
+#. type: TP
+#: en/minios-kernel.1:62
+#, no-wrap
+msgid "B<info>I< [kernel-version]>"
+msgstr "B<info>I< [kernel-version]>"
+
+#. type: Plain text
+#: en/minios-kernel.1:65
+msgid ""
+"Show information about a kernel. If no version specified, shows current "
+"active kernel."
+msgstr ""
+"Показать информацию о ядре. Если версия не указана, отображается текущее "
+"активное ядро."
+
+#. type: TP
+#: en/minios-kernel.1:65 en/minios-kernel.1:187
+#, no-wrap
+msgid "B<package>"
+msgstr "B<package>"
+
+#. type: Plain text
+#: en/minios-kernel.1:68
+msgid "Package a kernel from a repository or one or more local .deb files."
+msgstr ""
+"Упаковать ядро из репозитория или из одного или нескольких локальных .deb-"
+"файлов."
+
+#. type: TP
+#: en/minios-kernel.1:68 en/minios-kernel.1:190
+#, no-wrap
+msgid "B<status>"
+msgstr "B<status>"
+
+#. type: Plain text
+#: en/minios-kernel.1:71
+msgid "Check MiniOS directory status and write permissions."
+msgstr "Проверить состояние каталога MiniOS и права на запись."
+
+#. type: TP
+#: en/minios-kernel.1:71
+#, no-wrap
+msgid "B<delete>I< kernel-version>"
+msgstr "B<delete>I< kernel-version>"
+
+#. type: Plain text
+#: en/minios-kernel.1:74
+msgid "Delete the specified packaged kernel from the repository."
+msgstr "Удалить указанный упакованный ядро из репозитория."
+
+#. type: SH
+#: en/minios-kernel.1:74
+#, no-wrap
+msgid "PACKAGE OPTIONS"
+msgstr "ПАРАМЕТРЫ ПАКЕТА"
+
+#. type: TP
+#: en/minios-kernel.1:75
+#, no-wrap
+msgid "B<--repo>I< package-name>"
+msgstr "B<--repo>I< package-name>"
+
+#. type: Plain text
+#: en/minios-kernel.1:79
+msgid ""
+"Download and package a real versioned kernel package from the existing "
+"system APT configuration. Tracking metapackages such as linux-image-amd64 "
+"are rejected."
+msgstr ""
+"Скачать и упаковать реальный версионный пакет ядра из текущей конфигурации "
+"APT системы. Отслеживаемые метапакеты, такие как linux-image-amd64, не "
+"поддерживаются."
+
+#. type: TP
+#: en/minios-kernel.1:79
+#, no-wrap
+msgid "B<--deb>I< deb-file...>"
+msgstr "B<--deb>I< deb-file...>"
+
+#. type: Plain text
+#: en/minios-kernel.1:84
+msgid ""
+"Package a kernel from one or more local .deb files. Debian split kernels "
+"require a coherent image, binary, base, and modules set; Ubuntu split "
+"kernels require the matching image and modules packages, plus modules-extra "
+"when selected."
+msgstr ""
+"Упаковать ядро из одного или нескольких локальных файлов .deb. Для "
+"раздельных ядер Debian требуется согласованный набор: image, binary, base и "
+"modules; для раздельных ядер Ubuntu необходимы соответствующие пакеты image "
+"и modules, а также modules-extra, если выбран."
+
+#. type: TP
+#: en/minios-kernel.1:84
+#, no-wrap
+msgid "B<-o, --output >I<output-dir>"
+msgstr "B<-o, --output >I<output-dir>"
+
+#. type: Plain text
+#: en/minios-kernel.1:87
+msgid "Directory to save packaged kernel files. Required."
+msgstr ""
+"Каталог для сохранения файлов упакованного ядра. Обязательный параметр."
+
+#. type: TP
+#: en/minios-kernel.1:87
+#, no-wrap
+msgid "B<--sqfs-comp>I< method>"
+msgstr "B<--sqfs-comp>I< method>"
+
+#. type: Plain text
+#: en/minios-kernel.1:90
+msgid "Compression method for SquashFS image. Default: B<zstd>."
+msgstr "Метод сжатия для SquashFS-образа. По умолчанию: B<zstd>."
+
+#. type: TP
+#: en/minios-kernel.1:90
+#, no-wrap
+msgid "B<--temp-dir>I< directory>"
+msgstr "B<--temp-dir>I< directory>"
+
+#. type: Plain text
+#: en/minios-kernel.1:93
+msgid "Custom temporary directory (must have at least 1024MB free space)."
+msgstr ""
+"Пользовательский временный каталог (должно быть не менее 1024 МБ свободного "
+"места)."
+
+#. type: TP
+#: en/minios-kernel.1:93
+#, no-wrap
+msgid "B<--force-update>"
+msgstr "B<--force-update>"
+
+#. type: Plain text
+#: en/minios-kernel.1:97
+msgid ""
+"Run apt update before repository packaging. Without this option, the "
+"existing system package lists are used without an age gate."
+msgstr ""
+"Выполнить apt update перед упаковкой в репозиторий. Без этой опции "
+"используются существующие списки пакетов системы без проверки их "
+"актуальности."
+
+#. type: TP
+#: en/minios-kernel.1:97
+#, no-wrap
+msgid "B<--dkms-driver>I< driver-id>"
+msgstr "B<--dkms-driver>I< driver-id>"
+
+#. type: Plain text
+#: en/minios-kernel.1:102
+msgid ""
+"Build one additional driver from the curated 01-kernel DKMS catalog. This "
+"option may be repeated and is supported only with --repo, where matching "
+"headers can be resolved automatically."
+msgstr ""
+"Собрать дополнительный драйвер из курируемого каталога 01-kernel DKMS. Опция "
+"может быть указана несколько раз и поддерживается только с --repo, где "
+"соответствующие заголовки определяются автоматически."
+
+#. type: SH
+#: en/minios-kernel.1:102
+#, no-wrap
+msgid "PACKAGING"
+msgstr "УПАКОВКА"
+
+#. type: Plain text
+#: en/minios-kernel.1:108
+msgid ""
+"Repository mode resolves matching linux-modules packages automatically. "
+"Local mode accepts multiple packages for split kernels. The output includes "
+"the kernel image, initramfs, and SquashFS module; selected dpkg metadata is "
+"retained inside the SquashFS at I</usr/share/minios/kernel-dpkg/>."
+msgstr ""
+"В режиме репозитория соответствующие пакеты linux-modules определяются "
+"автоматически. В локальном режиме поддерживается несколько пакетов для "
+"раздельных ядер. В выходной набор входят образ ядра, initramfs и модуль "
+"SquashFS; выбранные метаданные dpkg сохраняются внутри SquashFS по адресу I</"
+"usr/share/minios/kernel-dpkg/>."
+
+#. type: Plain text
+#: en/minios-kernel.1:113
+msgid ""
+"Selected DKMS drivers are built in a private overlay chroot without changing "
+"the running system package database. Resulting modules are checked against "
+"the target kernel version before they are included. Driver provenance is "
+"stored at I</usr/share/minios/kernel-dkms/>."
+msgstr ""
+"Выбранные драйверы DKMS собираются в приватном оверлейном chroot без "
+"изменения базы данных пакетов работающей системы. Полученные модули "
+"проверяются на совместимость с целевой версией ядра перед их включением. "
+"Происхождение драйвера сохраняется в I</usr/share/minios/kernel-dkms/>."
+
+#. type: Plain text
+#: en/minios-kernel.1:118
+msgid ""
+"Repository downloads are temporary workspace inputs and are removed after "
+"success or handled failure. Local input archives remain caller-owned. New "
+"bundles use canonical frozen format 1 with a manual held image package, "
+"automatic subordinate kernel packages, and no embedded repository "
+"configuration."
+msgstr ""
+"Загрузки из репозитория используются как временные рабочие файлы и удаляются "
+"после успешного завершения или обработанной ошибки. Локальные архивы "
+"остаются во владении вызывающей стороны. Новые пакеты используют "
+"канонический замороженный формат 1 с вручную удерживаемым образом ядра, "
+"автоматическими подчинёнными пакетами ядра и без встроенной конфигурации "
+"репозитория."
+
+#. type: Plain text
+#: en/minios-kernel.1:123
+msgid ""
+"The canonical runtime module path is /lib/modules/E<lt>versionE<gt>. The "
+"physical path stored in the bundle follows the running base system: lib/"
+"modules on traditional layouts or usr/lib/modules when /lib is usrmerged. "
+"Packaging refuses an existing same-version module tree rather than mix it "
+"with a different package revision."
+msgstr ""
+"Канонический путь к модулю времени выполнения — /lib/modules/"
+"E<lt>versionE<gt>. Физический путь, сохраняемый в пакете, соответствует "
+"базовой системе: lib/modules для традиционной структуры или usr/lib/modules "
+"при использовании usrmerge. Упаковка отклоняет существующее дерево модулей с "
+"той же версией, чтобы не смешивать его с другой редакцией пакета."
+
+#. type: Plain text
+#: en/minios-kernel.1:127
+msgid ""
+"When a writable MiniOS root is detected and the output is not already the "
+"repository directory, the completed package is staged atomically into "
+"I<E<lt>MiniOS-rootE<gt>/kernels/E<lt>versionE<gt>>."
+msgstr ""
+"Если обнаружен доступный для записи корень MiniOS и выходной каталог не "
+"совпадает с каталогом репозитория, готовый пакет размещается атомарно в "
+"I<E<lt>MiniOS-rootE<gt>/kernels/E<lt>versionE<gt>>."
+
+#. type: Plain text
+#: en/minios-kernel.1:131
+msgid ""
+"Packaging requires a MiniOS live runtime with mkdracut or mkinitrfs under I</"
+"run/initramfs>, plus mksquashfs, depmod, and dpkg-deb. Repository mode also "
+"requires APT."
+msgstr ""
+"Для упаковки требуется живая среда MiniOS с mkdracut или mkinitrfs в I</run/"
+"initramfs>, а также mksquashfs, depmod и dpkg-deb. Для режима репозитория "
+"также необходим APT."
+
+#. type: SH
+#: en/minios-kernel.1:131
+#, no-wrap
+msgid "ENCRYPTED PERSISTENCE"
+msgstr "ШИФРОВАННОЕ СОХРАНЕНИЕ"
+
+#. type: Plain text
+#: en/minios-kernel.1:136
+msgid ""
+"When the running initrd advertises encrypted persistence, the replacement "
+"kernel must provide dm-crypt support. The generated initramfs is checked for "
+"cryptsetup, dm-crypt.ko, and etc/minios-initramfs-crypt. Packaging fails "
+"when those safeguards cannot be preserved."
+msgstr ""
+"Если работающий initrd поддерживает шифрованное сохранение, заменяемое ядро "
+"должно обеспечивать поддержку dm-crypt. Сгенерированный initramfs "
+"проверяется на наличие cryptsetup, dm-crypt.ko и etc/minios-initramfs-crypt. "
+"Упаковка завершится с ошибкой, если эти требования не могут быть обеспечены."
+
+#. type: SH
+#: en/minios-kernel.1:136
+#, no-wrap
+msgid "ACTIVATION"
+msgstr "АКТИВАЦИЯ"
+
+#. type: Plain text
+#: en/minios-kernel.1:142
+msgid ""
+"Activation requires a complete repository entry containing the SquashFS, "
+"kernel image, and initramfs. Boot files and bootloader configuration are "
+"updated atomically and restored if activation fails. GRUB configuration is "
+"required; SYSLINUX configuration is updated when present. Activation affects "
+"the next boot and does not reboot the machine."
+msgstr ""
+"Для активации требуется полная запись в репозитории, содержащая SquashFS, "
+"образ ядра и initramfs. Файлы загрузки и конфигурация загрузчика обновляются "
+"атомарно и восстанавливаются при ошибке активации. Требуется конфигурация "
+"GRUB; конфигурация SYSLINUX обновляется при наличии. Активация влияет на "
+"следующую загрузку и не выполняет перезагрузку машины."
+
+#. type: Plain text
+#: en/minios-kernel.1:146
+msgid ""
+"Activation accepts Manager-produced frozen format-1 bundles and canonical "
+"tracked bundles produced by 01-kernel. The legacy 1.2.1 metadata shape is "
+"accepted only by the live activation compatibility path."
+msgstr ""
+"Активация поддерживает замороженные пакеты формата 1, созданные Менеджером, "
+"и отслеживаемые канонические пакеты, созданные 01-kernel. Устаревшая "
+"структура метаданных 1.2.1 поддерживается только в режиме совместимости "
+"живой активации."
+
+#. type: SH
+#: en/minios-kernel.1:146
+#, no-wrap
+msgid "EXAMPLES"
+msgstr "ПРИМЕРЫ"
+
+#. type: Plain text
+#: en/minios-kernel.1:148
+msgid "List available kernels:"
+msgstr "Список доступных ядер:"
+
+#. type: Plain text
+#: en/minios-kernel.1:150
+msgid "B<sudo minios-kernel list>"
+msgstr "B<sudo minios-kernel list>"
+
+#. type: Plain text
+#: en/minios-kernel.1:153
+msgid "Activate a specific kernel:"
+msgstr "Активировать конкретное ядро:"
+
+#. type: Plain text
+#: en/minios-kernel.1:155
+msgid "B<sudo minios-kernel activate 6.12.38+deb13-amd64>"
+msgstr "B<sudo minios-kernel activate 6.12.38+deb13-amd64>"
+
+#. type: Plain text
+#: en/minios-kernel.1:158
+msgid "Package kernel from repository:"
+msgstr "Упаковать ядро из репозитория:"
+
+#. type: Plain text
+#: en/minios-kernel.1:160
+msgid ""
+"B<sudo minios-kernel package --repo linux-image-6.12.38+deb13-amd64 -o /tmp/"
+"output>"
+msgstr ""
+"B<sudo minios-kernel package --repo linux-image-6.12.38+deb13-amd64 -o /tmp/"
+"output>"
+
+#. type: Plain text
+#: en/minios-kernel.1:163
+msgid "Package a repository kernel with two additional drivers:"
+msgstr "Упаковать ядро из репозитория с двумя дополнительными драйверами:"
+
+#. type: Plain text
+#: en/minios-kernel.1:165
+msgid ""
+"B<sudo minios-kernel package --repo linux-image-6.12.38+deb13-amd64 --dkms-"
+"driver dynblk --dkms-driver rtl8821au -o /tmp/output>"
+msgstr ""
+"B<sudo minios-kernel package --repo linux-image-6.12.38+deb13-amd64 --dkms-"
+"driver dynblk --dkms-driver rtl8821au -o /tmp/output>"
+
+#. type: Plain text
+#: en/minios-kernel.1:168
+msgid "Package kernel from local .deb file:"
+msgstr "Упаковать ядро из локального файла .deb:"
+
+#. type: Plain text
+#: en/minios-kernel.1:170
+msgid "B<sudo minios-kernel package --deb kernel.deb -o /tmp/output>"
+msgstr "B<sudo minios-kernel package --deb kernel.deb -o /tmp/output>"
+
+#. type: Plain text
+#: en/minios-kernel.1:173
+msgid "Delete a packaged kernel:"
+msgstr "Удалить упакованное ядро:"
+
+#. type: Plain text
+#: en/minios-kernel.1:175
+msgid "B<sudo minios-kernel delete 6.12.38+deb13-amd64>"
+msgstr "B<sudo minios-kernel delete 6.12.38+deb13-amd64>"
+
+#. type: SH
+#: en/minios-kernel.1:176
+#, no-wrap
+msgid "JSON OUTPUT"
+msgstr "ВЫВОД JSON"
+
+#. type: Plain text
+#: en/minios-kernel.1:178
+msgid "When using the B<--json> option, commands return structured data:"
+msgstr ""
+"При использовании опции B<--json> команды возвращают структурированные "
+"данные:"
+
+#. type: Plain text
+#: en/minios-kernel.1:181
+msgid "Returns array of kernels with version, status, and metadata."
+msgstr "Возвращает массив ядер с информацией о версии, статусе и метаданных."
+
+#. type: TP
+#: en/minios-kernel.1:181
+#, no-wrap
+msgid "B<activate>"
+msgstr "B<активировать>"
+
+#. type: Plain text
+#: en/minios-kernel.1:184
+msgid "Returns success status and activation details."
+msgstr "Возвращает статус успешного выполнения и детали активации."
+
+#. type: TP
+#: en/minios-kernel.1:184
+#, no-wrap
+msgid "B<info>"
+msgstr "B<информация>"
+
+#. type: Plain text
+#: en/minios-kernel.1:187
+msgid "Returns kernel information including version, status, and system paths."
+msgstr "Возвращает сведения о ядре, включая версию, статус и системные пути."
+
+#. type: Plain text
+#: en/minios-kernel.1:190
+msgid "Returns progress updates during packaging and final success status."
+msgstr ""
+"Возвращает обновления о ходе упаковки и итоговый статус успешного выполнения."
+
+#. type: Plain text
+#: en/minios-kernel.1:193
+msgid "Returns MiniOS directory status and filesystem information."
+msgstr "Возвращает статус каталога MiniOS и информацию о файловой системе."
+
+#. type: TP
+#: en/minios-kernel.1:193
+#, no-wrap
+msgid "B<delete>"
+msgstr "B<удалить>"
+
+#. type: Plain text
+#: en/minios-kernel.1:196
+msgid "Returns success status and deletion details."
+msgstr "Возвращает статус успешного выполнения и детали удаления."
+
+#. type: TP
+#: en/minios-kernel.1:197
+#, no-wrap
+msgid "I</run/initramfs/memory/data/minios/>"
+msgstr "I</run/initramfs/memory/data/minios/>"
+
+#. type: Plain text
+#: en/minios-kernel.1:200
+msgid "Preferred MiniOS root in the standard runtime."
+msgstr "Предпочтительный корень MiniOS в стандартной среде выполнения."
+
+#. type: TP
+#: en/minios-kernel.1:200
+#, no-wrap
+msgid "I</lib/live/mount/medium/minios/>"
+msgstr "I</lib/live/mount/medium/minios/>"
+
+#. type: Plain text
+#: en/minios-kernel.1:203
+msgid "Fallback MiniOS root on a mounted live medium."
+msgstr "Резервный корень MiniOS на смонтированном live-носителе."
+
+#. type: TP
+#: en/minios-kernel.1:206
+#, no-wrap
+msgid "I<E<lt>MiniOS-rootE<gt>/boot/vmlinuz-*>"
+msgstr "I<E<lt>MiniOS-rootE<gt>/boot/vmlinuz-*>"
+
+#. type: Plain text
+#: en/minios-kernel.1:209
+msgid "Active kernel image."
+msgstr "Активный образ ядра."
+
+#. type: TP
+#: en/minios-kernel.1:209
+#, no-wrap
+msgid "I<E<lt>MiniOS-rootE<gt>/boot/initrfs-*.img>"
+msgstr "I<E<lt>MiniOS-rootE<gt>/boot/initrfs-*.img>"
+
+#. type: Plain text
+#: en/minios-kernel.1:212
+msgid "Active initramfs image."
+msgstr "Активный образ initramfs."
+
+#. type: TP
+#: en/minios-kernel.1:212
+#, no-wrap
+msgid "I<E<lt>MiniOS-rootE<gt>/01-kernel-*.sb>"
+msgstr "I<E<lt>MiniOS-rootE<gt>/01-kernel-*.sb>"
+
+#. type: Plain text
+#: en/minios-kernel.1:215
+msgid "Active SquashFS kernel modules."
+msgstr "Активные модули ядра SquashFS."
+
+#. type: Plain text
+#: en/minios-kernel.1:218
+msgid "Active version marker."
+msgstr "Маркер активной версии."
+
+#. type: Plain text
+#: en/minios-kernel.1:222
+msgid "B<minios-kernel-manager>(1), B<mksquashfs>(1)"
+msgstr "B<minios-kernel-manager>(1), B<mksquashfs>(1)"

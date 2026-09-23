@@ -1,1 +1,9 @@
-debian/minios-kernel-manager.1
+manpages/en/minios-kernel-manager.1
+manpages/de/minios-kernel-manager.de.1
+manpages/es/minios-kernel-manager.es.1
+manpages/fr/minios-kernel-manager.fr.1
+manpages/id/minios-kernel-manager.id.1
+manpages/it/minios-kernel-manager.it.1
+manpages/pt/minios-kernel-manager.pt.1
+manpages/pt_BR/minios-kernel-manager.pt_BR.1
+manpages/ru/minios-kernel-manager.ru.1

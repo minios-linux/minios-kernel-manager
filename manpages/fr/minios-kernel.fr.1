@@ -1,0 +1,226 @@
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH MINIOS\-KERNEL 1 "septembre 2026" "Gestionnaire de noyaux MiniOS" "Commandes utilisateur"
+.SH NOM
+minios\-kernel \- Outil en ligne de commande pour la gestion des noyaux MiniOS
+.SH SYNOPSIS
+\fBminios\-kernel\fP [\fI\-\-help\fP]
+.br
+\fBminios\-kernel\fP [\fB\-\-json\fP] \fBlist\fP
+.br
+\fBminios\-kernel\fP [\fB\-\-json\fP] \fBactivate\fP \fIkernel\-version\fP
+.br
+\fBminios\-kernel\fP [\fB\-\-json\fP] \fBinfo\fP [\fIkernel\-version\fP]
+.br
+\fBminios\-kernel\fP [\fB\-\-json\fP] \fBpackage\fP {\fB\-\-repo\fP \fIpackage\fP |\fB\-\-deb\fP
+\fIfile...\fP} \fB\-o\fP \fIoutput\-dir\fP [\fIoptions\fP]
+.br
+\fBminios\-kernel\fP [\fB\-\-json\fP] \fBstatus\fP
+.br
+\fBminios\-kernel\fP [\fB\-\-json\fP] \fBdelete\fP \fIkernel\-version\fP
+.SH DESCRIPTION
+\fBminios\-kernel\fP est un utilitaire en ligne de commande pour la gestion des
+noyaux Linux dans la distribution MiniOS. Nécessite les privilèges
+administrateur.
+.PP
+Cet outil sert à la fois d'utilitaire CLI autonome et de moteur pour
+l'interface graphique \fBminios\-kernel\-manager\fP. Il gère l'empaquetage,
+l'activation des noyaux et fournit des informations détaillées sur les
+noyaux.
+.SH OPTIONS
+.TP
+\fB\-h, \-\-help\fP
+Affiche le message d'aide intégré et quitte.
+.TP
+\fB\-\-json\fP
+Affiche les résultats au format JSON. Peut être utilisé avec n'importe
+quelle commande.
+.SH COMMANDES
+.TP
+\fBlist\fP
+Liste les noyaux disponibles avec leur statut.
+.TP
+\fBactivate\fP\fI kernel\-version\fP
+Active la version du noyau spécifiée pour le prochain démarrage.
+.TP
+\fBinfo\fP\fI [kernel\-version]\fP
+Affiche des informations sur un noyau. Si aucune version n'est précisée,
+affiche le noyau actif actuel.
+.TP
+\fBpackage\fP
+Crée un paquet noyau à partir d'un dépôt ou d'un ou plusieurs fichiers .deb
+locaux.
+.TP
+\fBstatus\fP
+Vérifie le statut du répertoire MiniOS et les droits d'écriture.
+.TP
+\fBdelete\fP\fI kernel\-version\fP
+Supprime le noyau empaqueté spécifié du dépôt.
+.SH "OPTIONS D'EMPAQUETAGE"
+.TP
+\fB\-\-repo\fP\fI package\-name\fP
+Télécharge et empaquette un noyau versionné réel à partir de la
+configuration APT du système existant. Les métapaquets de suivi comme
+linux\-image\-amd64 sont refusés.
+.TP
+\fB\-\-deb\fP\fI deb\-file...\fP
+Empaqueter un noyau à partir d'un ou plusieurs fichiers .deb locaux. Les
+noyaux fractionnés de Debian nécessitent un ensemble cohérent d'image, de
+binaire, de base et de modules ; ceux d'Ubuntu requièrent les paquets image
+et modules correspondants, ainsi que modules\-extra si sélectionné.
+.TP
+\fB\-o, \-\-output \fP\fIoutput\-dir\fP
+Répertoire dans lequel enregistrer les fichiers du noyau
+empaqueté. Obligatoire.
+.TP
+\fB\-\-sqfs\-comp\fP\fI method\fP
+Méthode de compression pour l'image SquashFS. Par défaut : \fBzstd\fP.
+.TP
+\fB\-\-temp\-dir\fP\fI directory\fP
+Répertoire temporaire personnalisé (doit disposer d'au moins 1024 Mo
+d'espace libre).
+.TP
+\fB\-\-force\-update\fP
+Exécute apt update avant l'empaquetage du dépôt. Sans cette option, les
+listes de paquets du système existant sont utilisées sans contrôle
+d'ancienneté.
+.TP
+\fB\-\-dkms\-driver\fP\fI driver\-id\fP
+Construit un pilote supplémentaire à partir du catalogue DKMS 01\-kernel
+sélectionné. Cette option peut être répétée et n'est prise en charge qu'avec
+\-\-repo, où les en\-têtes correspondants peuvent être résolus automatiquement.
+.SH EMPAQUETAGE
+Le mode dépôt résout automatiquement les paquets linux\-modules
+correspondants. Le mode local accepte plusieurs paquets pour les noyaux
+fractionnés. Le résultat comprend l'image du noyau, l'initramfs et le module
+SquashFS ; certaines métadonnées dpkg sont conservées dans le SquashFS sous
+\fI/usr/share/minios/kernel\-dpkg/\fP.
+.PP
+Les pilotes DKMS sélectionnés sont construits dans un chroot superposé privé
+sans modifier la base de données des paquets du système en cours
+d'exécution. Les modules résultants sont vérifiés par rapport à la version
+cible du noyau avant d'être inclus. La provenance du pilote est enregistrée
+dans \fI/usr/share/minios/kernel\-dkms/\fP.
+.PP
+Les téléchargements du dépôt servent d'entrées temporaires à l'espace de
+travail et sont supprimés après succès ou échec géré. Les archives locales
+restent la propriété de l'appelant. Les nouveaux bundles utilisent le format
+figé canonique 1 avec un paquet image maintenu manuellement, des paquets
+noyau subordonnés automatiques et aucune configuration de dépôt intégrée.
+.PP
+Le chemin canonique des modules à l'exécution est
+/lib/modules/<version>. Le chemin physique stocké dans le bundle
+suit le système de base en cours : lib/modules sur les agencements
+traditionnels ou usr/lib/modules lorsque /lib est usrmerged. L'empaquetage
+refuse un arbre de modules de même version déjà existant plutôt que de le
+mélanger avec une révision de paquet différente.
+.PP
+Lorsqu'une racine MiniOS accessible en écriture est détectée et que la
+sortie n'est pas déjà le répertoire du dépôt, le paquet complété est déplacé
+de manière atomique dans \fI<MiniOS\-root>/kernels/<version>\fP.
+.PP
+L'empaquetage nécessite un runtime live MiniOS avec mkdracut ou mkinitrfs
+sous \fI/run/initramfs\fP, ainsi que mksquashfs, depmod et dpkg\-deb. Le mode
+dépôt requiert également APT.
+.SH "PERSISTANCE CHIFFRÉE"
+Lorsque l'initrd en cours signale une persistance chiffrée, le noyau de
+remplacement doit fournir la prise en charge de dm\-crypt. L'initramfs généré
+est vérifié pour la présence de cryptsetup, dm\-crypt.ko et
+etc/minios\-initramfs\-crypt. L'empaquetage échoue si ces protections ne
+peuvent être garanties.
+.SH ACTIVATION
+L'activation requiert une entrée complète dans le dépôt contenant le
+SquashFS, l'image du noyau et l'initramfs. Les fichiers de démarrage et la
+configuration du chargeur d'amorçage sont mis à jour de façon atomique et
+restaurés en cas d'échec de l'activation. La configuration GRUB est
+obligatoire ; la configuration SYSLINUX est mise à jour si elle est
+présente. L'activation concerne le prochain démarrage et ne redémarre pas la
+machine.
+.PP
+L'activation accepte les bundles figés au format 1 produits par le
+gestionnaire ainsi que les bundles suivis canoniques produits par
+01\-kernel. L'ancien format de métadonnées 1.2.1 n'est accepté que par le
+chemin de compatibilité d'activation en mode live.
+.SH EXEMPLES
+Lister les noyaux disponibles :
+.RS
+\fBsudo minios\-kernel list\fP
+.RE
+.PP
+Activer un noyau spécifique :
+.RS
+\fBsudo minios\-kernel activate 6.12.38+deb13\-amd64\fP
+.RE
+.PP
+Empaqueter un noyau depuis le dépôt :
+.RS
+\fBsudo minios\-kernel package \-\-repo linux\-image\-6.12.38+deb13\-amd64 \-o /tmp/output\fP
+.RE
+.PP
+Empaqueter un noyau du dépôt avec deux pilotes supplémentaires :
+.RS
+\fBsudo minios\-kernel package \-\-repo linux\-image\-6.12.38+deb13\-amd64 \-\-dkms\-driver dynblk \-\-dkms\-driver rtl8821au \-o /tmp/output\fP
+.RE
+.PP
+Empaqueter un noyau à partir d'un fichier .deb local :
+.RS
+\fBsudo minios\-kernel package \-\-deb kernel.deb \-o /tmp/output\fP
+.RE
+.PP
+Supprimer un noyau empaqueté :
+.RS
+\fBsudo minios\-kernel delete 6.12.38+deb13\-amd64\fP
+.RE
+.SH "SORTIE JSON"
+Lorsque l'option \fB\-\-json\fP est utilisée, les commandes renvoient des données
+structurées :
+.TP
+\fBlist\fP
+Renvoie un tableau des noyaux avec la version, l'état et les métadonnées.
+.TP
+\fBactiver\fP
+Renvoie le statut de réussite et les détails de l'activation.
+.TP
+\fBinfo\fP
+Renvoie les informations du noyau, y compris la version, l'état et les
+chemins système.
+.TP
+\fBpackage\fP
+Renvoie les mises à jour de progression pendant le conditionnement ainsi que
+le statut final de réussite.
+.TP
+\fBstatus\fP
+Renvoie l'état du répertoire MiniOS et les informations du système de
+fichiers.
+.TP
+\fBsupprimer\fP
+Renvoie le statut de réussite et les détails de la suppression.
+.SH FICHIERS
+.TP
+\fI/run/initramfs/memory/data/minios/\fP
+Racine préférée MiniOS dans l'environnement d'exécution standard.
+.TP
+\fI/lib/live/mount/medium/minios/\fP
+Racine de secours MiniOS sur un support live monté.
+.TP
+\fI<MiniOS\-root>/kernels/<version>/\fP
+Répertoire pour les noyaux conditionnés inactifs.
+.TP
+\fI<MiniOS\-root>/boot/vmlinuz\-*\fP
+Image du noyau actif.
+.TP
+\fI<MiniOS\-root>/boot/initrfs\-*.img\fP
+Image initramfs active.
+.TP
+\fI<MiniOS\-root>/01\-kernel\-*.sb\fP
+Modules du noyau SquashFS actifs.
+.TP
+\fI<MiniOS\-root>/boot/active\-kernel\fP
+Indicateur de version active.
+.SH AUTEUR
+crims0n <crims0n@minios.dev>
+.SH "VOIR AUSSI"
+\fBminios\-kernel\-manager\fP(1), \fBmksquashfs\fP(1)

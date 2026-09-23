@@ -59,9 +59,13 @@ _minios_kernel() {
                     # Complete directories
                     COMPREPLY=($(compgen -d -- ${cur}))
                     ;;
+                --dkms-driver)
+                    local dkms_drivers="ntfs3 broadcom-sta aufs aufs-ng dynblk zfs rtl8723cs rtl8821au rtl8821cu rtl88xxau rtl8188eus rtl8814au rtl88x2bu"
+                    COMPREPLY=($(compgen -W "${dkms_drivers}" -- ${cur}))
+                    ;;
                 *)
                     if [[ ${cur} == -* ]]; then
-                        local package_opts="--help --json --repo --deb -o --output --sqfs-comp --temp-dir --force-update"
+                        local package_opts="--help --json --repo --deb -o --output --sqfs-comp --temp-dir --force-update --dkms-driver"
                         COMPREPLY=($(compgen -W "${package_opts}" -- ${cur}))
                     fi
                     ;;

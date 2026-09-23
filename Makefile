@@ -1,5 +1,6 @@
 EXECUTABLES = bin/minios-kernel-manager bin/minios-kernel
 LIBRARIES = lib/*.py
+LIBEXEC = libexec/dkms-sandbox
 APPLICATIONS = share/applications/minios-kernel-manager.desktop
 POLICIES = share/polkit/dev.minios.kernel-manager.policy
 STYLES = share/styles/style.css
@@ -43,6 +44,8 @@ install: build
 
 	cp $(EXECUTABLES) $(DESTDIR)/$(BINDIR)/
 	cp $(LIBRARIES) $(DESTDIR)/$(LIBDIR)/
+	cp $(LIBEXEC) $(DESTDIR)/$(LIBDIR)/
+	chmod 755 $(DESTDIR)/$(LIBDIR)/dkms-sandbox
 	chmod +x $(DESTDIR)/$(LIBDIR)/minios_kernel_manager.py
 	chmod +x $(DESTDIR)/$(LIBDIR)/minios_kernel.py
 	cp $(APPLICATIONS) $(DESTDIR)/$(APPLICATIONSDIR)

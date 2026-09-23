@@ -1,3 +1,12 @@
+minios-kernel-manager (1.5.0) unstable; urgency=medium
+
+  * Add per-driver selection from the curated MiniOS DKMS catalog for
+    repository kernels, with compatibility filtering in the GUI and CLI.
+  * Build drivers in an isolated disk-backed workspace and include verified
+    modules and final payload checksums in the packaged kernel manifest.
+
+ -- crims0n <crims0n@minios.dev>  Wed, 23 Sep 2026 18:09:55 +0300
+
 minios-kernel-manager (1.4.6) unstable; urgency=medium
 
   * Hide the writable-directory status banner while the system is healthy,
