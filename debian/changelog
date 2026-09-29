@@ -1,3 +1,9 @@
+minios-kernel-manager (1.5.1) unstable; urgency=medium
+
+  * Group the Kernel Manager launcher in the MiniOS desktop category.
+
+ -- crims0n <crims0n@minios.dev>  Tue, 29 Sep 2026 17:02:22 +0300
+
 minios-kernel-manager (1.5.0) unstable; urgency=medium
 
   * Add per-driver selection from the curated MiniOS DKMS catalog for

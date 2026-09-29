@@ -5,7 +5,7 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: minios-kernel-manager 1.5.0\n"
+"Project-Id-Version: minios-kernel-manager 1.5.1\n"
 "Report-Msgid-Bugs-To: support@minios.dev\n"
 "POT-Creation-Date: 2026-09-22 21:27+0300\n"
 "PO-Revision-Date: 2026-09-22 18:28+0000\n"
