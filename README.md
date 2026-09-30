@@ -1,4 +1,4 @@
-# MiniOS Kernel Manager 1.5.1
+# MiniOS Kernel Manager 1.5.2
 
 ## Overview
 

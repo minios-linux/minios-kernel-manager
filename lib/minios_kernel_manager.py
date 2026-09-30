@@ -363,6 +363,8 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         banner = StatusBanner(status_text, intent=intent)
         banner.label.set_markup(
             '<b>{}</b>'.format(GLib.markup_escape_text(status_text)))
+        # Show the contents before excluding the banner from window.show_all().
+        banner.show_all()
         banner.set_no_show_all(True)
         banner.set_visible(intent != 'success')
         self.main_vbox.pack_start(banner, False, False, 0)
@@ -398,10 +400,16 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         # Install tab (second)
         install_tab = self._build_install_tab()
         install_label = Gtk.Label(label=_("Package Kernel"))
+        can_package = bool(self.minios_path and self.minios_writable)
+        install_tab.set_sensitive(can_package)
         self.notebook.append_page(install_tab, install_label)
         
         # Show everything first, then apply initial visibility logic
         self.show_all()
+        # Unavailable pages must be hidden: insensitive tabs still allow
+        # Gtk.Notebook keyboard navigation to switch to their contents.
+        install_tab.set_no_show_all(True)
+        install_tab.set_visible(can_package)
         
         # Apply initial UI state (this must be after show_all)
         self._initialize_loading_overlays()
@@ -532,7 +540,6 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         
         # Main content area
         vb_kernel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        vb_kernel.set_margin_top(12)
         container.pack_start(vb_kernel, True, True, 0)
         
         # Kernel selection area
@@ -614,7 +621,7 @@ class KernelPackWindow(Gtk.ApplicationWindow):
 
         sw = Gtk.ScrolledWindow()
         sw.set_min_content_width(650)
-        sw.set_min_content_height(200)
+        sw.set_min_content_height(120)
         sw.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         sw.add(self.kernel_list)
 
@@ -648,15 +655,26 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         driver_note.set_line_wrap(True)
         driver_note.get_style_context().add_class('field-description')
         driver_box.pack_start(driver_note, False, False, 0)
-        driver_grid = Gtk.Grid(column_spacing=18, row_spacing=4)
+        driver_grid = Gtk.Grid(column_spacing=18, row_spacing=4,
+                               column_homogeneous=True)
+        driver_grid.set_hexpand(True)
         self.driver_checks = {}
         for index, driver in enumerate(get_driver_catalog()):
             check = Gtk.CheckButton(label=driver['label'])
             check.driver_id = driver['id']
             check.connect('toggled', self._on_driver_toggled)
-            driver_grid.attach(check, index % 2, index // 2, 1, 1)
+            check.set_hexpand(True)
+            driver_grid.attach(check, index % 3, index // 3, 1, 1)
             self.driver_checks[driver['id']] = check
-        driver_box.pack_start(driver_grid, False, False, 0)
+        # Keep the optional catalog from setting the window's minimum height.
+        # It grows to show the choices when space permits and scrolls otherwise.
+        driver_scroll = Gtk.ScrolledWindow()
+        driver_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        driver_scroll.set_min_content_height(80)
+        driver_scroll.set_max_content_height(160)
+        driver_scroll.set_propagate_natural_height(True)
+        driver_scroll.add(driver_grid)
+        driver_box.pack_start(driver_scroll, True, True, 0)
         self.driver_frame.add(driver_box)
         self.driver_frame.set_sensitive(False)
         vb_kernel.pack_start(self.driver_frame, False, False, 0)
@@ -664,7 +682,6 @@ class KernelPackWindow(Gtk.ApplicationWindow):
         # Bottom buttons
         button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         button_box.set_halign(Gtk.Align.END)
-        button_box.set_margin_top(12)
         container.pack_start(button_box, False, False, 0)
 
         button_text = _("Package Kernel")
