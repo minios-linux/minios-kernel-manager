@@ -14,6 +14,18 @@ from typing import List, Tuple
 DKMS_SUPPORT_DIR = '.minios-kernel-dkms'
 _ACTIVE_PROCESS = None
 
+# Keep these package constraints aligned with 01-kernel/packages.list.
+NTFS3_KERNEL_SERIES = {'6.1', '6.4', '6.5', '6.6', '6.7', '6.8',
+                       '6.9', '6.10', '6.11', '6.12', '6.13'}
+LEGACY_8188_KERNEL_SERIES = {'4.9', '4.15', '4.19', '5.4', '5.10', '5.15'}
+LEGACY_REALTEK_SUITES = {'buster', 'beowulf', 'bullseye', 'chimaera',
+                        'bookworm', 'daedalus', 'bionic', 'focal', 'jammy'}
+LEGACY_REALTEK_VERSIONS = {
+    'rtl8814au': '5.8.5.1~git20240527.d8208c8-0kali1',
+    'rtl88xxau': '5.6.4.2~git20240726.63cf0b4-0kali1',
+    'rtl8188eus': '5.3.9~git20230921.3fae723-0kali2',
+}
+
 # Stable IDs are shared by the CLI and GUI. Package selection mirrors the DKMS
 # section of linux-live/scripts/01-kernel/packages.list.
 DRIVER_CATALOG = (
@@ -110,6 +122,7 @@ def get_compatible_driver_ids(kernel_package: str, architecture: str) -> List[st
         'architecture': distribution_arch,
         'variant': _read_release_variant(),
         'series': '{}.{}'.format(match.group(1), match.group(2)),
+        'provider': 'distribution',
         'capabilities': [],
     }
     compatible = []
@@ -189,8 +202,8 @@ def resolve_driver_selection(driver_ids: List[str], context: dict) -> Tuple[List
     capabilities = set(context['capabilities'])
     requests = []
     skipped = []
-    legacy = {'buster', 'beowulf', 'bullseye', 'chimaera', 'bookworm',
-              'daedalus', 'bionic', 'focal', 'jammy'}
+    legacy = (context.get('provider', 'distribution') == 'distribution' and
+              suite in LEGACY_REALTEK_SUITES)
     excluded_8723 = {'buster', 'beowulf', 'bullseye', 'chimaera', 'bionic',
                      'focal', 'jammy', 'noble'}
 
@@ -201,6 +214,8 @@ def resolve_driver_selection(driver_ids: List[str], context: dict) -> Tuple[List
         capability = None
         if driver_id == 'ntfs3':
             capability = 'ntfs3'
+            if context['series'] not in NTFS3_KERNEL_SERIES:
+                unavailable = 'the NTFS3 backport has no sources for Linux {}'.format(context['series'])
         elif driver_id == 'broadcom-sta' and (suite == 'jammy' or arch == 'i386'):
             unavailable = 'not supported on Ubuntu Jammy or i386'
         elif driver_id == 'aufs':
@@ -209,7 +224,8 @@ def resolve_driver_selection(driver_ids: List[str], context: dict) -> Tuple[List
                 unavailable = 'available only for Debian Buster/Beowulf kernels'
         elif driver_id == 'aufs-ng':
             capability = 'aufs'
-            if context['series'] != '6.12' or arch == 'i386':
+            if (context.get('provider', 'distribution') != 'distribution' or
+                    context['series'] != '6.12' or arch == 'i386'):
                 unavailable = 'available only for non-i386 Linux 6.12 kernels'
         elif driver_id == 'dynblk' and context['series'] != '6.12':
             unavailable = 'available only for Linux 6.12 kernels'
@@ -225,11 +241,12 @@ def resolve_driver_selection(driver_ids: List[str], context: dict) -> Tuple[List
             capability = 'rtw88_8821cu'
         elif driver_id == 'rtl8814au':
             capability = 'rtw88_8814au'
-            if arch in {'i386', 'i386-pae'} and suite in legacy:
-                package += '=5.8.5.1~git20240527.d8208c8-0kali1'
-        elif (driver_id == 'rtl88xxau' and
-              arch in {'i386', 'i386-pae'} and suite in legacy):
-            package += '=5.6.4.2~git20240726.63cf0b4-0kali1'
+            if legacy:
+                package += '=' + LEGACY_REALTEK_VERSIONS[driver_id]
+        elif driver_id == 'rtl88xxau' and legacy:
+            package += '=' + LEGACY_REALTEK_VERSIONS[driver_id]
+        elif driver_id == 'rtl8188eus' and context['series'] in LEGACY_8188_KERNEL_SERIES:
+            package += '=' + LEGACY_REALTEK_VERSIONS[driver_id]
         elif driver_id == 'rtl88x2bu' and suite in {
                 'bookworm', 'daedalus', 'trixie', 'excalibur', 'sid'}:
             unavailable = 'not supported by this distribution release'
@@ -241,6 +258,15 @@ def resolve_driver_selection(driver_ids: List[str], context: dict) -> Tuple[List
             raise RuntimeError('{} is unavailable: {}'.format(item['label'], unavailable))
         item['package_spec'] = package
         requests.append(item)
+    # The legacy RTL88xxAU package depends on RTL8814AU without a version.
+    # Pin that dependency as well, otherwise APT picks the newer DKMS>=3 build
+    # even when the user selected only RTL88xxAU.
+    if legacy and 'rtl88xxau' in driver_ids and not any(
+            item['id'] == 'rtl8814au' for item in requests):
+        dependency = dict(catalog['rtl8814au'])
+        dependency['package_spec'] = (dependency['package'] + '=' +
+                                      LEGACY_REALTEK_VERSIONS['rtl8814au'])
+        requests.append(dependency)
     return requests, skipped
 
 

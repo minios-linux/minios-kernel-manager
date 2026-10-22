@@ -1,4 +1,4 @@
-# MiniOS Kernel Manager 1.5.2
+# MiniOS Kernel Manager 1.5.3
 
 ## Overview
 
@@ -39,6 +39,14 @@ Downloaded `.deb` files live only in the private packaging workspace and are rem
 Packaging produces the kernel image, initramfs, and SquashFS module. Compact dpkg metadata from the source packages is retained under `/usr/share/minios/kernel-dpkg/` inside the SquashFS. When a writable MiniOS root is detected, the completed package is staged into `<MiniOS-root>/kernels/<version>`.
 
 Repository kernels can include any individually selected driver from the curated `01-kernel` DKMS catalog. Repeat `--dkms-driver ID` for multiple drivers, or use the checkboxes in the GUI. The backend resolves matching headers, builds the selected packages in a private overlay/chroot, verifies module `vermagic`, and copies only the resulting modules and runtime configuration into the bundle. Manual kernel `.deb` files do not enable this option because matching header packages cannot be inferred reliably.
+
+Driver compatibility follows the selected kernel series and the running APT
+distribution. Legacy suites use pinned RTL88xxAU/RTL8814AU packages on amd64 as
+well as i386; selecting RTL88xxAU also pins its RTL8814AU dependency. Older
+kernel series use the compatible RTL8188EUS package. NTFS3 is offered only for
+series covered by the backport, and is skipped when already supplied by the
+kernel. The sandbox collects newly built modules from legacy DKMS installation
+paths as well as `updates/dkms`.
 
 Manager-produced bundles use canonical format 1 with `update_policy: frozen`: the image package is manual and held, subordinate kernel packages are automatic and unheld, and no repository configuration is embedded. Activation also accepts canonical tracked bundles from `01-kernel`. Legacy 1.2.1 metadata is accepted only for live activation, not as Installer-native format 1.
 

@@ -1,5 +1,6 @@
 import json
 import hashlib
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -61,7 +62,7 @@ def test_dkms_workspace_does_not_use_tmpfs():
     source = helper.read_text(encoding='utf-8')
     assert 'mount -t tmpfs' not in source
     assert '< <(' not in source
-    assert '${MODULE_UPPER}/updates/dkms' in source
+    assert 'find "${MODULE_UPPER}" -type f' in source
     assert 'ROOT_UPPER="${WORKSPACE}/root-upper"' in source
 
 
@@ -128,3 +129,90 @@ def test_final_manifest_describes_published_module(tmp_path, suffix):
         'path': 'updates/dkms/driver.ko',
         'sha256': hashlib.sha256(b'published module').hexdigest()}]
     assert json.loads(source.read_text())['files'][0]['sha256'] == 'old'
+
+
+def _context(suite='buster', arch='amd64', series='4.19', capabilities=(),
+             provider='distribution'):
+    return {'distribution': suite, 'architecture': arch, 'series': series,
+            'capabilities': list(capabilities), 'provider': provider,
+            'profile': 'debian', 'variant': 'standard'}
+
+
+@pytest.mark.parametrize('arch', ['amd64', 'i386', 'i386-pae'])
+@pytest.mark.parametrize('suite', ['buster', 'beowulf', 'bullseye', 'chimaera',
+                                  'bookworm', 'daedalus', 'bionic', 'focal', 'jammy'])
+def test_legacy_realtek_versions_on_all_architectures(arch, suite):
+    requests, skipped = resolve_driver_selection(
+        ['rtl88xxau', 'rtl8814au'], _context(suite=suite, arch=arch))
+    assert [item['package_spec'] for item in requests] == [
+        'realtek-rtl88xxau-dkms=5.6.4.2~git20240726.63cf0b4-0kali1',
+        'realtek-rtl8814au-dkms=5.8.5.1~git20240527.d8208c8-0kali1']
+    assert skipped == []
+
+
+def test_legacy_realtek_dependency_is_pinned_when_not_selected():
+    requests, _ = resolve_driver_selection(['rtl88xxau'], _context())
+    assert [item['package_spec'] for item in requests] == [
+        'realtek-rtl88xxau-dkms=5.6.4.2~git20240726.63cf0b4-0kali1',
+        'realtek-rtl8814au-dkms=5.8.5.1~git20240527.d8208c8-0kali1']
+
+
+@pytest.mark.parametrize('context', [_context(suite='trixie', series='6.12'),
+                                     _context(provider='minios', series='6.12')])
+def test_modern_realtek_versions_are_not_pinned(context):
+    requests, _ = resolve_driver_selection(['rtl88xxau', 'rtl8814au'], context)
+    assert [item['package_spec'] for item in requests] == [
+        'realtek-rtl88xxau-dkms', 'realtek-rtl8814au-dkms']
+
+
+@pytest.mark.parametrize('series', ['4.9', '4.15', '4.19', '5.4', '5.10', '5.15'])
+def test_old_kernel_selection(series):
+    context = _context(series=series)
+    with pytest.raises(RuntimeError, match='NTFS3.*no sources'):
+        resolve_driver_selection(['ntfs3'], context)
+    requests, _ = resolve_driver_selection(['rtl8188eus'], context)
+    assert requests[0]['package_spec'] == (
+        'realtek-rtl8188eus-dkms=5.3.9~git20230921.3fae723-0kali2')
+
+
+@pytest.mark.parametrize('series', ['6.1', '6.4', '6.5', '6.6', '6.7', '6.8',
+                                   '6.9', '6.10', '6.11', '6.12', '6.13'])
+def test_ntfs3_supported_kernel_series(series):
+    requests, _ = resolve_driver_selection(['ntfs3', 'rtl8188eus'],
+                                            _context(series=series))
+    assert [item['package_spec'] for item in requests] == [
+        'ntfs3-dkms', 'realtek-rtl8188eus-dkms']
+    requests, skipped = resolve_driver_selection(
+        ['ntfs3'], _context(series=series, capabilities=['ntfs3']))
+    assert requests == [] and skipped == ['ntfs3']
+
+
+def test_ntfs3_unknown_series_and_gui_filter(monkeypatch):
+    with pytest.raises(RuntimeError, match='NTFS3.*no sources'):
+        resolve_driver_selection(['ntfs3'], _context(series='6.14'))
+    monkeypatch.setattr('dkms_utils._host_distribution', lambda: ('buster', 'debian'))
+    compatible = get_compatible_driver_ids('linux-image-4.19.0-21-amd64', 'amd64')
+    assert 'ntfs3' not in compatible
+    assert 'rtl8188eus' in compatible
+
+
+def test_sandbox_collects_legacy_and_modern_install_paths(tmp_path):
+    upper = tmp_path / 'upper'
+    result = tmp_path / 'result'
+    paths = ['updates/dkms/modern.ko.xz', 'updates/legacy.ko',
+             'kernel/drivers/net/8188eu.ko', 'kernel/fs/aufs/aufs.ko']
+    for path in paths + ['modules.dep']:
+        target = upper / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(path.encode())
+    source = (Path(__file__).resolve().parents[1] / 'libexec/dkms-sandbox').read_text()
+    collector = source.split(': > /run/minios-built-modules', 1)[1].split(
+        'for RUNTIME_DIR', 1)[0]
+    collector = ': > /run/minios-built-modules' + collector
+    collector = collector.replace('/run/minios-built-modules', str(tmp_path / 'list'))
+    subprocess.run(['bash', '-eu', '-c',
+                    'MODULE_UPPER="$1"; RESULT="$2"; ' + collector,
+                    'collector', str(upper), str(result)], check=True)
+    for path in paths:
+        assert (result / 'modules' / path).read_bytes() == path.encode()
+    assert not (result / 'modules/modules.dep').exists()
